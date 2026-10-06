@@ -62,7 +62,7 @@ The work follows [the implementation plan](docs/plans/2026-10-06-otium-implement
 | 1 | Theme: palette, fonts, shared components | Done |
 | 2 | Domain rules and the Room library store | Done |
 | 3 | Library and book detail screens | Done (device timings still to take) |
-| 4 | Metadata lookup (Google Books, Open Library) | Next |
+| 4 | Metadata lookup (Google Books, Open Library) | Done (device check still to do) |
 | 5 | Add flow: scan, ISBN, title search | Planned |
 | 6 | Backup and restore with Google Drive | Planned |
 | 7 | Polish, accessibility, Play Store release | Planned |

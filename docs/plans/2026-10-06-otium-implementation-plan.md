@@ -399,10 +399,16 @@ title/author query, with fallbacks and errors handled.
 
 ### Acceptance
 
-- [ ] All MockWebServer scenarios pass.
-- [ ] A real ISBN lookup returns a merged candidate on a device or emulator (manual check).
-- [ ] Missing key still works.
-- [ ] No API key committed.
+- [x] All MockWebServer scenarios pass. (22 repository tests: both services, Google only, Open
+  Library only, 429 then success, persistent 429, 5xx, a slow service, both failing, not found,
+  and the search fallback. Plus API, mapper, error-mapping and cover-store tests.)
+- [ ] A real ISBN lookup returns a merged candidate on a device or emulator (manual check). (Run
+  against the live services from the JVM: three real ISBNs resolved and an unknown one was
+  `NotFound`. Not yet run on a device or emulator.)
+- [x] Missing key still works. (Google rejects keyless requests with 429, so without a key the
+  lookup relies on Open Library; a test covers a persistent Google 429.)
+- [x] No API key committed. (Searched the full git history and every tracked file for the key
+  value: no hits.)
 
 ---
 
