@@ -247,7 +247,7 @@ Audit of this repository against every item on Google's page. Status as of Phase
 | Plain state holders in reusable components | Strongly | Planned, Phases 1 and 3 | review |
 | Do not use `AndroidViewModel` | Recommended | Planned, Phase 3 | _(test)_ |
 | Expose a UI state | Recommended | Planned, Phase 3 | _(test)_ for private mutable flows |
-| Lifecycle-aware effects, not Activity callbacks | Strongly | Planned, Phase 5 | review |
+| Lifecycle-aware effects, not Activity callbacks | Strongly | Met | `CameraPreview`, `ScanScreen` (`LifecycleResumeEffect`); review |
 | Use dependency injection | Strongly | Met | Hilt modules in the `di` package |
 | Scope to a component when necessary | Strongly | Met | singletons only for database, repositories, clock |
 | Use Hilt | Recommended | Met | |

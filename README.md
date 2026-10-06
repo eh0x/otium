@@ -63,7 +63,7 @@ The work follows [the implementation plan](docs/plans/2026-10-06-otium-implement
 | 2 | Domain rules and the Room library store | Done |
 | 3 | Library and book detail screens | Done (device timings still to take) |
 | 4 | Metadata lookup (Google Books, Open Library) | Done (device check still to do) |
-| 5 | Add flow: scan, ISBN, title search | Planned |
+| 5 | Add flow: scan, ISBN, title search | Done (device scan check still to do) |
 | 6 | Backup and restore with Google Drive | Planned |
 | 7 | Polish, accessibility, Play Store release | Planned |
 
@@ -94,9 +94,10 @@ These are design commitments for version 1:
 - **Language and UI:** Kotlin, Jetpack Compose with Material 3, and a custom theme.
 - **Data:** Room with an FTS4 full-text index; Kotlin coroutines and Flow.
 - **Dependency injection:** Hilt.
-- **Planned:** CameraX and ML Kit for barcode scanning, Retrofit with kotlinx.serialization for the
-  book APIs, Coil for covers, WorkManager for scheduled work, and Google Identity Services for
-  Drive.
+- **Adding books:** CameraX and ML Kit (on-device model) for barcode scanning, Retrofit with
+  kotlinx.serialization for the book APIs, Coil for covers, and WorkManager for lookups that wait
+  for a connection.
+- **Planned:** Google Identity Services for Drive backup.
 - **Quality:** Spotless with ktlint, detekt, Android Lint, markdownlint, and architecture rules
   written as tests (Konsist).
 - **Tests:** JUnit, Turbine, Robolectric.

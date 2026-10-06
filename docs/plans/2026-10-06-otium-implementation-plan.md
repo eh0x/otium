@@ -3,7 +3,8 @@
 Date: 2026-10-06
 Source design: `docs/design/2026-10-06-otium-library-app-design.md` (commit `c55b61b`)
 Complexity: Large (8 phases, solo project)
-Status: In progress. Phases 0, 1 and 2 complete; next up are Phases 3 and 4.
+Status: In progress. Phases 0 to 5 complete (device checks for 3 to 5 still to take); next up is
+Phase 6.
 
 ## 1. Summary
 
@@ -469,11 +470,25 @@ offline queueing.
 
 ### Acceptance
 
-- [ ] All three add paths end on the confirm screen and save correctly.
-- [ ] Duplicate ISBN opens the existing book.
-- [ ] Offline ISBN entry is saved and later enriched.
-- [ ] Scan-to-result under about 3 s on a normal connection (manual measurement).
-- [ ] UI tests green with the fake scanner.
+- [x] All three add paths end on the confirm screen and save correctly. (End-to-end Robolectric
+  tests with Hilt drive the real activity and navigation graph: typed ISBN and scanned barcode to
+  a saved book; the title search path is covered by ViewModel and screen tests. Editing from the
+  detail screen goes through the same confirm screen and returns to the book.)
+- [x] Duplicate ISBN opens the existing book. (Lookup, scan and title search check the library
+  first; saving a confirmed book with an owned ISBN offers to open that book instead.)
+- [x] Offline ISBN entry is saved and later enriched. (`SaveIsbnForLater` keeps the ISBN and plans
+  `LookupRetryWorker`, which waits for a connection, backs off and fills in the details without
+  overwriting a book the user edited. Covered by use case, worker and scheduler tests.)
+- [ ] Scan-to-result under about 3 s on a normal connection (manual measurement). (Needs a device;
+  not yet taken. Neither is the planned scan of real books: matte, glossy, curved spine, low
+  light.)
+- [x] UI tests green with the fake scanner. (`FakeBarcodeScanner` drives `ScanViewModelTest` and
+  the end-to-end scan test; the camera preview itself only runs on a device.)
+
+Notes: picked or photographed covers are stored when the book is saved, so backing out leaves no
+files; title search runs on demand to spare the API quota; an ISBN saved offline uses the ISBN as
+its title until the lookup fills it in. Form edits on the confirm screen are not yet kept across
+process death (the looked-up draft is, through the route).
 
 ---
 
