@@ -1,6 +1,5 @@
 package app.otium.ui.detail
 
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -11,8 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.test.performTextReplacement
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.book
 import app.otium.domain.model.Book
@@ -25,8 +23,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-
-private const val DIALOG_FRAMES = 3
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -50,22 +46,8 @@ class DetailContentTest {
     private fun show(state: DetailUiState, actions: DetailActions = DetailActions()) =
         rule.setContent { OtiumTheme(darkTheme = false) { DetailContent(state, actions) } }
 
-    /**
-     * A focused field inside a dialog blinks its cursor forever, and the test clock waits for
-     * animations to finish. The clock is paused before the dialog opens and frames are stepped
-     * by hand from then on.
-     */
-    private fun openDialog(buttonText: String) {
-        rule.mainClock.autoAdvance = false
-        rule.onNodeWithText(buttonText).performScrollTo().performClick()
-        repeat(DIALOG_FRAMES) { rule.mainClock.advanceTimeByFrame() }
-    }
-
     private fun typeInDialog(text: String) {
-        rule.onNode(hasSetTextAction()).performSemanticsAction(SemanticsActions.SetText) {
-            it(AnnotatedString(text))
-        }
-        rule.mainClock.advanceTimeByFrame()
+        rule.onNode(hasSetTextAction()).performTextReplacement(text)
     }
 
     private fun loaded(book: Book = dune, error: AppError? = null) =
@@ -146,7 +128,7 @@ class DetailContentTest {
         var page = -1
         show(loaded(), DetailActions(onProgressConfirmed = { page = it }))
 
-        openDialog("Update progress")
+        rule.onNodeWithText("Update progress").performScrollTo().performClick()
         typeInDialog("250")
         rule.onNodeWithText("Save").performClick()
         rule.mainClock.advanceTimeByFrame()
@@ -159,7 +141,7 @@ class DetailContentTest {
         var page = -1
         show(loaded(), DetailActions(onProgressConfirmed = { page = it }))
 
-        openDialog("Update progress")
+        rule.onNodeWithText("Update progress").performScrollTo().performClick()
         typeInDialog("250")
         rule.onNodeWithText("Cancel").performClick()
         rule.mainClock.advanceTimeByFrame()
@@ -172,7 +154,7 @@ class DetailContentTest {
     fun `an empty page cannot be saved`() {
         show(loaded())
 
-        openDialog("Update progress")
+        rule.onNodeWithText("Update progress").performScrollTo().performClick()
         typeInDialog("")
 
         rule.onNodeWithText("Save").assertIsNotEnabled()
@@ -206,7 +188,7 @@ class DetailContentTest {
         rule.onAllNodesWithText("Mark as finished").assertCountEquals(0)
         rule.onNodeWithText("Total pages not set").assertIsDisplayed()
 
-        openDialog("Set total pages")
+        rule.onNodeWithText("Set total pages").performScrollTo().performClick()
         typeInDialog("412")
         rule.onNodeWithText("Save").performClick()
         rule.mainClock.advanceTimeByFrame()

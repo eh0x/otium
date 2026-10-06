@@ -27,12 +27,20 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import app.otium.R
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookStatus
 import app.otium.ui.components.OtiumProgressBar
 
 private const val MAX_PAGE_DIGITS = 6
+
+/**
+ * Size the window by its content, which the text field gives a 280 dp minimum, instead of the
+ * platform default width. Robolectric never finishes laying out a platform-width dialog that holds
+ * a text field, so the dialog tests could not run with the default.
+ */
+private val FIELD_DIALOG_PROPERTIES = DialogProperties(usePlatformDefaultWidth = false)
 
 /** Where the reader is in the book, with the two ways to change it. */
 @Composable
@@ -120,6 +128,7 @@ private fun ProgressDialog(
     val sliderState = stringResource(R.string.progress_page_of, page ?: 0, total)
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = FIELD_DIALOG_PROPERTIES,
         title = { Text(stringResource(R.string.progress_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -155,6 +164,7 @@ private fun TotalPagesDialog(onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
     val total = text.toIntOrNull()
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = FIELD_DIALOG_PROPERTIES,
         title = { Text(stringResource(R.string.progress_total_dialog_title)) },
         text = {
             OutlinedTextField(
