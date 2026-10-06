@@ -30,10 +30,18 @@ style:
       - 'STOPSHIP:'
   UnusedPrivateMember:
     active: true
+    # Previews are called by the IDE, not by code.
+    ignoreAnnotated:
+      - 'Preview'
   UnnecessaryAbstractClass:
     active: false
 
 naming:
+  MatchingDeclarationName:
+    # Compose theme files are conventionally named Color.kt and Type.kt.
+    excludes:
+      - '**/ui/theme/Color.kt'
+      - '**/ui/theme/Type.kt'
   FunctionNaming:
     ignoreAnnotated:
       - 'Composable'

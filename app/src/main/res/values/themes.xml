@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window theme only. The Compose theme (OtiumTheme) arrives in Phase 1. -->
-    <style name="Theme.Otium" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Window theme only. The Compose theme is OtiumTheme. -->
+    <style name="Theme.Otium" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>

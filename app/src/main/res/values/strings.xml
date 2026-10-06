@@ -2,4 +2,11 @@
 <resources>
     <string name="app_name">Otium</string>
     <string name="placeholder_tagline">Your personal Alexandria library</string>
+
+    <string name="status_not_started">Not started</string>
+    <string name="status_in_progress">In progress</string>
+    <string name="status_read">Read</string>
+
+    <string name="progress_percent">%1$d%%</string>
+    <string name="book_cover_description">Cover of %1$s</string>
 </resources>

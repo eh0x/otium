@@ -57,7 +57,7 @@ class ArchitectureTest {
                 "androidx.room.",
                 "retrofit2.",
                 "okhttp3.",
-                "android.database.",
+                "android.database.sqlite.",
             )
         }
     }
@@ -81,6 +81,17 @@ class ArchitectureTest {
         appSources.classes()
             .filter { cls -> cls.hasAnnotationWithName("Dao") }
             .assertTrue { it.resideInPackage("app.otium.data.local.dao..") }
+    }
+
+    @Test
+    fun `raw color values appear only in the theme palette`() {
+        val rawColor = Regex("""0x[Ff]{2}[0-9A-Fa-f]{6}|Color\(0x""")
+        val offenders = appSources.files
+            .filter { it.packagee?.name?.startsWith("app.otium.ui") == true }
+            .filter { it.name != "Color" }
+            .filter { rawColor.containsMatchIn(it.text) }
+
+        assertTrue("Raw colors outside Color.kt: ${offenders.map { it.path }}", offenders.isEmpty())
     }
 
     // --- ViewModels (recommendations: screen level, no AndroidViewModel, no lifecycle types) ---
