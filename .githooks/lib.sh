@@ -12,7 +12,11 @@ ensure_java() {
     if command -v java >/dev/null 2>&1 && java -version >/dev/null 2>&1; then
         return 0
     fi
+    # Homebrew's keg root also has a working bin/java, but it is not a JDK home: the Kotlin
+    # compiler fails there with "No class roots are found in the JDK path". Use libexec.
     for candidate in \
+        /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+        /usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
         /opt/homebrew/opt/openjdk@17 \
         /usr/local/opt/openjdk@17 \
         /usr/lib/jvm/java-17-openjdk \

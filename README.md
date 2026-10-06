@@ -255,7 +255,9 @@ docs update. Who owns which document, and the `Docs: n/a - <reason>` commit trai
 
 **`Unable to locate a Java Runtime`, or an unsupported class version.** The build needs JDK 17. On
 macOS, `/usr/bin/java` exists even with no JDK installed, so check `java -version` and set
-`JAVA_HOME` to a JDK 17 installation if it is not on your `PATH`.
+`JAVA_HOME` to a JDK 17 installation if it is not on your `PATH`. With Homebrew, point it at
+`$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home`, not the keg root; Kotlin fails
+there with "No class roots are found in the JDK path".
 
 **`Failed to find Platform SDK` or missing build-tools.** Install platform 37 and build-tools 37:
 

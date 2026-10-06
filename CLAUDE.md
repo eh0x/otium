@@ -24,4 +24,7 @@ Rules and enforcement are in `docs/STYLE_GUIDE.md` (baseline: the Android Kotlin
 - Markdown follows `docs/MARKDOWN_GUIDE.md` (100 columns, `-` bullets, fenced code with a
   language). Run `scripts/lint-markdown.sh` after editing docs; the commit hook runs it too.
 - Keep `:domain` free of Android and framework imports. Follow the layer rules in the design doc.
-- JDK for local Gradle runs: `JAVA_HOME=/opt/homebrew/opt/openjdk@17` (keg-only, not on PATH).
+- JDK for local Gradle runs:
+  `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home` (keg-only, not on
+  PATH). The keg root `/opt/homebrew/opt/openjdk@17` is not a JDK home; Kotlin compilation fails
+  there with "No class roots are found in the JDK path".
