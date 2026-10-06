@@ -18,5 +18,7 @@ Rules and enforcement are in `docs/STYLE_GUIDE.md` (baseline: the Android Kotlin
   The `commit-msg` hook rejects anything else.
 - Fix findings; do not add baselines or global rule disables. Suppress at the smallest scope with a
   comment giving the reason.
+- Markdown follows `docs/MARKDOWN_GUIDE.md` (100 columns, `-` bullets, fenced code with a
+  language). Run `scripts/lint-markdown.sh` after editing docs; the commit hook runs it too.
 - Keep `:domain` free of Android and framework imports. Follow the layer rules in the design doc.
 - JDK for local Gradle runs: `JAVA_HOME=/opt/homebrew/opt/openjdk@17` (keg-only, not on PATH).

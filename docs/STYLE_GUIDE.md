@@ -4,7 +4,8 @@ This is the single reference for how code is written in this repository, and how
 enforced.
 
 **Baseline:** the [Android Kotlin style guide](https://developer.android.com/kotlin/style-guide),
-which builds on the [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html).
+which builds on the [Kotlin coding
+conventions](https://kotlinlang.org/docs/coding-conventions.html).
 Everything in those two documents applies unless this file says otherwise. This file lists the
 tightenings, project decisions and the tooling that checks them.
 
@@ -25,6 +26,7 @@ rules the tools cannot see.
 | Commit messages | `commit-msg` hook | `.githooks/commit-msg` | every commit |
 | Documentation drift (links, commands, paths, facts) | `checkDocs` | `gradle/docs-check.gradle.kts` | `check`, `pre-push` hook, CI |
 | Docs missing after build, tooling or CI changes | `scripts/docs-impact.sh` (warning) | `scripts/docs-impact.sh` | `pre-push` hook, CI |
+| Markdown style (100 columns, lists, fences, links, headings) | markdownlint | `.markdownlint-cli2.jsonc`, [Markdown guidelines](MARKDOWN_GUIDE.md) | `pre-commit` (staged files), `check` via `lintMarkdown`, `pre-push`, CI |
 | Everything else in this guide | Code review | this file | pull requests |
 
 ### Daily commands
@@ -59,7 +61,8 @@ becomes the gate. Bypassing a hook with `--no-verify` is for emergencies only; C
 ### Source files
 
 - File name: `PascalCase.kt`. A file with one top-level class is named after it. A file with
-  several related declarations gets a descriptive PascalCase name (`CrossRefs.kt`, `BookMappers.kt`).
+  several related declarations gets a descriptive PascalCase name (`CrossRefs.kt`,
+  `BookMappers.kt`).
 - UTF-8, LF line endings, one final newline, no trailing whitespace, no tabs.
 - Order: file-level annotations, `package`, imports, declarations. `package` and `import` lines
   are never wrapped.
@@ -135,10 +138,11 @@ get a `Default` prefix when nothing better fits. The `Impl` suffix is not allowe
 Two sources, both binding:
 
 - Our own layer rules (design doc, section 4.1 "Layer rules"), listed in 3.1.
-- Google's [Android architecture recommendations](https://developer.android.com/topic/architecture/recommendations),
+- Google's [Android architecture
+  recommendations](https://developer.android.com/topic/architecture/recommendations),
   applied in 3.2 and audited item by item in 3.3.
 
-Rules marked *(test)* are enforced by `ArchitectureTest` (`app/src/test/.../architecture`), which
+Rules marked _(test)_ are enforced by `ArchitectureTest` (`app/src/test/.../architecture`), which
 reads the source files and fails the build. The rest are checked in review.
 
 ### 3.1 Layer rules
@@ -152,50 +156,50 @@ reads the source files and fails the build. The rest are checked in review.
 - ViewModels hold no business rules: they map domain results and `AppError` to UI state.
 - Workers (`work/`) are thin: call a use case, translate the result.
 - The UI layer never imports `app.otium.data`, Room or network libraries, and the data layer
-  never imports the UI layer. *(test)*
-- Room `@Entity` and `@Dao` classes live only in `data.local.entity` and `data.local.dao`. *(test)*
+  never imports the UI layer. _(test)_
+- Room `@Entity` and `@Dao` classes live only in `data.local.entity` and `data.local.dao`. _(test)_
 
 ### 3.2 Applying the Android recommendations
 
-**UI layer**
+#### UI layer
 
 - **Unidirectional data flow.** State flows down (ViewModel to composables as one immutable UI
   state), events flow up (composables call ViewModel functions). No two-way bindings.
 - **One UI state per screen**, exposed as `StateFlow<XUiState>`. The mutable twin is private;
-  expose it with `asStateFlow()` or `stateIn`. *(test)*
+  expose it with `asStateFlow()` or `stateIn`. _(test)_
 - **Lifecycle-aware collection.** Collect with `collectAsStateWithLifecycle()`, never bare
   `collectAsState()` on a ViewModel flow.
 - **Do not send events from the ViewModel to the UI.** No `SharedFlow`/`Channel` of one-off
   events. Model the outcome as state and let the UI report it handled. Example: a duplicate ISBN
   becomes `uiState.openBookId = existingId`, the UI navigates, then calls `onNavigated()` and the
   ViewModel clears it.
-- **Single activity.** `MainActivity` hosts everything through Navigation Compose. *(test)*
+- **Single activity.** `MainActivity` hosts everything through Navigation Compose. _(test)_
 - **Jetpack Compose** for all UI.
 
-**ViewModels**
+#### ViewModels
 
 - **Screen level only.** One ViewModel per screen or navigation destination. Reusable
   components use plain state holder classes (remembered via `rememberXState`), not ViewModels.
 - **Independent of the Android lifecycle.** No `Context`, `Activity`, `Lifecycle` or any
-  `android.*` import in a ViewModel's file. *(test)*
-- **No `AndroidViewModel`.** *(test)* Anything needing a `Context` sits behind a port in
+  `android.*` import in a ViewModel's file. _(test)_
+- **No `AndroidViewModel`.** _(test)_ Anything needing a `Context` sits behind a port in
   `:domain`, implemented in `data/`.
-- ViewModels are `@HiltViewModel` classes in `app.otium.ui`. *(test)*
+- ViewModels are `@HiltViewModel` classes in `app.otium.ui`. _(test)_
 - Use coroutines and flows; launch in `viewModelScope`.
 
-**Lifecycle**
+#### Lifecycle
 
 - Use lifecycle-aware effects in composables (`LaunchedEffect`, `DisposableEffect`,
   `LifecycleEventEffect`, `rememberUpdatedState`) rather than overriding Activity callbacks. The
   CameraX scanner binds to the composable's lifecycle owner.
 
-**Dependencies**
+#### Dependencies
 
 - Hilt everywhere. Scope only where an instance must be shared: the database, repositories and
   clock are `@Singleton`; use cases and ViewModels are unscoped. Do not widen a scope to "fix" a
   wiring problem.
 
-**Models**
+#### Models
 
 - A model per layer: Room entities and network DTOs (`data/`), domain models (`:domain`), UI
   state (`ui/`). A UI state class is only needed when the screen shows something the domain
@@ -210,9 +214,9 @@ reads the source files and fails the build. The rest are checked in review.
   difference visible at the call site.
 - Implementations have a meaningful name that says what they are backed by (`RoomBookRepository`,
   `GoogleDriveBackupClient`, `MlKitBarcodeScanner`). If nothing better fits, prefix `Default`
-  (`DefaultDispatcherProvider`). The `Impl` suffix is not used. *(test)*
+  (`DefaultDispatcherProvider`). The `Impl` suffix is not used. _(test)_
 
-**Performance**
+#### Performance
 
 - R8 shrinking and optimization are on for release (`isMinifyEnabled`, `isShrinkResources`).
   Keep rules are verified against a release build before shipping (Phase 7).
@@ -233,16 +237,16 @@ Audit of this repository against every item on Google's page. Status as of Phase
 | Coroutines and flows | Strongly | Met | detekt coroutine rules |
 | Domain layer (big apps) | Recommended in big apps | Met, kept small | `:domain`: rules and orchestration only |
 | Unidirectional data flow | Strongly | Planned, Phase 3 | review |
-| AAC ViewModels | Strongly | Planned, Phase 3 | *(test)* |
+| AAC ViewModels | Strongly | Planned, Phase 3 | _(test)_ |
 | Lifecycle-aware UI state collection | Strongly | Planned, Phase 3 | review |
 | No events from ViewModel to UI | Strongly | Planned, Phase 3 | review; pattern in 3.2 |
-| Single activity | Strongly | Met | `MainActivity`; *(test)* |
+| Single activity | Strongly | Met | `MainActivity`; _(test)_ |
 | Jetpack Compose | Strongly | Met | Compose UI; theme in Phase 1 |
-| ViewModels independent of lifecycle | Strongly | Planned, Phase 3 | *(test)* |
+| ViewModels independent of lifecycle | Strongly | Planned, Phase 3 | _(test)_ |
 | ViewModels at screen level | Strongly | Planned, Phase 3 | review |
 | Plain state holders in reusable components | Strongly | Planned, Phases 1 and 3 | review |
-| Do not use `AndroidViewModel` | Recommended | Planned, Phase 3 | *(test)* |
-| Expose a UI state | Recommended | Planned, Phase 3 | *(test)* for private mutable flows |
+| Do not use `AndroidViewModel` | Recommended | Planned, Phase 3 | _(test)_ |
+| Expose a UI state | Recommended | Planned, Phase 3 | _(test)_ for private mutable flows |
 | Lifecycle-aware effects, not Activity callbacks | Strongly | Planned, Phase 5 | review |
 | Use dependency injection | Strongly | Met | Hilt modules in the `di` package |
 | Scope to a component when necessary | Strongly | Met | singletons only for database, repositories, clock |
@@ -256,13 +260,14 @@ Audit of this repository against every item on Google's page. Status as of Phase
 | A model per layer | Recommended | Met | entity, DTO, domain; UI state in Phase 3 |
 | Naming: verb methods, noun properties | Optional | Met | |
 | Naming: `get{Model}Stream` for flows | Optional | Deviation, documented | `observe*`, see 3.2 |
-| Naming: meaningful implementation names or `Default` | Optional | Met | *(test)* |
+| Naming: meaningful implementation names or `Default` | Optional | Met | _(test)_ |
 
 Re-run this audit when Google updates the page, and at the end of Phases 3, 5 and 7.
 
 ## 4. Jetpack Compose (from Phase 1 on)
 
-- Follow the [Compose API guidelines](https://developer.android.com/develop/ui/compose/api-guidelines).
+- Follow the [Compose API
+  guidelines](https://developer.android.com/develop/ui/compose/api-guidelines).
 - Screens are stateless composables fed by a UI state and callbacks (state hoisting). Only
   screen-level entry points touch a ViewModel.
 - Every composable that emits UI takes a `modifier: Modifier = Modifier` as its first optional
@@ -276,7 +281,8 @@ Re-run this audit when Google updates the page, and at the end of Phases 3, 5 an
 ## 5. Tests
 
 - Write the failing test first for domain logic, queries and parsers.
-- Names are sentences in backticks that state the behavior: `` `duplicate isbn reports the existing book` ``.
+- Names are sentences in backticks that state the behavior: `` `duplicate isbn reports the existing
+  book` ``.
 - Prefer fakes over mocks for owned interfaces (`FakeBookRepository`). Use MockK only at
   boundaries you do not own.
 - Coroutines: `runTest`. Flows: Turbine, with an explicit wait for the item you expect.
@@ -312,10 +318,9 @@ Re-run this audit when Google updates the page, and at the end of Phases 3, 5 an
 
 ### Markdown
 
-- One sentence per line is fine; wrap at about 100 columns where it reads better. No trailing
-  spaces (use a blank line, not a double space, for a break). Fenced code blocks name their
-  language.
-- Documents under `docs/` are dated (`YYYY-MM-DD-name.md`) except this guide.
+- Follow [the Markdown guidelines](MARKDOWN_GUIDE.md). markdownlint enforces them: 100 columns,
+  `-` bullets, `_italic_`, fenced code with a language, descriptive link text.
+- Design and plan documents are dated (`YYYY-MM-DD-name.md`); guides are not.
 
 ### Shell (git hooks)
 
@@ -349,6 +354,7 @@ describes, and is checked by the build.
 | `docs/STYLE_GUIDE.md` | Rules and how they are enforced | a rule, a tool or its configuration changes |
 | `docs/design/*.md` | Decisions and the reasons behind them (decision log) | a design decision is made or reversed |
 | `docs/plans/*.md` | The implementation plan and phase status | a phase starts or finishes, or scope changes |
+| `docs/MARKDOWN_GUIDE.md` | How Markdown is written and linted | a Markdown rule or its lint config changes |
 | `CLAUDE.md` | Instructions for the coding assistant | workflow rules change |
 
 README, the guide and `CLAUDE.md` describe the present and must always be true. The design and
