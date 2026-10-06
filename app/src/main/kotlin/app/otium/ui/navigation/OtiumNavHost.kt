@@ -26,6 +26,7 @@ import app.otium.ui.add.AddDestination
 import app.otium.ui.add.AddMethod
 import app.otium.ui.add.confirm.ConfirmScreen
 import app.otium.ui.add.isbn.IsbnEntryScreen
+import app.otium.ui.add.search.TitleSearchScreen
 import app.otium.ui.catalog.ThemeCatalogScreen
 import app.otium.ui.detail.DetailScreen
 import app.otium.ui.library.LibraryScreen
@@ -95,7 +96,9 @@ private fun NavGraphBuilder.addFlow(navController: NavHostController) {
     composable<IsbnEntryRoute> {
         IsbnEntryScreen(onBack = { navController.popBackStack() }, onDestination = goTo)
     }
-    composable<TitleSearchRoute> { AddBookStub() }
+    composable<TitleSearchRoute> {
+        TitleSearchScreen(onBack = { navController.popBackStack() }, onDestination = goTo)
+    }
     composable<ConfirmRoute> { entry ->
         val isEdit = entry.toRoute<ConfirmRoute>().isEdit
         ConfirmScreen(

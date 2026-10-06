@@ -94,6 +94,13 @@
     <string name="isbn_save_for_later_hint">Otium looks it up once you are back online.</string>
     <string name="add_enter_manually">Type the details yourself</string>
 
+    <!-- Search by title -->
+    <string name="search_title">Search by title</string>
+    <string name="search_field">Title or author</string>
+    <string name="search_action">Search</string>
+    <string name="search_no_results">No editions found. Try other words, or type the details yourself.</string>
+    <string name="search_result_description">%1$s by %2$s</string>
+
     <!-- Confirm and edit -->
     <string name="confirm_title_new">Check the details</string>
     <string name="confirm_title_edit">Edit book</string>
