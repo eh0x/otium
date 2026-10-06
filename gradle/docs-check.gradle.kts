@@ -96,8 +96,12 @@ tasks.register("checkDocs") {
                 // Build output and graphify output are generated: they exist on a machine that
                 // has built, not on a fresh checkout, so a doc may mention them freely.
                 val generated = candidate.split('/').let { "build" in it || "graphify-out" in it }
+                // An absolute path points at the reader's machine (a JDK, an SDK), not at the
+                // repository, and exists on one machine but not on the next, CI included.
+                val machinePath = candidate.startsWith("/")
                 val looksLikePath = candidate.contains('/') && !candidate.startsWith("http") &&
-                    !candidate.startsWith("app.") && !candidate.contains("...") && !generated
+                    !candidate.startsWith("app.") && !candidate.contains("...") && !generated &&
+                    !machinePath
                 val rooted = root.resolve(candidate)
                 val underModule = listOf("app", "domain").any {
                     root.resolve("$it/$candidate").exists()

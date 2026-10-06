@@ -377,7 +377,7 @@ plan documents also describe intent, so they are only checked for broken links.
 
 | Layer | What it does | Blocks? |
 |-------|--------------|---------|
-| `./gradlew checkDocs` | Verifies relative links, `./gradlew` tasks, repository paths in backticks, and key facts (application id, `minSdk`, JDK, platform, modules) against the build files | Yes: part of `check`, `pre-push` and CI |
+| `./gradlew checkDocs` | Verifies relative links, `./gradlew` tasks, repository paths in backticks (absolute machine paths are skipped), and key facts (application id, `minSdk`, JDK, platform, modules) against the build files | Yes: part of `check`, `pre-push` and CI |
 | `scripts/docs-impact.sh` | Flags changes to build, manifest, tooling or CI files that come without a docs change | No: warning on `pre-push` and in CI |
 | Claude Code hook (`.claude/hooks/docs-reminder.sh`) | Reminds the assistant, once per category per session, after it edits docs-sensitive files | No |
 | Pull request template | Checklist item for docs | No |
