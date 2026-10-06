@@ -330,10 +330,16 @@ data.
 
 ### Acceptance
 
-- [ ] All screens usable offline with seeded data.
-- [ ] Search feels instant on 5,000 books.
-- [ ] Compose UI tests green.
-- [ ] No business rules in ViewModels (review against design layer rules).
+- [x] All screens usable offline with seeded data. (Library, detail and the add stub work with no
+  network. The library ran on an emulator with 5,000 seeded books under the benchmark; the detail
+  screen is covered by Robolectric UI tests, not yet driven by hand on a device.)
+- [x] Search feels instant on 5,000 books. (Emulator, host GPU: typing P99 8.7 ms and shelf scroll
+  P99 9.3 ms of frame CPU time against a 16.7 ms budget; clearing the search is one frame of about
+  20 ms. Emulator numbers only compare runs: the figure from a real mid-range device is still to
+  be taken, with `./gradlew :benchmark:connectedBenchmarkAndroidTest`.)
+- [x] Compose UI tests green. (Robolectric; CI passes. Instrumented UI tests are not set up.)
+- [x] No business rules in ViewModels. (Reviewed: "mark finished" moved into the `MarkFinished`
+  use case; what remains is state mapping, debounce and toggling UI selections.)
 
 ---
 

@@ -61,7 +61,7 @@ The work follows [the implementation plan](docs/plans/2026-10-06-otium-implement
 | 0 | Project scaffold, CI | Done |
 | 1 | Theme: palette, fonts, shared components | Done |
 | 2 | Domain rules and the Room library store | Done |
-| 3 | Library and book detail screens | Next |
+| 3 | Library and book detail screens | Done (device timings still to take) |
 | 4 | Metadata lookup (Google Books, Open Library) | Next |
 | 5 | Add flow: scan, ISBN, title search | Planned |
 | 6 | Backup and restore with Google Drive | Planned |
@@ -71,7 +71,7 @@ The plan holds the detail and is kept current; this table is a summary.
 
 ## Screenshots
 
-There are no app screens yet. These are renders of the design system (the theme catalog that debug
+There are no app screenshots yet. These are renders of the design system (the theme catalog that debug
 builds show), in the light and dark themes: parchment, sage, terra and ink, with EB Garamond
 headlines and a quiet sans for interface text.
 
