@@ -93,8 +93,11 @@ tasks.register("checkDocs") {
             val text = read(doc) ?: continue
             for (match in path.findAll(text)) {
                 val candidate = match.groupValues[1].trimEnd('/')
+                // Build output and graphify output are generated: they exist on a machine that
+                // has built, not on a fresh checkout, so a doc may mention them freely.
+                val generated = candidate.split('/').let { "build" in it || "graphify-out" in it }
                 val looksLikePath = candidate.contains('/') && !candidate.startsWith("http") &&
-                    !candidate.startsWith("app.") && !candidate.contains("...")
+                    !candidate.startsWith("app.") && !candidate.contains("...") && !generated
                 val rooted = root.resolve(candidate)
                 val underModule = listOf("app", "domain").any {
                     root.resolve("$it/$candidate").exists()
