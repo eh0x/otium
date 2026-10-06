@@ -250,6 +250,7 @@ otium/
 - [Markdown guidelines](docs/MARKDOWN_GUIDE.md): how documentation is written and linted.
 - [Open source guidelines](docs/OPEN_SOURCE_GUIDELINES.md): standards and best practices for
   project governance, issue triage, security, and community.
+- [Security policy](SECURITY.md): supported versions and how to report a vulnerability privately.
 
 Docs live in the repository and change with the code. `./gradlew checkDocs` fails when this README
 or the guides drift from the build files, and CI warns when setup or tooling changes come without a
