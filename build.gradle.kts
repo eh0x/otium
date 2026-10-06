@@ -57,6 +57,10 @@ detekt {
     parallel = true
 }
 
+// Documentation drift check (see gradle/docs-check.gradle.kts). Part of `check`.
+apply(from = "gradle/docs-check.gradle.kts")
+tasks.matching { it.name == "check" }.configureEach { dependsOn("checkDocs") }
+
 // Points git at the tracked hooks in .githooks (formatting, commit message and push checks).
 tasks.register<Exec>("installGitHooks") {
     group = "verification"

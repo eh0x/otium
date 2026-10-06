@@ -3,7 +3,7 @@
 Date: 2026-10-06
 Source design: `docs/design/2026-10-06-otium-library-app-design.md` (commit `c55b61b`)
 Complexity: Large (8 phases, solo project)
-Status: Draft, awaiting approval
+Status: In progress. Phases 0 and 2 complete; Phase 1 under way.
 
 ## 1. Summary
 
@@ -90,10 +90,10 @@ An empty app with the final module structure builds and tests in CI.
 6. **Harden `.gitignore`** (see conventions) and document setup in `README.md`.
 
 ### Acceptance
-- [ ] Both modules build; `:domain` has no Android dependencies.
-- [ ] CI passes on `develop`.
-- [ ] Room schema directory exists and is tracked.
-- [ ] No secrets in git history.
+- [x] Both modules build; `:domain` has no Android dependencies.
+- [x] CI passes on `develop`.
+- [x] Room schema directory exists and is tracked.
+- [x] No secrets in git history.
 
 ---
 
@@ -191,10 +191,10 @@ All business rules exist as pure, tested Kotlin; Room stores and queries the lib
 ```
 
 ### Acceptance
-- [ ] Domain tests green on plain JVM.
-- [ ] DAO tests cover search, filters, sort, constraints.
-- [ ] FTS query on 5,000 seeded books returns well under 100 ms (measured in a test or benchmark).
-- [ ] Exported schema `1.json` is committed.
+- [x] Domain tests green on plain JVM.
+- [x] DAO tests cover search, filters, sort, constraints. (Run under Robolectric on the JVM; an on-device run is still outstanding.)
+- [x] FTS query on 5,000 seeded books returns well under 100 ms (host JVM regression guard: 1-6 ms; device measurement comes with the Phase 3 Macrobenchmark).
+- [x] Exported schema `1.json` is committed.
 
 ---
 

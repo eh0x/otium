@@ -23,6 +23,8 @@ rules the tools cannot see.
 | Layering (`:domain` stays pure Kotlin) | `DomainPurityTest` | `domain/src/test` | every `:domain:test` |
 | Architecture rules (UI/data boundaries, ViewModels, single activity, naming) | Konsist `ArchitectureTest` | `app/src/test/.../architecture` | every `testDebugUnitTest`, CI |
 | Commit messages | `commit-msg` hook | `.githooks/commit-msg` | every commit |
+| Documentation drift (links, commands, paths, facts) | `checkDocs` | `gradle/docs-check.gradle.kts` | `check`, `pre-push` hook, CI |
+| Docs missing after build, tooling or CI changes | `scripts/docs-impact.sh` (warning) | `scripts/docs-impact.sh` | `pre-push` hook, CI |
 | Everything else in this guide | Code review | this file | pull requests |
 
 ### Daily commands
@@ -143,7 +145,7 @@ reads the source files and fails the build. The rest are checked in review.
 
 - `:domain` is pure Kotlin/JVM: no Android, Room, Retrofit or Hilt imports. (`DomainPurityTest`)
 - Interfaces belong to the consumer: repository and port interfaces live in `:domain`,
-  implementations in `:app/data`, bindings in `:app/di`.
+  implementations in the `data` package of `:app`, bindings in its `di` package.
 - Room entities, row projections and network DTOs never leave `data/`. Repositories map them to
   domain models with extension-function mappers.
 - Use cases exist only where there is logic. Plain reads go from ViewModel to repository.
@@ -225,8 +227,8 @@ Audit of this repository against every item on Google's page. Status as of Phase
 
 | Recommendation | Google's strength | Otium status | Where |
 |---|---|---|---|
-| Clearly defined data layer | Strongly | Met | `app/data`, `RoomBookRepository`; layering test |
-| Clearly defined UI layer | Strongly | Planned, Phase 3 | `app/ui`; rules in 3.2 |
+| Clearly defined data layer | Strongly | Met | `data` package, `RoomBookRepository`; layering test |
+| Clearly defined UI layer | Strongly | Planned, Phase 3 | `ui` package; rules in 3.2 |
 | Expose data through repositories | Strongly | Met | `BookRepository` port in `:domain` |
 | Coroutines and flows | Strongly | Met | detekt coroutine rules |
 | Domain layer (big apps) | Recommended in big apps | Met, kept small | `:domain`: rules and orchestration only |
@@ -242,7 +244,7 @@ Audit of this repository against every item on Google's page. Status as of Phase
 | Do not use `AndroidViewModel` | Recommended | Planned, Phase 3 | *(test)* |
 | Expose a UI state | Recommended | Planned, Phase 3 | *(test)* for private mutable flows |
 | Lifecycle-aware effects, not Activity callbacks | Strongly | Planned, Phase 5 | review |
-| Use dependency injection | Strongly | Met | Hilt modules in `app/di` |
+| Use dependency injection | Strongly | Met | Hilt modules in the `di` package |
 | Scope to a component when necessary | Strongly | Met | singletons only for database, repositories, clock |
 | Use Hilt | Recommended | Met | |
 | Know what to test | Strongly | Met | section 5 |
@@ -331,10 +333,53 @@ Spotless and note it here.
   Subject in the imperative, 72 characters at most, no trailing period. (`commit-msg` hook)
 - Body (optional) explains why, not what.
 - One logical change per commit. Formatting-only changes are their own `style:` commit.
-- Branches: work on `develop` or a short-lived `type/short-description` branch; merge to `main`
+- Branches: work on `develop` or a short-lived branch named `<type>/<description>`; merge to `main`
   at phase boundaries.
 
-## 8. Changing this guide
+## 8. Documentation
+
+Documentation is code: it lives in the repository, changes in the same commit as the behavior it
+describes, and is checked by the build.
+
+### Who owns what
+
+| Document | Describes | Update it when |
+|----------|-----------|----------------|
+| `README.md` | What Otium is, requirements, setup, everyday commands, module layout | requirements, build tasks, modules or app id change |
+| `docs/STYLE_GUIDE.md` | Rules and how they are enforced | a rule, a tool or its configuration changes |
+| `docs/design/*.md` | Decisions and the reasons behind them (decision log) | a design decision is made or reversed |
+| `docs/plans/*.md` | The implementation plan and phase status | a phase starts or finishes, or scope changes |
+| `CLAUDE.md` | Instructions for the coding assistant | workflow rules change |
+
+README, the guide and `CLAUDE.md` describe the present and must always be true. The design and
+plan documents also describe intent, so they are only checked for broken links.
+
+### Writing rules
+
+- Change docs in the same commit as the code. Do not leave "docs later" work.
+- Say a fact once and link to it elsewhere. Facts that change (versions, counts, task output) do
+  not belong in prose; point at the file that holds them.
+- Commands are written as `./gradlew <task>` in code spans so the checker can verify them.
+- Describe why in the design doc, how to use in the README, and what is allowed in this guide.
+
+### Keeping docs current: the mechanism
+
+| Layer | What it does | Blocks? |
+|-------|--------------|---------|
+| `./gradlew checkDocs` | Verifies relative links, `./gradlew` tasks, repository paths in backticks, and key facts (application id, `minSdk`, JDK, platform, modules) against the build files | Yes: part of `check`, `pre-push` and CI |
+| `scripts/docs-impact.sh` | Flags changes to build, manifest, tooling or CI files that come without a docs change | No: warning on `pre-push` and in CI |
+| Claude Code hook (`.claude/hooks/docs-reminder.sh`) | Reminds the assistant, once per category per session, after it edits docs-sensitive files | No |
+| Pull request template | Checklist item for docs | No |
+
+A deliberate skip is declared with a commit trailer, which silences the impact warning for that
+range of commits: `Docs: n/a - <reason>`. The trailer is capitalized; `docs:` in lowercase is
+the Conventional Commits type for documentation changes.
+
+When `checkDocs` fails, fix the document or, if the repository is wrong, fix the repository.
+Do not weaken the check to make it pass. New facts worth guarding go into
+`gradle/docs-check.gradle.kts`.
+
+## 9. Changing this guide
 
 Rules change by pull request that updates this file and the tool configuration together, so the
 document and the enforcement never drift apart. If a tool finding looks wrong, fix the config,

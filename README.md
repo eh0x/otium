@@ -40,7 +40,7 @@ Application id: `app.otium`. minSdk 26.
 3. Build and verify:
 
    ```bash
-   ./gradlew spotlessCheck detekt lint testDebugUnitTest :domain:test assembleDebug
+   ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test assembleDebug
    ```
 
    Fix formatting with `./gradlew spotlessApply`.
@@ -56,6 +56,13 @@ Application id: `app.otium`. minSdk 26.
 Kotlin follows the [Android Kotlin style guide](https://developer.android.com/kotlin/style-guide).
 The rules, project decisions and how each one is enforced are in
 [`docs/STYLE_GUIDE.md`](docs/STYLE_GUIDE.md).
+
+## Documentation
+
+Docs live in the repository and change with the code. `./gradlew checkDocs` fails when the README
+or the guide drift from the build files, and CI warns when setup or tooling changes come without a
+docs update. Who owns which document, and the `Docs: n/a - <reason>` commit trailer, are in
+[`docs/STYLE_GUIDE.md`](docs/STYLE_GUIDE.md#8-documentation).
 
 ## Secrets
 

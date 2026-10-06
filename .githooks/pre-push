@@ -3,8 +3,11 @@
 # Emergency bypass: git push --no-verify
 . "$(dirname "$0")/lib.sh"
 
-if ! run_gradle spotlessCheck detekt testDebugUnitTest :domain:test; then
+if ! run_gradle spotlessCheck detekt checkDocs testDebugUnitTest :domain:test; then
     echo >&2
     echo "pre-push: checks failed. Fix them or bypass with --no-verify." >&2
     exit 1
 fi
+
+# Warns (never blocks) when setup, build or tooling files changed without a docs update.
+"$(dirname "$0")/../scripts/docs-impact.sh" || true
