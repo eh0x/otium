@@ -1,6 +1,6 @@
-package app.eh.otium.data
+package app.otium.data
 
-import app.eh.otium.domain.port.DispatcherProvider
+import app.otium.domain.port.DispatcherProvider
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

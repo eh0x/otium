@@ -18,13 +18,13 @@ val localProperties = Properties().apply {
 val booksApiKey: String = localProperties.getProperty("books.api.key", "")
 
 android {
-    namespace = "app.eh.otium"
+    namespace = "app.otium"
     // Latest AndroidX releases require compiling against API 37. targetSdk stays at 36
     // so runtime behavior changes of 37 are adopted deliberately (revisit in Phase 7).
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "app.eh.otium"
+        applicationId = "app.otium"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

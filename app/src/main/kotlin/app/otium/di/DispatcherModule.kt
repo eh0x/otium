@@ -1,7 +1,7 @@
-package app.eh.otium.di
+package app.otium.di
 
-import app.eh.otium.data.DefaultDispatcherProvider
-import app.eh.otium.domain.port.DispatcherProvider
+import app.otium.data.DefaultDispatcherProvider
+import app.otium.domain.port.DispatcherProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

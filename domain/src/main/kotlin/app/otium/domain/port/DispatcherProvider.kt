@@ -1,4 +1,4 @@
-package app.eh.otium.domain.port
+package app.otium.domain.port
 
 import kotlinx.coroutines.CoroutineDispatcher
 

@@ -1,4 +1,4 @@
-package app.eh.otium
+package app.otium
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp

@@ -1,4 +1,4 @@
-package app.eh.otium.domain
+package app.otium.domain
 
 import java.io.File
 import org.junit.Assert.assertTrue

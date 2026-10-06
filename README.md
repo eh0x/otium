@@ -14,7 +14,7 @@ Plan: [`docs/plans/2026-10-06-otium-implementation-plan.md`](docs/plans/2026-10-
 | `:domain` | Pure Kotlin/JVM: models, errors, repository and port interfaces, use cases. No Android dependencies (enforced by `DomainPurityTest`). |
 | `:app` | Android app: Compose UI, Room, Retrofit, Hilt wiring, WorkManager. |
 
-Application id: `app.eh.otium`. minSdk 26.
+Application id: `app.otium`. minSdk 26.
 
 ## Requirements
 
@@ -45,7 +45,7 @@ Application id: `app.eh.otium`. minSdk 26.
 
 ## Secrets
 
-Never commit `local.properties`, `keystore.properties`, keystores, or `google-services.json`. The Google Books API key should be restricted by package name (`app.eh.otium`) and SHA-1 in the Google Cloud console.
+Never commit `local.properties`, `keystore.properties`, keystores, or `google-services.json`. The Google Books API key should be restricted by package name (`app.otium`) and SHA-1 in the Google Cloud console.
 
 ## License
 

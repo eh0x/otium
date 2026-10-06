@@ -15,7 +15,7 @@ The repository is greenfield (only `README.md`, `LICENSE`, `.gitignore` and the 
 
 | # | Decision | Recommendation | Blocks |
 |---|----------|----------------|--------|
-| P1 | Application id / package name | **Decided: `app.eh.otium`** (`<pkg>` in file paths below means `app/eh/otium`). Cannot change after Play Store publish. | Phase 0 scaffold, API key restriction, Drive OAuth client |
+| P1 | Application id / package name | **Decided: `app.otium`** (`<pkg>` in file paths below means `app/otium`). Cannot change after Play Store publish. | Phase 0 scaffold, API key restriction, Drive OAuth client |
 | P2 | Drive client | **Decided: REST via Retrofit/OkHttp.** Only about 5 calls needed (list, create, update, download, delete in `appDataFolder`); avoids the heavy Google API client library and R8 pain. | Phase 6 |
 | P3 | Use case provisioning | `@Provides` in `:app/di`, so `:domain` has no `javax.inject` dependency. | Phase 0 |
 | P4 | Google Cloud project | Create one now: enable Books API and Drive API, configure the OAuth consent screen (external, testing mode), register debug SHA-1. | Phase 4 (API key), Phase 6 (OAuth) |

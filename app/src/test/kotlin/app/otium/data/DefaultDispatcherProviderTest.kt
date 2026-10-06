@@ -1,4 +1,4 @@
-package app.eh.otium.data
+package app.otium.data
 
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertSame
