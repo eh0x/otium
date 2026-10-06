@@ -61,6 +61,7 @@
     <!-- Book detail -->
     <string name="detail_back">Back</string>
     <string name="detail_more_options">More options</string>
+    <string name="detail_edit">Edit book</string>
     <string name="detail_delete">Delete book</string>
     <string name="detail_delete_title">Delete this book?</string>
     <string name="detail_delete_message">\"%1$s\" will be removed from your library. This cannot be undone.</string>

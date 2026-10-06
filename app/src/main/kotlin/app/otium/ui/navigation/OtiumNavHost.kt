@@ -47,8 +47,12 @@ fun OtiumNavHost(modifier: Modifier = Modifier) {
                 onOpenCatalog = { navController.navigate(CatalogRoute) },
             )
         }
-        composable<DetailRoute> {
-            DetailScreen(onBack = { navController.popBackStack() })
+        composable<DetailRoute> { entry ->
+            val bookId = entry.toRoute<DetailRoute>().bookId
+            DetailScreen(
+                onBack = { navController.popBackStack() },
+                onEdit = { navController.navigate(ConfirmRoute.edit(bookId)) },
+            )
         }
         addFlow(navController)
         if (BuildConfig.DEBUG) {

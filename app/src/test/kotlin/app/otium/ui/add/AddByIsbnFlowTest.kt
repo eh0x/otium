@@ -1,12 +1,14 @@
 package app.otium.ui.add
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import app.otium.MainActivity
 import app.otium.di.RepositoryModule
 import app.otium.di.WorkModule
@@ -39,8 +41,9 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The manual ISBN path end to end: the real activity, navigation graph and ViewModels, with the
- * library, metadata services and cover store replaced by fakes.
+ * The manual ISBN path end to end, and editing a book through the same confirm screen: the real
+ * activity, navigation graph and ViewModels, with the library, metadata services and cover store
+ * replaced by fakes.
  */
 @HiltAndroidTest
 @UninstallModules(RepositoryModule::class, WorkModule::class)
@@ -146,6 +149,27 @@ class AddByIsbnFlowTest {
         rule.waitUntil(TIMEOUT) { library.all.isNotEmpty() }
         assertTrue(library.all.single().needsLookup)
         assertEquals(1, lookupsPlanned)
+    }
+
+    @Test
+    fun `a book is edited from its detail screen and the edit is shown there`() {
+        library.seed(book(isbn13 = DUNE, title = "Dune"))
+        rule.waitUntil(TIMEOUT) {
+            rule.onAllNodes(hasContentDescription("Dune by Some Author"))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onNodeWithContentDescription("Dune by Some Author").performClick()
+        rule.onNodeWithContentDescription("More options").performClick()
+        rule.onNodeWithText("Edit book").performClick()
+
+        waitFor("Save")
+        rule.onNodeWithText("Dune").performTextReplacement("Dune Messiah")
+        rule.onNodeWithText("Save").performClick()
+
+        rule.waitUntil(TIMEOUT) { library.all.single().title == "Dune Messiah" }
+        assertTrue(library.all.single().userEdited)
+        waitFor("Dune Messiah")
+        rule.onNodeWithContentDescription("More options").assertIsDisplayed()
     }
 
     private companion object {

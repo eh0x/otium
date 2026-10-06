@@ -196,6 +196,19 @@ class DetailContentTest {
         assertEquals(412, total)
     }
 
+    // --- Edit ---
+
+    @Test
+    fun `the menu opens the book for editing`() {
+        var edits = 0
+        show(loaded(), DetailActions(onEdit = { edits++ }))
+
+        rule.onNodeWithContentDescription("More options").performClick()
+        rule.onNodeWithText("Edit book").performClick()
+
+        assertEquals(1, edits)
+    }
+
     // --- Delete ---
 
     @Test
