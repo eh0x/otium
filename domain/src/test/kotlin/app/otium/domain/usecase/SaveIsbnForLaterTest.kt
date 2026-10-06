@@ -15,7 +15,22 @@ import org.junit.Test
 class SaveIsbnForLaterTest {
 
     private val repo = FakeBookRepository()
-    private val saveForLater = SaveIsbnForLater(repo, FixedClock(now = 9_000L))
+    private var scheduled = 0
+    private val saveForLater = SaveIsbnForLater(repo, FixedClock(now = 9_000L)) { scheduled++ }
+
+    @Test
+    fun `saving plans a lookup for later`() = runTest {
+        saveForLater("9780306406157")
+
+        assertEquals(1, scheduled)
+    }
+
+    @Test
+    fun `nothing is planned when nothing was saved`() = runTest {
+        saveForLater("123")
+
+        assertEquals(0, scheduled)
+    }
 
     @Test
     fun `saves a placeholder that waits for a lookup`() = runTest {

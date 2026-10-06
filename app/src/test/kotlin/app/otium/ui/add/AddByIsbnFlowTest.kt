@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import app.otium.MainActivity
 import app.otium.di.RepositoryModule
+import app.otium.di.WorkModule
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeBookRepository
@@ -20,6 +21,7 @@ import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
+import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
 import dagger.hilt.android.testing.BindValue
@@ -41,7 +43,7 @@ import org.robolectric.annotation.GraphicsMode
  * library, metadata services and cover store replaced by fakes.
  */
 @HiltAndroidTest
-@UninstallModules(RepositoryModule::class)
+@UninstallModules(RepositoryModule::class, WorkModule::class)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(application = HiltTestApplication::class, qualifiers = "w360dp-h740dp")
@@ -77,6 +79,11 @@ class AddByIsbnFlowTest {
 
     @BindValue @JvmField
     val clock: Clock = FixedClock()
+
+    private var lookupsPlanned = 0
+
+    @BindValue @JvmField
+    val scheduler: LookupScheduler = LookupScheduler { lookupsPlanned++ }
 
     private fun waitFor(text: String) = rule.waitUntil(TIMEOUT) {
         rule.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()
@@ -138,6 +145,7 @@ class AddByIsbnFlowTest {
 
         rule.waitUntil(TIMEOUT) { library.all.isNotEmpty() }
         assertTrue(library.all.single().needsLookup)
+        assertEquals(1, lookupsPlanned)
     }
 
     private companion object {

@@ -32,7 +32,7 @@ class IsbnEntryViewModelTest {
     private val metadata = FakeMetadataRepository()
     private val vm = IsbnEntryViewModel(
         AddBookFromIsbn(repo, metadata),
-        SaveIsbnForLater(repo, FixedClock()),
+        SaveIsbnForLater(repo, FixedClock()) {},
     )
 
     private val dune =

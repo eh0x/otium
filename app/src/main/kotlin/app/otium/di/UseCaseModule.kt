@@ -2,6 +2,7 @@ package app.otium.di
 
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
+import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.usecase.AddBookFromIsbn
@@ -46,8 +47,11 @@ object UseCaseModule {
         SaveBook(repository, covers, clock)
 
     @Provides
-    fun provideSaveIsbnForLater(repository: BookRepository, clock: Clock) =
-        SaveIsbnForLater(repository, clock)
+    fun provideSaveIsbnForLater(
+        repository: BookRepository,
+        clock: Clock,
+        scheduler: LookupScheduler,
+    ) = SaveIsbnForLater(repository, clock, scheduler)
 
     @Provides
     fun provideRetryPendingLookups(

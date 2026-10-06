@@ -1,6 +1,9 @@
 package app.otium
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
+import app.otium.domain.port.LookupScheduler
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -13,10 +16,28 @@ import okhttp3.OkHttpClient
 @HiltAndroidApp
 class OtiumApp :
     Application(),
-    SingletonImageLoader.Factory {
+    SingletonImageLoader.Factory,
+    Configuration.Provider {
 
     @Inject
     lateinit var httpClient: Lazy<OkHttpClient>
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var lookupScheduler: LookupScheduler
+
+    override fun onCreate() {
+        super.onCreate()
+        // Books saved offline wait for a lookup; a run left over from an earlier session (or
+        // given up after its last attempt) is planned again. Without such books it does nothing.
+        lookupScheduler.schedule()
+    }
+
+    /** Workers get their dependencies from Hilt; the default initializer is off in the manifest. */
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     /**
      * Images load through the app's shared OkHttp client, which carries no API key. Remote covers

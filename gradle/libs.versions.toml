@@ -25,7 +25,8 @@ exifinterface = "1.4.1"
 
 # DI
 hilt = "2.60.1"
-hiltNavigationCompose = "1.4.0"
+# androidx.hilt: Compose navigation and WorkManager integration share one version.
+androidxHilt = "1.4.0"
 
 # Kotlin libraries
 coroutines = "1.11.0"
@@ -92,7 +93,9 @@ androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
-androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "androidxHilt" }
+androidx-hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "androidxHilt" }
+androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref = "androidxHilt" }
 
 # Benchmarks
 androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmarkMacro" }
