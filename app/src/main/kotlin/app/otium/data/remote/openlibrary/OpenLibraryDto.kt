@@ -48,11 +48,25 @@ internal data class EditionDto(
     val description: JsonElement? = null,
 )
 
-/** `GET /works/{id}.json`: the part shared by every edition, including the description. */
+/** A work's author entry: `{"author": {"key": "/authors/OL26320A"}}`. */
+@Serializable
+internal data class WorkAuthorDto(val author: KeyDto? = null)
+
+internal object LenientWorkAuthorList : KSerializer<List<WorkAuthorDto>> by LenientSerializer(
+    ListSerializer(WorkAuthorDto.serializer()),
+    emptyList(),
+)
+
+/**
+ * `GET /works/{id}.json`: the part shared by every edition, including the description. Some
+ * editions name no authors at all, and then the work is the only place that does.
+ */
 @Serializable
 internal data class WorkDto(
     val description: JsonElement? = null,
     @Serializable(with = LenientStringList::class) val subjects: List<String> = emptyList(),
+    @Serializable(with = LenientWorkAuthorList::class)
+    val authors: List<WorkAuthorDto> = emptyList(),
 )
 
 /** `GET /authors/{id}.json`. */

@@ -1,0 +1,31 @@
+{
+  "title": "The Hobbit",
+  "publishers": [
+    "Mariner Books"
+  ],
+  "publish_date": "2012",
+  "covers": [
+    12003329
+  ],
+  "isbn_13": [
+    "9780547928227"
+  ],
+  "isbn_10": [
+    "054792822X"
+  ],
+  "languages": [
+    {
+      "key": "/languages/eng"
+    }
+  ],
+  "number_of_pages": 300,
+  "works": [
+    {
+      "key": "/works/OL27482W"
+    }
+  ],
+  "key": "/books/OL33891995M",
+  "type": {
+    "key": "/type/edition"
+  }
+}

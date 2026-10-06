@@ -34,6 +34,8 @@ internal fun EditionDto.authorKeys(): List<String> = authors.mapNotNull { it.key
 
 internal fun EditionDto.workKey(): String? = works.firstNotNullOfOrNull { it.key }
 
+internal fun WorkDto.authorKeys(): List<String> = authors.mapNotNull { it.author?.key }
+
 /** A description is either a plain string or an object with the text under `value`. */
 internal fun WorkDto.descriptionText(): String? = description.text()
 

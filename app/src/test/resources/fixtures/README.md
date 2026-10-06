@@ -32,6 +32,7 @@ Recorded on 2026-10-06 from `https://openlibrary.org`. Long lists (ISBNs, subjec
 | `work-dune.json` | `/works/{id}.json`, where the description lives |
 | `author-dune.json` | `/authors/{id}.json`, where the author name lives |
 | `search-dune.json`, `search-empty.json` | `/search.json` |
+| `edition-hobbit.json`, `work-hobbit.json`, `author-tolkien.json` | The real Hobbit records: the edition names no authors, only its work does |
 
 An edition record holds author and work keys, not names or a description. Those need two more
 requests, which is why the Open Library mapper takes several responses.
