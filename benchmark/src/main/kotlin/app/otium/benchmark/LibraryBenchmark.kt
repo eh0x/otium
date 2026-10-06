@@ -49,19 +49,22 @@ class LibraryBenchmark {
         repeat(FLINGS_PER_DIRECTION) { shelf.fling(Direction.UP) }
     }
 
+    /** Typing narrows 5,000 books to a few hundred. */
     @Test
-    fun searchByText() = measure {
-        val field =
-            device.wait(Until.findObject(By.clazz("android.widget.EditText")), UI_TIMEOUT_MILLIS)
-                ?: error("No search field found")
-        field.click()
-        field.text = SEARCH_TEXT
-        Thread.sleep(SEARCH_SETTLE_MILLIS)
-        field.text = ""
-        Thread.sleep(SEARCH_SETTLE_MILLIS)
+    fun searchTyping() = measure(prepare = { setSearchText("") }) {
+        setSearchText(SEARCH_TEXT)
     }
 
-    private fun measure(block: MacrobenchmarkScope.() -> Unit) = rule.measureRepeated(
+    /** Clearing the search brings all 5,000 books back at once. */
+    @Test
+    fun searchClearing() = measure(prepare = { setSearchText(SEARCH_TEXT) }) {
+        setSearchText("")
+    }
+
+    private fun measure(
+        prepare: MacrobenchmarkScope.() -> Unit = {},
+        block: MacrobenchmarkScope.() -> Unit,
+    ) = rule.measureRepeated(
         packageName = TARGET_PACKAGE,
         metrics = listOf(FrameTimingMetric()),
         iterations = ITERATIONS,
@@ -70,9 +73,20 @@ class LibraryBenchmark {
             pressHome()
             startActivityAndWait()
             seedLibraryIfEmpty()
+            prepare()
         },
         measureBlock = block,
     )
+
+    /** Sets the search text and waits out the debounce, so the list has settled on return. */
+    private fun MacrobenchmarkScope.setSearchText(text: String) {
+        val field =
+            device.wait(Until.findObject(By.clazz("android.widget.EditText")), UI_TIMEOUT_MILLIS)
+                ?: error("No search field found")
+        field.click()
+        field.text = text
+        Thread.sleep(SEARCH_SETTLE_MILLIS)
+    }
 
     /** The seeder skips books it already added, so this is cheap after the first run. */
     private fun MacrobenchmarkScope.seedLibraryIfEmpty() {
