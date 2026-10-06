@@ -4,6 +4,7 @@ import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteException
 import app.otium.data.local.LibraryQueryBuilder
 import app.otium.data.local.dao.BookDao
+import app.otium.data.local.entity.BookEntity
 import app.otium.data.local.mapper.toDomain
 import app.otium.data.local.mapper.toEntity
 import app.otium.data.local.mapper.toSummary
@@ -43,13 +44,11 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
 
     override suspend fun findByIsbn13(isbn13: String): Try<Book?> = guard {
         val entity = dao.findEntityByIsbn13(isbn13) ?: return@guard Try.Success(null)
-        Try.Success(
-            entity.toDomain(
-                dao.authorNames(entity.id),
-                dao.categoryNames(entity.id),
-                dao.tagNames(entity.id),
-            ),
-        )
+        Try.Success(dao.withLabels(entity))
+    }
+
+    override suspend fun getBooksNeedingLookup(): Try<List<Book>> = guard {
+        Try.Success(dao.booksNeedingLookup().map { dao.withLabels(it) })
     }
 
     override suspend fun add(book: Book): Try<Long> = try {
@@ -57,7 +56,7 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
     } catch (e: CancellationException) {
         throw e
     } catch (e: SQLiteConstraintException) {
-        val existing = book.isbn13?.let { findExistingOrNull(it) }
+        val existing = book.isbn13?.let { dao.findExistingOrNull(it) }
         if (existing != null) {
             Try.Failure(AppError.Duplicate(existing.id))
         } else {
@@ -94,16 +93,6 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
 
     override fun observeAuthors(): Flow<List<String>> = dao.observeAllAuthors()
 
-    /** Best effort lookup used while reporting a constraint failure; never throws. */
-    @Suppress("SwallowedException") // The original constraint failure is already being reported.
-    private suspend fun findExistingOrNull(isbn13: String) = try {
-        dao.findEntityByIsbn13(isbn13)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: SQLiteException) {
-        null
-    }
-
     /** Converts database exceptions to [AppError.Storage]; cancellation is rethrown. */
     private inline fun <T> guard(block: () -> Try<T>): Try<T> = try {
         block()
@@ -113,3 +102,17 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
         Try.Failure(AppError.Storage(e.message ?: "database error"))
     }
 }
+
+/** Best effort lookup used while reporting a constraint failure; never throws. */
+@Suppress("SwallowedException") // The original constraint failure is already being reported.
+private suspend fun BookDao.findExistingOrNull(isbn13: String) = try {
+    findEntityByIsbn13(isbn13)
+} catch (e: CancellationException) {
+    throw e
+} catch (e: SQLiteException) {
+    null
+}
+
+/** The domain book for [entity], with its authors, categories and tags in order. */
+private suspend fun BookDao.withLabels(entity: BookEntity): Book =
+    entity.toDomain(authorNames(entity.id), categoryNames(entity.id), tagNames(entity.id))

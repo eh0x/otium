@@ -10,6 +10,9 @@ class FakeMetadataRepository : MetadataRepository {
     var isbnResult: Try<BookCandidate> = Try.Failure(AppError.NotFound)
     var searchResult: Try<List<BookCandidate>> = Try.Success(emptyList())
 
+    /** Answers for particular ISBNs; any other ISBN gets [isbnResult]. */
+    val isbnResults = mutableMapOf<String, Try<BookCandidate>>()
+
     /** Every ISBN passed to [lookupByIsbn], oldest first. */
     val lookedUp = mutableListOf<String>()
 
@@ -18,7 +21,7 @@ class FakeMetadataRepository : MetadataRepository {
 
     override suspend fun lookupByIsbn(isbn13: String): Try<BookCandidate> {
         lookedUp += isbn13
-        return isbnResult
+        return isbnResults[isbn13] ?: isbnResult
     }
 
     override suspend fun searchByTitleAuthor(query: String): Try<List<BookCandidate>> {
