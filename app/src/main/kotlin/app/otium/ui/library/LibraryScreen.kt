@@ -55,6 +55,8 @@ import app.otium.R
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
+import app.otium.ui.add.AddMethod
+import app.otium.ui.add.AddSheet
 import app.otium.ui.components.OtiumTopBar
 import app.otium.ui.components.labelRes
 import app.otium.ui.theme.PaperBackground
@@ -63,7 +65,7 @@ import app.otium.ui.theme.PaperBackground
 @Composable
 fun LibraryScreen(
     onOpenBook: (Long) -> Unit,
-    onAddBook: () -> Unit,
+    onAddBook: (AddMethod) -> Unit,
     onOpenCatalog: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = hiltViewModel(),
@@ -91,28 +93,13 @@ fun LibraryScreen(
 @Composable
 fun LibraryContent(state: LibraryUiState, actions: LibraryActions, modifier: Modifier = Modifier) {
     var filtersOpen by rememberSaveable { mutableStateOf(false) }
+    var addOpen by rememberSaveable { mutableStateOf(false) }
     PaperBackground(modifier = modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = {
-                OtiumTopBar(
-                    title = stringResource(R.string.library_title),
-                    actions = {
-                        ViewModeAction(
-                            selected = state.viewMode,
-                            onSelected = actions.onViewModeSelected,
-                        )
-                        if (state.debugToolsAvailable) {
-                            DebugMenu(
-                                onSeed = actions.onSeedDebugData,
-                                onOpenCatalog = actions.onOpenCatalog,
-                            )
-                        }
-                    },
-                )
-            },
+            topBar = { LibraryTopBar(state = state, actions = actions) },
             floatingActionButton = {
-                FloatingActionButton(onClick = actions.onAddBook) {
+                FloatingActionButton(onClick = { addOpen = true }) {
                     Icon(
                         imageVector = Icons.Filled.Add,
                         contentDescription = stringResource(R.string.library_add_book),
@@ -134,13 +121,39 @@ fun LibraryContent(state: LibraryUiState, actions: LibraryActions, modifier: Mod
                     actions = actions,
                     onOpenFilters = { filtersOpen = true },
                 )
-                LibraryBody(state = state, actions = actions)
+                LibraryBody(
+                    state = state,
+                    actions = actions,
+                    onOpenAddSheet = { addOpen = true },
+                )
             }
         }
         if (filtersOpen) {
             FilterSheet(state = state, actions = actions, onDismiss = { filtersOpen = false })
         }
+        if (addOpen) {
+            AddSheet(
+                onChoose = { method ->
+                    addOpen = false
+                    actions.onAddBook(method)
+                },
+                onDismiss = { addOpen = false },
+            )
+        }
     }
+}
+
+@Composable
+private fun LibraryTopBar(state: LibraryUiState, actions: LibraryActions) {
+    OtiumTopBar(
+        title = stringResource(R.string.library_title),
+        actions = {
+            ViewModeAction(selected = state.viewMode, onSelected = actions.onViewModeSelected)
+            if (state.debugToolsAvailable) {
+                DebugMenu(onSeed = actions.onSeedDebugData, onOpenCatalog = actions.onOpenCatalog)
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

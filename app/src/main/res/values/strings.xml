@@ -74,8 +74,14 @@
     <string name="detail_language">Language</string>
     <string name="detail_isbn">ISBN-13</string>
 
-    <!-- Add book (stub until the add flow exists) -->
+    <!-- Add book -->
     <string name="add_book_title">Add a book</string>
+    <string name="add_method_scan">Scan barcode</string>
+    <string name="add_method_scan_hint">Point the camera at the barcode on the back cover</string>
+    <string name="add_method_isbn">Enter ISBN</string>
+    <string name="add_method_isbn_hint">Type the 10 or 13 digit number</string>
+    <string name="add_method_search">Search by title</string>
+    <string name="add_method_search_hint">Find the edition by title or author</string>
     <string name="add_book_coming_soon">Adding books by scan, ISBN or title is coming soon.</string>
 
     <!-- Shared actions -->

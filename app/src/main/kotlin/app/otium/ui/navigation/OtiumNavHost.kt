@@ -46,7 +46,7 @@ fun OtiumNavHost(modifier: Modifier = Modifier) {
         composable<LibraryRoute> {
             LibraryScreen(
                 onOpenBook = { navController.navigate(DetailRoute(it)) },
-                onAddBook = { navController.navigate(AddRoute) },
+                onAddBook = { _ -> navController.navigate(AddRoute) },
                 onOpenCatalog = { navController.navigate(CatalogRoute) },
             )
         }
