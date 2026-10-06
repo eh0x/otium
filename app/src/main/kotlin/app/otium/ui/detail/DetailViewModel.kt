@@ -1,0 +1,88 @@
+package app.otium.ui.detail
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import app.otium.domain.error.AppError
+import app.otium.domain.error.Try
+import app.otium.domain.model.Book
+import app.otium.domain.repo.BookRepository
+import app.otium.domain.usecase.SetTotalPages
+import app.otium.domain.usecase.UpdateProgress
+import app.otium.ui.navigation.DetailRoute
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+private const val STOP_TIMEOUT_MILLIS = 5_000L
+
+/** State holder for one book. The book is read live, so every change shows without refresh. */
+@HiltViewModel
+class DetailViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val repository: BookRepository,
+    private val updateProgress: UpdateProgress,
+    private val setTotalPages: SetTotalPages,
+) : ViewModel() {
+
+    private val bookId: Long = savedStateHandle.toRoute<DetailRoute>().bookId
+
+    private data class Outcome(val deleted: Boolean = false, val error: AppError? = null)
+
+    private val outcome = MutableStateFlow(Outcome())
+
+    /** Paired with a flag: true until the first read, which tells "loading" from "not found". */
+    private val book = repository.observeBook(bookId)
+        .map<Book?, Pair<Book?, Boolean>> { it to false }
+        .onStart { emit(null to true) }
+
+    val uiState: StateFlow<DetailUiState> = combine(book, outcome) { (loaded, loading), result ->
+        DetailUiState(
+            isLoading = loading,
+            book = loaded,
+            deleted = result.deleted,
+            error = result.error,
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+        initialValue = DetailUiState(),
+    )
+
+    fun onProgressConfirmed(page: Int) = perform { updateProgress(bookId, page) }
+
+    /** Goes to the last page. Without a known total there is no last page, so nothing happens. */
+    fun onMarkFinished() {
+        val total = uiState.value.book?.totalPages ?: return
+        if (total > 0) onProgressConfirmed(total)
+    }
+
+    fun onTotalPagesConfirmed(totalPages: Int) = perform { setTotalPages(bookId, totalPages) }
+
+    fun onDelete() {
+        viewModelScope.launch {
+            when (val result = repository.delete(bookId)) {
+                is Try.Success -> outcome.update { it.copy(deleted = true) }
+                is Try.Failure -> outcome.update { it.copy(error = result.error) }
+            }
+        }
+    }
+
+    fun onErrorShown() = outcome.update { it.copy(error = null) }
+
+    private fun perform(action: suspend () -> Try<*>) {
+        viewModelScope.launch {
+            val result = action()
+            if (result is Try.Failure) outcome.update { it.copy(error = result.error) }
+        }
+    }
+}

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Otium</string>
+
+    <!-- Status and progress -->
+    <string name="status_not_started">Not started</string>
+    <string name="status_in_progress">In progress</string>
+    <string name="status_read">Read</string>
+    <string name="progress_percent">%1$d%%</string>
+    <string name="progress_page_of">Page %1$d of %2$d</string>
+    <string name="progress_total_unknown">Total pages not set</string>
+    <string name="progress_set_total">Set total pages</string>
+    <string name="progress_update">Update progress</string>
+    <string name="progress_mark_finished">Mark as finished</string>
+    <string name="progress_dialog_title">Current page</string>
+    <string name="progress_page_label">Page</string>
+    <string name="progress_total_dialog_title">Total pages</string>
+    <string name="progress_total_label">Number of pages</string>
+
+    <!-- Covers -->
+    <string name="book_cover_description">Cover of %1$s</string>
+    <string name="book_open_description">%1$s by %2$s</string>
+    <string name="book_state_description">%1$s, page %2$d of %3$d</string>
+
+    <!-- Library -->
+    <string name="library_title">Library</string>
+    <string name="library_search_hint">Search title or author</string>
+    <string name="library_search_clear">Clear search</string>
+    <string name="library_add_book">Add book</string>
+    <string name="library_sort">Sort</string>
+    <string name="library_filters">Filters</string>
+    <string name="library_filters_active">Filters (%1$d)</string>
+    <string name="library_view_shelf">Shelf</string>
+    <string name="library_view_list">List</string>
+    <string name="library_more_options">More options</string>
+    <string name="library_debug_seed">Seed 5,000 test books</string>
+    <string name="library_debug_catalog">Theme catalog</string>
+    <plurals name="library_book_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+    <string name="library_empty_title">Your shelves are empty</string>
+    <string name="library_empty_message">Add your first book to start your library.</string>
+    <string name="library_empty_action">Add a book</string>
+    <string name="library_no_results_title">No books match</string>
+    <string name="library_no_results_message">Try a different search, or clear the filters.</string>
+
+    <string name="sort_title">Title</string>
+    <string name="sort_author">Author</string>
+    <string name="sort_recently_added">Recently added</string>
+    <string name="sort_last_updated">Recently updated</string>
+    <string name="sort_progress">Progress</string>
+
+    <string name="filter_status_all">All</string>
+    <string name="filter_clear">Clear filters</string>
+    <string name="filter_categories">Categories</string>
+    <string name="filter_tags">Tags</string>
+    <string name="filter_none_available">Categories and tags appear here once your books have them.</string>
+    <string name="filter_done">Done</string>
+
+    <!-- Book detail -->
+    <string name="detail_back">Back</string>
+    <string name="detail_more_options">More options</string>
+    <string name="detail_delete">Delete book</string>
+    <string name="detail_delete_title">Delete this book?</string>
+    <string name="detail_delete_message">\"%1$s\" will be removed from your library. This cannot be undone.</string>
+    <string name="detail_not_found">This book is no longer in your library.</string>
+    <string name="detail_progress">Progress</string>
+    <string name="detail_description">Description</string>
+    <string name="detail_show_more">Show more</string>
+    <string name="detail_show_less">Show less</string>
+    <string name="detail_publisher">Publisher</string>
+    <string name="detail_published">Published</string>
+    <string name="detail_language">Language</string>
+    <string name="detail_isbn">ISBN-13</string>
+
+    <!-- Add book (stub until the add flow exists) -->
+    <string name="add_book_title">Add a book</string>
+    <string name="add_book_coming_soon">Adding books by scan, ISBN or title is coming soon.</string>
+
+    <!-- Shared actions -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+
+    <!-- Errors, one per AppError (see ErrorMessages.kt) -->
+    <string name="error_offline">You are offline. Check your connection and try again.</string>
+    <string name="error_rate_limited">The book service is busy. Please try again in a moment.</string>
+    <string name="error_timeout">That took too long. Please try again.</string>
+    <string name="error_not_found">We could not find that.</string>
+    <string name="error_duplicate">That book is already in your library.</string>
+    <string name="error_invalid_isbn">That does not look like a valid ISBN.</string>
+    <string name="error_invalid_input">Please check what you entered and try again.</string>
+    <string name="error_auth_expired">Your Google sign-in expired. Please sign in again.</string>
+    <string name="error_drive_space">Your Google Drive is full, so the backup could not be saved.</string>
+    <string name="error_incompatible_backup">That backup was made by a newer version of Otium.</string>
+    <string name="error_storage">Something went wrong saving your library. Please try again.</string>
+    <string name="error_unexpected">Something went wrong. Please try again.</string>
+</resources>

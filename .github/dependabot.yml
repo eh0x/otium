@@ -1,0 +1,160 @@
+# Dependabot configuration. Reference:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# What it covers:
+#   - Gradle: libraries, plugins (gradle/libs.versions.toml) and the Gradle wrapper.
+#   - GitHub Actions: the actions used by .github/workflows.
+#
+# Policy:
+#   - Version updates open against `develop`, where work happens (docs/STYLE_GUIDE.md, branches).
+#   - Minor and patch updates are grouped by purpose, so a week produces a handful of reviewable
+#     PRs instead of one per library. Major updates always get their own PR.
+#   - A cooldown delays brand-new releases, which blunts a compromised or yanked release. Security
+#     updates ignore the cooldown, the schedule and the ignore rules, so fixes are never delayed.
+#   - Commit messages follow Conventional Commits, like every other commit in this repository.
+#
+# Not configured here, because they are repository settings: Dependabot alerts, Dependabot
+# security updates and grouped security updates (Settings > Code security), and branch protection
+# on `develop` and `main` so no update merges without CI. See docs/OPEN_SOURCE_GUIDELINES.md.
+
+version: 2
+
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 8
+    labels:
+      - "dependencies"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    # A dependency joins the first group that matches it. Order matters: the narrower groups come
+    # before the wide `androidx` one.
+    groups:
+      # One PR for every security fix in the same ecosystem, whatever its version jump.
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      # Kotlin and KSP must move together: a KSP release targets exactly one Kotlin version.
+      kotlin-toolchain:
+        applies-to: "version-updates"
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "com.google.devtools.ksp*"
+        exclude-patterns:
+          - "org.jetbrains.kotlinx*"
+        update-types:
+          - "minor"
+          - "patch"
+      kotlinx:
+        applies-to: "version-updates"
+        patterns:
+          - "org.jetbrains.kotlinx*"
+        update-types:
+          - "minor"
+          - "patch"
+      testing:
+        applies-to: "version-updates"
+        patterns:
+          - "junit*"
+          - "androidx.test*"
+          - "androidx.benchmark*"
+          - "androidx.compose.ui:ui-test*"
+          - "org.robolectric*"
+          - "app.cash.turbine*"
+          - "io.mockk*"
+          - "com.lemonappdev*"
+        update-types:
+          - "minor"
+          - "patch"
+      code-quality:
+        applies-to: "version-updates"
+        patterns:
+          - "com.diffplug.spotless*"
+          - "io.gitlab.arturbosch.detekt*"
+          - "com.pinterest*"
+        update-types:
+          - "minor"
+          - "patch"
+      hilt:
+        applies-to: "version-updates"
+        patterns:
+          - "com.google.dagger*"
+          - "androidx.hilt*"
+        update-types:
+          - "minor"
+          - "patch"
+      networking-and-images:
+        applies-to: "version-updates"
+        patterns:
+          - "com.squareup*"
+          - "io.coil-kt*"
+        update-types:
+          - "minor"
+          - "patch"
+      google-libraries:
+        applies-to: "version-updates"
+        patterns:
+          - "com.google.mlkit*"
+          - "com.google.android.gms*"
+        update-types:
+          - "minor"
+          - "patch"
+      androidx:
+        applies-to: "version-updates"
+        patterns:
+          - "androidx.*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # These four are upgraded by hand and together: a new major needs a matching Kotlin, KSP,
+      # AGP, Gradle and compileSdk, plus fixes in the build files. Minor and patch still arrive.
+      - dependency-name: "org.jetbrains.kotlin*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "com.google.devtools.ksp*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "com.android.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "gradle"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    cooldown:
+      default-days: 7
+    groups:
+      security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      github-actions:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Enforces Conventional Commits: type(scope)!: subject
+# Emergency bypass: git commit --no-verify
+first_line=$(head -n 1 "$1")
+
+# Allow merge, revert and fixup commits created by git itself.
+case "$first_line" in
+    Merge\ *|Revert\ *|fixup!\ *|squash!\ *) exit 0 ;;
+esac
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+'
+if ! printf '%s\n' "$first_line" | grep -Eq "$pattern"; then
+    echo "commit-msg: subject must follow Conventional Commits:" >&2
+    echo "  <type>(<optional scope>): <subject>" >&2
+    echo "  types: feat fix docs style refactor perf test build ci chore revert" >&2
+    echo "  got:   $first_line" >&2
+    exit 1
+fi
+
+if [ "$(printf '%s' "$first_line" | wc -c)" -gt 72 ]; then
+    echo "commit-msg: subject line is longer than 72 characters." >&2
+    exit 1
+fi
