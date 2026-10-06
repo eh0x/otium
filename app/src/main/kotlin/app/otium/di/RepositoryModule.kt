@@ -1,7 +1,7 @@
 package app.otium.di
 
 import app.otium.data.SystemClock
-import app.otium.data.repo.BookRepositoryImpl
+import app.otium.data.repo.RoomBookRepository
 import app.otium.domain.port.Clock
 import app.otium.domain.repo.BookRepository
 import dagger.Binds
@@ -16,7 +16,7 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindBookRepository(impl: BookRepositoryImpl): BookRepository
+    abstract fun bindBookRepository(impl: RoomBookRepository): BookRepository
 
     @Binds
     @Singleton

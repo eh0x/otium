@@ -4,7 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
-import app.otium.data.repo.BookRepositoryImpl
+import app.otium.data.repo.RoomBookRepository
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
@@ -27,7 +27,7 @@ import org.robolectric.RobolectricTestRunner
 class BookRepositoryTest {
 
     private lateinit var db: OtiumDatabase
-    private lateinit var repo: BookRepositoryImpl
+    private lateinit var repo: RoomBookRepository
 
     @Before
     fun setUp() {
@@ -35,7 +35,7 @@ class BookRepositoryTest {
             ApplicationProvider.getApplicationContext(),
             OtiumDatabase::class.java,
         ).allowMainThreadQueries().build()
-        repo = BookRepositoryImpl(db.bookDao())
+        repo = RoomBookRepository(db.bookDao())
     }
 
     @After

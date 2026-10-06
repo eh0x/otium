@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
-class BookRepositoryImpl @Inject constructor(private val dao: BookDao) : BookRepository {
+class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRepository {
 
     override fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>> =
         dao.observeLibrary(LibraryQueryBuilder.build(filter).toSupportQuery())
