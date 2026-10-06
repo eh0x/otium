@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import app.otium.ui.PlaceholderScreen
+import app.otium.ui.navigation.OtiumNavHost
 import app.otium.ui.theme.OtiumTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             OtiumTheme {
-                PlaceholderScreen()
+                OtiumNavHost()
             }
         }
     }

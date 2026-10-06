@@ -11,6 +11,9 @@ class FakeLibraryPreferences(initial: LibraryViewMode = LibraryViewMode.SHELF) :
 
     override val viewMode: Flow<LibraryViewMode> = mode
 
+    /** The stored value, for assertions. */
+    val current: LibraryViewMode get() = mode.value
+
     override suspend fun setViewMode(mode: LibraryViewMode) {
         this.mode.value = mode
     }

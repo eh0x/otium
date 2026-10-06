@@ -24,7 +24,6 @@ import app.otium.ui.theme.otiumColors
  */
 @Composable
 fun ShelfRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
-    val colors = MaterialTheme.otiumColors
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -34,6 +33,15 @@ fun ShelfRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> 
             verticalAlignment = Alignment.Bottom,
             content = content,
         )
+        ShelfBoard()
+    }
+}
+
+/** The wooden shelf line with the soft shadow under it. Full width of whatever holds it. */
+@Composable
+fun ShelfBoard(modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.otiumColors
+    Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

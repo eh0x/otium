@@ -65,6 +65,7 @@ androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-material-icons-core = { module = "androidx.compose.material:material-icons-core" }
 
 # Room
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }

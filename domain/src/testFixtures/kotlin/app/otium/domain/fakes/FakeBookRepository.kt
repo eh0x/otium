@@ -21,6 +21,9 @@ class FakeBookRepository : BookRepository {
     var lastFilter: LibraryFilter? = null
         private set
 
+    /** When set, every write (add, update, updateProgress, delete) fails with this error. */
+    var failWith: AppError? = null
+
     /** Every filter passed to observeLibrary, oldest first. */
     val filters = mutableListOf<LibraryFilter>()
     var lastProgressUpdate: Triple<Long, Int, Long>? = null
@@ -34,22 +37,29 @@ class FakeBookRepository : BookRepository {
 
     val all: List<Book> get() = books.value.values.toList()
 
+    /**
+     * Approximates the real library query: text, status, any-of categories and tags, author, and
+     * title sorting. The Room tests are authoritative; this is enough for ViewModel behavior.
+     */
     override fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>> {
         lastFilter = filter
         filters += filter
         return books.map { map ->
-            map.values.map {
-                BookSummary(
-                    id = it.id,
-                    title = it.title,
-                    authors = it.authors.joinToString(", "),
-                    coverPath = it.coverPath,
-                    coverSourceUrl = it.coverSourceUrl,
-                    currentPage = it.currentPage,
-                    totalPages = it.totalPages,
-                    status = DeriveStatus(it.currentPage, it.totalPages),
-                )
-            }
+            map.values
+                .filter { it.matches(filter) }
+                .sortedWith(filter.sort.comparator())
+                .map {
+                    BookSummary(
+                        id = it.id,
+                        title = it.title,
+                        authors = it.authors.joinToString(", "),
+                        coverPath = it.coverPath,
+                        coverSourceUrl = it.coverSourceUrl,
+                        currentPage = it.currentPage,
+                        totalPages = it.totalPages,
+                        status = DeriveStatus(it.currentPage, it.totalPages),
+                    )
+                }
         }
     }
 
@@ -64,6 +74,7 @@ class FakeBookRepository : BookRepository {
         Try.Success(books.value.values.firstOrNull { it.isbn13 == isbn13 })
 
     override suspend fun add(book: Book): Try<Long> {
+        failWith?.let { return Try.Failure(it) }
         val existing = book.isbn13?.let { isbn ->
             books.value.values.firstOrNull { it.isbn13 == isbn }
         }
@@ -72,12 +83,14 @@ class FakeBookRepository : BookRepository {
     }
 
     override suspend fun update(book: Book): Try<Unit> {
+        failWith?.let { return Try.Failure(it) }
         if (book.id !in books.value) return Try.Failure(AppError.NotFound)
         books.value = books.value + (book.id to book)
         return Try.Success(Unit)
     }
 
     override suspend fun updateProgress(id: Long, currentPage: Int, updatedAt: Long): Try<Unit> {
+        failWith?.let { return Try.Failure(it) }
         val book = books.value[id] ?: return Try.Failure(AppError.NotFound)
         lastProgressUpdate = Triple(id, currentPage, updatedAt)
         books.value =
@@ -86,6 +99,7 @@ class FakeBookRepository : BookRepository {
     }
 
     override suspend fun delete(id: Long): Try<Unit> {
+        failWith?.let { return Try.Failure(it) }
         if (id !in books.value) return Try.Failure(AppError.NotFound)
         books.value = books.value - id
         return Try.Success(Unit)
