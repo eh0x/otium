@@ -6,7 +6,7 @@
 // Design and plan documents describe the future as well as the present, so they only get the
 // link check. See docs/STYLE_GUIDE.md, "Documentation".
 
-val liveDocs = listOf("README.md", "CLAUDE.md", "docs/STYLE_GUIDE.md")
+val liveDocs = listOf("README.md", "CLAUDE.md", "docs/STYLE_GUIDE.md", "docs/MARKDOWN_GUIDE.md")
 
 // Markdown that git tracks or has staged. Untracked scratch files are not part of the docs.
 fun versionedMarkdown(root: File): List<String> = runCatching {

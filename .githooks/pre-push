@@ -9,5 +9,11 @@ if ! run_gradle spotlessCheck detekt checkDocs testDebugUnitTest :domain:test; t
     exit 1
 fi
 
+if ! "$(dirname "$0")/../scripts/lint-markdown.sh"; then
+    echo >&2
+    echo "pre-push: Markdown lint failed (docs/MARKDOWN_GUIDE.md). Fix it or use --no-verify." >&2
+    exit 1
+fi
+
 # Warns (never blocks) when setup, build or tooling files changed without a docs update.
 "$(dirname "$0")/../scripts/docs-impact.sh" || true

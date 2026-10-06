@@ -20,6 +20,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Needs Node.js, which the runner image provides. Rules: docs/MARKDOWN_GUIDE.md.
+      - name: Markdown lint
+        run: scripts/lint-markdown.sh
+
       - name: Style, static analysis, docs, lint, unit tests, assemble
         run: ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test assembleDebug
 

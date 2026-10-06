@@ -18,7 +18,7 @@ case "$file" in
     */AndroidManifest.xml)
         category="manifest"
         hint="The manifest changed. Check README.md and the design doc for permissions or app config." ;;
-    */.githooks/* | */config/* | */.editorconfig | */scripts/* | */.claude/*)
+    */.githooks/* | */config/* | */.editorconfig | */.markdownlint-cli2.jsonc | */scripts/* | */.claude/*)
         category="tooling"
         hint="Tooling changed. Check docs/STYLE_GUIDE.md (enforcement table) and README.md." ;;
     */.github/*)

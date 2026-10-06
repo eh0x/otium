@@ -54,7 +54,7 @@ for file in $changed; do
             add "$file" "build or setup: README requirements, commands, layout" ;;
         app/src/main/AndroidManifest.xml)
             add "$file" "permissions or app config: README, design doc" ;;
-        .githooks/* | config/* | .editorconfig | scripts/* | .claude/*)
+        .githooks/* | config/* | .editorconfig | .markdownlint-cli2.jsonc | scripts/* | .claude/*)
             add "$file" "tooling: docs/STYLE_GUIDE.md, README" ;;
         .github/*)
             add "$file" "CI: README, docs/STYLE_GUIDE.md" ;;

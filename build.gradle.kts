@@ -61,6 +61,14 @@ detekt {
 apply(from = "gradle/docs-check.gradle.kts")
 tasks.matching { it.name == "check" }.configureEach { dependsOn("checkDocs") }
 
+// Markdown lint (scripts/lint-markdown.sh, rules in docs/MARKDOWN_GUIDE.md). Part of `check`.
+tasks.register<Exec>("lintMarkdown") {
+    group = "verification"
+    description = "Lints Markdown files with markdownlint."
+    commandLine("sh", "scripts/lint-markdown.sh")
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn("lintMarkdown") }
+
 // Points git at the tracked hooks in .githooks (formatting, commit message and push checks).
 tasks.register<Exec>("installGitHooks") {
     group = "verification"

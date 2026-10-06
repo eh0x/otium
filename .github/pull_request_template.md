@@ -4,7 +4,8 @@
 
 ## Checklist
 
-- [ ] `./gradlew spotlessCheck detekt lint testDebugUnitTest :domain:test checkDocs` passes
+- [ ] `./gradlew spotlessCheck detekt lint testDebugUnitTest :domain:test checkDocs lintMarkdown`
+      passes
 - [ ] Documentation updated in this PR, or not needed because: <!-- reason -->
   - [ ] `README.md` (requirements, setup, commands, module layout)
   - [ ] `docs/STYLE_GUIDE.md` (rules or tooling changed)
