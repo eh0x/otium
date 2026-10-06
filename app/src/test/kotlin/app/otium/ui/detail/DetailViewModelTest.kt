@@ -6,6 +6,7 @@ import app.otium.domain.error.AppError
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
+import app.otium.domain.usecase.MarkFinished
 import app.otium.domain.usecase.SetTotalPages
 import app.otium.domain.usecase.UpdateProgress
 import app.otium.testing.MainDispatcherRule
@@ -41,6 +42,7 @@ class DetailViewModelTest {
         savedStateHandle = SavedStateHandle(mapOf("bookId" to id)),
         repository = repo,
         updateProgress = UpdateProgress(repo, clock),
+        markFinished = MarkFinished(repo, UpdateProgress(repo, clock)),
         setTotalPages = SetTotalPages(repo, clock),
     )
 
