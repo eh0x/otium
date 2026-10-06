@@ -84,6 +84,35 @@
     <string name="add_method_search_hint">Find the edition by title or author</string>
     <string name="add_book_coming_soon">Adding books by scan, ISBN or title is coming soon.</string>
 
+    <!-- Confirm and edit -->
+    <string name="confirm_title_new">Check the details</string>
+    <string name="confirm_title_edit">Edit book</string>
+    <string name="confirm_not_found">This book is no longer in your library.</string>
+    <string name="confirm_field_title">Title</string>
+    <string name="confirm_field_title_required">A title is needed to save the book</string>
+    <string name="confirm_field_subtitle">Subtitle</string>
+    <string name="confirm_field_authors">Authors</string>
+    <string name="confirm_field_list_hint">Separate names with commas</string>
+    <string name="confirm_field_isbn">ISBN</string>
+    <string name="confirm_field_pages">Number of pages</string>
+    <string name="confirm_field_pages_prompt">Add the page count to follow your progress</string>
+    <string name="confirm_field_publisher">Publisher</string>
+    <string name="confirm_field_year">Year published</string>
+    <string name="confirm_field_language">Language</string>
+    <string name="confirm_field_categories">Categories</string>
+    <string name="confirm_field_description">Description</string>
+    <string name="confirm_tags">Tags</string>
+    <string name="confirm_tag_add">Add a tag</string>
+    <string name="confirm_tag_remove">Remove tag %1$s</string>
+    <string name="confirm_cover_option">Cover option %1$d</string>
+    <string name="confirm_cover_gallery">Choose photo</string>
+    <string name="confirm_cover_camera">Take photo</string>
+    <string name="confirm_cover_remove">No cover</string>
+    <string name="confirm_camera_denied">Camera access is off, so a cover photo cannot be taken.</string>
+    <string name="confirm_duplicate_title">Already in your library</string>
+    <string name="confirm_duplicate_message">A book with this ISBN is already on your shelves.</string>
+    <string name="confirm_duplicate_open">Open book</string>
+
     <!-- Shared actions -->
     <string name="action_cancel">Cancel</string>
     <string name="action_save">Save</string>
