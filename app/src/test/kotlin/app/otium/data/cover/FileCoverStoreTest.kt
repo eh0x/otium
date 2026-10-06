@@ -1,5 +1,7 @@
 package app.otium.data.cover
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import app.otium.data.remote.RemoteClients
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
@@ -54,6 +56,7 @@ class FileCoverStoreTest {
 
     private fun store(maxBytes: Long = 5_000_000L) = FileCoverStore(
         directory = coversDir,
+        resolver = ApplicationProvider.getApplicationContext<Context>().contentResolver,
         client = RemoteClients.httpClient("Otium/test"),
         dispatchers = RealDispatchers,
         maxBytes = maxBytes,
@@ -184,6 +187,48 @@ class FileCoverStoreTest {
 
         assertEquals(AppError.InvalidInput("cover"), result.error())
         assertTrue(savedFiles().isEmpty())
+    }
+
+    // --- From the device (gallery or camera) ---
+
+    private fun onDevice(bytes: ByteArray): String =
+        temp.newFile("photo.png").apply { writeBytes(bytes) }.toURI().toString()
+
+    private fun decodedSize(path: String): Pair<Int, Int> {
+        val image = ImageIO.read(File(path))
+        return image.width to image.height
+    }
+
+    @Test
+    fun `a photo on the device is stored as a cover`() = runBlocking {
+        val path = store().saveFromDevice(onDevice(picture(width = 300, height = 450))).path()
+
+        assertEquals(coversDir.canonicalFile, File(path).parentFile?.canonicalFile)
+        assertEquals(300 to 450, decodedSize(path))
+    }
+
+    @Test
+    fun `a large photo is scaled down to cover size, keeping its shape`() = runBlocking {
+        val path = store().saveFromDevice(onDevice(picture(width = 2_400, height = 3_600))).path()
+
+        val (width, height) = decodedSize(path)
+        assertEquals(1_200, height)
+        assertEquals(800, width)
+    }
+
+    @Test
+    fun `a device file that is not a picture is invalid input`() = runBlocking {
+        val result = store().saveFromDevice(onDevice(ByteArray(5_000) { 7 }))
+
+        assertEquals(AppError.InvalidInput("cover"), result.error())
+        assertTrue(savedFiles().isEmpty())
+    }
+
+    @Test
+    fun `a location that cannot be read is invalid input`() = runBlocking {
+        val result = store().saveFromDevice(File(temp.root, "missing.png").toURI().toString())
+
+        assertEquals(AppError.InvalidInput("cover"), result.error())
     }
 
     // --- Delete ---

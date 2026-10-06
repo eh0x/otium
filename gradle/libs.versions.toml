@@ -21,6 +21,7 @@ room = "2.8.5"
 work = "2.12.0"
 camerax = "1.6.2"
 datastore = "1.2.1"
+exifinterface = "1.4.1"
 
 # DI
 hilt = "2.60.1"
@@ -57,6 +58,7 @@ androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-ru
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
 
 # Compose (versions come from the BOM)
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
