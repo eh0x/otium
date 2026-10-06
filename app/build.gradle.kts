@@ -149,6 +149,9 @@ dependencies {
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.navigation.testing)
     testImplementation(libs.konsist)
+    // End-to-end flows run the real activity and graph under Robolectric with fake bindings.
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
 
