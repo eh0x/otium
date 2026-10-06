@@ -128,14 +128,19 @@ Create `local.properties` in the repository root. It is git-ignored and never co
 
 ```properties
 sdk.dir=/path/to/Android/sdk
-# Optional. Used by the book lookup (Phase 4); without it the app uses the keyless quota.
+# Optional. Used by the book lookup (Phase 4). Without it Google rejects most requests, and
+# the lookup relies on Open Library.
 books.api.key=YOUR_GOOGLE_BOOKS_API_KEY
+# Optional. How Open Library can reach you; sent in the User-Agent header. Defaults to the
+# project page. An email or phone number gives a higher request limit.
+openlibrary.contact=you@example.org
 ```
 
 | Key | Required | Meaning |
 |-----|----------|---------|
 | `sdk.dir` | Yes, unless `ANDROID_HOME` is set | Location of the Android SDK |
 | `books.api.key` | No | Google Books API key, restricted by package name and SHA-1 |
+| `openlibrary.contact` | No | Contact for Open Library's User-Agent; default is the project page |
 
 ### Enable the git hooks
 

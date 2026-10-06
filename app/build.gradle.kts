@@ -17,6 +17,11 @@ val localProperties = Properties().apply {
 }
 val booksApiKey: String = localProperties.getProperty("books.api.key", "")
 
+// Open Library asks every client to identify itself with a contact. Without a setting, the
+// project page is used.
+val openLibraryContact: String =
+    localProperties.getProperty("openlibrary.contact", "https://github.com/eh0x/otium")
+
 android {
     namespace = "app.otium"
     // Latest AndroidX releases require compiling against API 37. Greenfield app, so it
@@ -31,6 +36,7 @@ android {
         versionName = "0.1.0"
 
         buildConfigField("String", "BOOKS_API_KEY", "\"$booksApiKey\"")
+        buildConfigField("String", "OPEN_LIBRARY_CONTACT", "\"$openLibraryContact\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -113,6 +119,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
+    implementation(libs.okhttp)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
 
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
@@ -131,6 +140,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core.ktx)
     testImplementation(libs.androidx.test.ext.junit)
