@@ -3,7 +3,7 @@
 Date: 2026-10-06
 Source design: `docs/design/2026-10-06-otium-library-app-design.md` (commit `c55b61b`)
 Complexity: Large (8 phases, solo project)
-Status: In progress. Phases 0 and 2 complete; Phase 1 under way.
+Status: In progress. Phases 0, 1 and 2 complete; next up are Phases 3 and 4.
 
 ## 1. Summary
 
@@ -129,10 +129,10 @@ Complexity: Small to Medium. Runs in parallel with Phase 2.
 5. **Reduced-motion helper.** A small `rememberReducedMotion()` that reads the system animator-duration scale, used later by transitions.
 
 ### Acceptance
-- [ ] Light and dark themes render the catalog correctly.
-- [ ] Contrast unit test passes.
-- [ ] No raw hex values outside `Color.kt`.
-- [ ] Fonts and licences bundled.
+- [x] Light and dark themes render the catalog correctly. (Rendered headlessly by `ThemeCatalogScreenshotTest` to `app/build/screenshots`; reviewed by eye. A real-device pass comes in Phase 7.)
+- [x] Contrast unit test passes. (Sage and Terra darkened to meet 4.5:1; see the design doc.)
+- [x] No raw hex values outside `Color.kt`. (Enforced by `ArchitectureTest`; the window background in XML is checked against the palette.)
+- [x] Fonts and licences bundled. (EB Garamond, Source Sans 3 and Cinzel, in `third_party/fonts`.)
 
 ---
 

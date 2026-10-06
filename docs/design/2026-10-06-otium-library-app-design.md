@@ -208,13 +208,13 @@ Drive backup:
 
 Reference: a bridge between the analog and digital worlds. Otium should feel like a quiet room at the end of a long day, a "digital study", not a transactional utility. No cold tech gradients, no gamified pop colors. Natural textures, quiet layouts, soft shadows, warm low-contrast lighting that evokes book pages, linen covers and wooden desks.
 
-**Palette: Earth & Ink.** Hex values are proposals to tune on a real device.
+**Palette: Earth & Ink.** Final light values below. Sage and Terra were darkened from the first proposal (`#6F8062` and `#B5573A`) after the WCAG check: as text on Parchment they reached only 3.6:1 and 4.0:1, short of the 4.5:1 this design requires. `PaletteContrastTest` now guards every text and graphic pair in both themes. Real-device tuning is still a Phase 7 task.
 
 | Token | Role | Proposed light value |
 |-------|------|----------------------|
 | Parchment | App background, cards slightly darker or lighter | `#F4EBD9` |
-| Tiber Sage | Primary (muted green): calm actions, "read" status | `#6F8062` |
-| Terra | Accent (rust terracotta): reading progress, active filters, milestones | `#B5573A` |
+| Tiber Sage | Primary (muted green): calm actions, "read" status | `#566A4B` |
+| Terra | Accent (rust terracotta): reading progress, active filters, milestones | `#A24A2D` |
 | Ink | Text and icons (deep indigo / dark gray) | `#1F2433` |
 
 - **Status colors:** not started = muted ink outline, in progress = Terra, read = Sage. Status is never conveyed by color alone (label or icon too).
@@ -222,23 +222,23 @@ Reference: a bridge between the analog and digital worlds. Otium should feel lik
 - **Accessibility constraint:** "low-contrast lighting" applies to surfaces and shadows only. Body text and controls must still meet WCAG AA (4.5:1 text, 3:1 UI). Verify Ink on Parchment, Terra on Parchment, and the dark equivalents before locking values.
 
 **Typography**
-- Headlines and the wordmark: a high-contrast Roman-style serif. Candidates, all open-licensed and safe for Play Store: Cormorant Garamond or EB Garamond for headlines; Cinzel as a wordmark placeholder.
-- Interface text: a modern, quiet sans-serif for lists, filters and forms (candidates: Inter or Source Sans 3).
-- Fonts bundled in the app (SIL OFL), no runtime font download.
+- Headlines and screen titles: **EB Garamond**, a high-contrast Roman-style serif that stays legible at title sizes. The wordmark placeholder uses **Cinzel**. Both are open-licensed (SIL OFL) and safe for Play Store.
+- Interface text: **Source Sans 3**, a quiet humanist sans for lists, filters and forms (chosen over Inter for its smaller file size and warmer feel next to Garamond).
+- Fonts are bundled as variable font files (one file per family, all weights), with their licenses in `third_party/fonts`. No runtime font download.
 
 **Wordmark and logo**
 - "OTIUM" in a Roman-inspired serif, with a stylized "O" containing a classical arch over an open book.
 - The final mark is a design asset, not a coding task. v1 development uses a typeset placeholder wordmark and a simple arch-over-book vector icon, swappable later without code changes.
 
 **Screen treatment**
-- Backgrounds use a very subtle paper texture, a small tiled low-resolution asset (a few KB) with a flat Parchment fallback. Soft, low-elevation shadows. No heavy imagery.
+- Backgrounds use a very subtle paper texture, a 64 by 64 grain tile generated once in code (no image asset) and repeated, over a flat Parchment background that is already correct on its own. Soft, low-elevation shadows. No heavy imagery.
 - **Library ("the vault"):** default view renders books as spines/covers on shelf rows, with a subtle shelf line and shadow per row, built on a `LazyVerticalGrid` so it stays fast. A secondary list mode (cover, title, author, progress) is kept for dense browsing. Empty state is an empty shelf with a scan prompt.
 - **Book detail:** cover on a soft shadow like a book resting on a desk, serif title, quiet Terra progress bar and "Page X of Y".
 - **Progress:** one thin Terra bar and a calm number, no streaks, badges or confetti (D18).
 - Motion: slow, minimal fades and gentle shelf-to-detail transitions. Respect the system "remove animations" setting.
 
 **Theme implementation**
-- One `OtiumTheme` composable owning the `ColorScheme`, `Typography` and `Shapes`, with a small `OtiumColors` extension for status colors and texture tokens. All screens consume tokens only, never raw hex values.
+- One `OtiumTheme` composable owning the `ColorScheme`, `Typography` and `Shapes`, with a small `OtiumColors` extension (`MaterialTheme.otiumColors`) for status colors, shelf and texture tokens. All screens consume tokens only, never raw hex values; `ArchitectureTest` enforces that. `PaperBackground` provides the textured surface and the matching content color, the way `Surface` does.
 
 ### 4.5 Testing strategy
 

@@ -12,7 +12,9 @@ Plan: [`docs/plans/2026-10-06-otium-implementation-plan.md`](docs/plans/2026-10-
 | Module | Purpose |
 |--------|---------|
 | `:domain` | Pure Kotlin/JVM: models, errors, repository and port interfaces, use cases. No Android dependencies (enforced by `DomainPurityTest`). |
-| `:app` | Android app: Compose UI, Room, Retrofit, Hilt wiring, WorkManager. |
+| `:app` | Android app: Compose UI and theme, Room, Retrofit, Hilt wiring, WorkManager. |
+
+The visual identity (the "Earth & Ink" theme, fonts and shared components) is in the `ui` package of `:app`. Debug builds open a theme catalog so it can be reviewed on a device. Bundled fonts are under the SIL Open Font License; the licenses are in `third_party/fonts`.
 
 Application id: `app.otium`. minSdk 26.
 
