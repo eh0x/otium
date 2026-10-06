@@ -1,5 +1,6 @@
 package app.otium.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,13 @@ private const val CHECK_END_Y = 0.34f
  * Shows a book's status as an icon plus a text label, so it is never conveyed by color alone.
  * The icon is drawn in code: an empty circle, a half filled circle and a checked circle.
  */
+@StringRes
+fun BookStatus.labelRes(): Int = when (this) {
+    BookStatus.NOT_STARTED -> R.string.status_not_started
+    BookStatus.IN_PROGRESS -> R.string.status_in_progress
+    BookStatus.READ -> R.string.status_read
+}
+
 @Composable
 fun StatusChip(status: BookStatus, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.otiumColors
@@ -47,13 +55,7 @@ fun StatusChip(status: BookStatus, modifier: Modifier = Modifier) {
         BookStatus.IN_PROGRESS -> colors.statusInProgress
         BookStatus.READ -> colors.statusRead
     }
-    val label = stringResource(
-        when (status) {
-            BookStatus.NOT_STARTED -> R.string.status_not_started
-            BookStatus.IN_PROGRESS -> R.string.status_in_progress
-            BookStatus.READ -> R.string.status_read
-        },
-    )
+    val label = stringResource(status.labelRes())
 
     Row(
         modifier = modifier

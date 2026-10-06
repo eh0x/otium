@@ -56,6 +56,7 @@ import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
 import app.otium.ui.components.OtiumTopBar
+import app.otium.ui.components.labelRes
 import app.otium.ui.theme.PaperBackground
 
 /** Connects the library screen to its ViewModel. Holds no layout of its own. */
@@ -198,12 +199,6 @@ private fun StatusFilterRow(selected: BookStatus?, onSelected: (BookStatus?) -> 
             )
         }
     }
-}
-
-private fun BookStatus.labelRes(): Int = when (this) {
-    BookStatus.NOT_STARTED -> R.string.status_not_started
-    BookStatus.IN_PROGRESS -> R.string.status_in_progress
-    BookStatus.READ -> R.string.status_read
 }
 
 private fun SortOrder.labelRes(): Int = when (this) {

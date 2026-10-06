@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.otium.R
@@ -27,6 +28,7 @@ import app.otium.ui.components.BookCover
 import app.otium.ui.components.OtiumProgressBar
 import app.otium.ui.components.ShelfBoard
 import app.otium.ui.components.StatusChip
+import app.otium.ui.components.labelRes
 
 private val LIST_COVER_WIDTH = 56.dp
 
@@ -34,8 +36,15 @@ private val LIST_COVER_WIDTH = 56.dp
 @Composable
 private fun Modifier.bookSemantics(book: BookSummary, onOpen: () -> Unit): Modifier {
     val description = stringResource(R.string.book_open_description, book.title, book.authors)
+    val status = stringResource(book.status.labelRes())
+    val state = if (book.totalPages > 0) {
+        stringResource(R.string.book_state_description, status, book.currentPage, book.totalPages)
+    } else {
+        status
+    }
     return clickable(onClick = onOpen).clearAndSetSemantics {
         contentDescription = description
+        stateDescription = state
         role = Role.Button
         onClick {
             onOpen()

@@ -1,5 +1,8 @@
 package app.otium.ui.library
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -121,6 +124,22 @@ class LibraryContentTest {
         rule.onNodeWithContentDescription("Emma by Jane Austen").performClick()
 
         assertEquals(2L, opened)
+    }
+
+    @Test
+    fun `a book is announced with its status and page, not by color or bar alone`() {
+        val unknownTotal = summary(3, "Ulysses", "James Joyce", current = 0, total = 0)
+        show(stateOf(books = listOf(dune, unknownTotal)))
+
+        rule.onNodeWithContentDescription("Dune by Frank Herbert").assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.StateDescription,
+                "In progress, page 120 of 300",
+            ),
+        )
+        rule.onNodeWithContentDescription("Ulysses by James Joyce").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not started"),
+        )
     }
 
     @Test

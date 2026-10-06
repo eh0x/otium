@@ -117,7 +117,7 @@ private fun ProgressDialog(
 ) {
     var text by rememberSaveable { mutableStateOf(current.toString()) }
     val page = text.toIntOrNull()
-    val sliderDescription = stringResource(R.string.progress_slider_description)
+    val sliderState = stringResource(R.string.progress_page_of, page ?: 0, total)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.progress_dialog_title)) },
@@ -134,7 +134,7 @@ private fun ProgressDialog(
                     value = (page ?: 0).coerceIn(0, total).toFloat(),
                     onValueChange = { text = it.toInt().toString() },
                     valueRange = 0f..total.toFloat(),
-                    modifier = Modifier.semantics { stateDescription = sliderDescription },
+                    modifier = Modifier.semantics { stateDescription = sliderState },
                 )
             }
         },

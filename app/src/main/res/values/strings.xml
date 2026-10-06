@@ -14,13 +14,13 @@
     <string name="progress_mark_finished">Mark as finished</string>
     <string name="progress_dialog_title">Current page</string>
     <string name="progress_page_label">Page</string>
-    <string name="progress_slider_description">Current page</string>
     <string name="progress_total_dialog_title">Total pages</string>
     <string name="progress_total_label">Number of pages</string>
 
     <!-- Covers -->
     <string name="book_cover_description">Cover of %1$s</string>
     <string name="book_open_description">%1$s by %2$s</string>
+    <string name="book_state_description">%1$s, page %2$d of %3$d</string>
 
     <!-- Library -->
     <string name="library_title">Library</string>
