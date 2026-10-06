@@ -73,7 +73,8 @@ class LibrarySearchPerformanceTest {
         val (words, wordsCount) = medianMillis(LibraryFilter(query = "golden river"))
         val (author, authorCount) = medianMillis(LibraryFilter(query = "lindq"))
 
-        println("search ms: prefix=$prefix ($prefixCount rows) words=$words ($wordsCount rows) author=$author ($authorCount rows)")
+        println("search ms: prefix=$prefix ($prefixCount rows) words=$words ($wordsCount rows)")
+        println("search ms: author=$author ($authorCount rows)")
         assertTrue("prefix search matched nothing", prefixCount > 0)
         assertTrue("prefix search took ${prefix}ms", prefix < 100)
         assertTrue("two word search took ${words}ms", words < 100)
@@ -95,7 +96,8 @@ class LibrarySearchPerformanceTest {
         val (allByProgress, allCount) = medianMillis(LibraryFilter(sort = SortOrder.PROGRESS))
         val (allByTitle, _) = medianMillis(LibraryFilter(sort = SortOrder.TITLE))
 
-        println("filter ms: combined=$combinedMs all-by-progress=$allByProgress ($allCount rows) all-by-title=$allByTitle")
+        println("filter ms: combined=$combinedMs all-by-title=$allByTitle")
+        println("filter ms: all-by-progress=$allByProgress ($allCount rows)")
         assertTrue("combined filter took ${combinedMs}ms", combinedMs < 100)
         assertTrue("full list by progress took ${allByProgress}ms", allByProgress < 100)
         assertTrue("full list by title took ${allByTitle}ms", allByTitle < 100)

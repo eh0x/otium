@@ -9,42 +9,55 @@ import app.otium.domain.error.Try
  * which is converted. Hyphens and whitespace are ignored.
  */
 object ValidateIsbn13 {
+    private const val ISBN13_LENGTH = 13
+    private const val ISBN10_LENGTH = 10
+    private const val ISBN13_PAYLOAD_LENGTH = 12
+    private const val ISBN10_BODY_LENGTH = 9
+    private const val CHECK_MODULUS_13 = 10
+    private const val CHECK_MODULUS_10 = 11
+    private const val EVEN_WEIGHT = 3
+    private const val X_DIGIT_VALUE = 10
+    private val PREFIXES = listOf("978", "979")
+
     operator fun invoke(input: String): Try<String> {
         val cleaned = input.filter { it != '-' && !it.isWhitespace() }.uppercase()
         val isbn13 = when (cleaned.length) {
-            13 -> cleaned.takeIf(::isValidIsbn13)
-            10 -> isbn10To13(cleaned)
+            ISBN13_LENGTH -> cleaned.takeIf(::isValidIsbn13)
+            ISBN10_LENGTH -> isbn10To13(cleaned)
             else -> null
         }
         return if (isbn13 != null) Try.Success(isbn13) else Try.Failure(AppError.InvalidIsbn(input))
     }
 
-    private fun isValidIsbn13(value: String): Boolean {
-        if (!value.all { it in '0'..'9' }) return false
-        if (!value.startsWith("978") && !value.startsWith("979")) return false
-        return checkDigit13(value.substring(0, 12)) == value[12]
-    }
+    private fun isValidIsbn13(value: String): Boolean = value.all { it in '0'..'9' } &&
+        PREFIXES.any(value::startsWith) &&
+        checkDigit13(value.take(ISBN13_PAYLOAD_LENGTH)) == value[ISBN13_PAYLOAD_LENGTH]
 
     private fun checkDigit13(first12: String): Char {
         val sum = first12.mapIndexed { index, c ->
-            (c - '0') * if (index % 2 == 0) 1 else 3
+            (c - '0') * if (index % 2 == 0) 1 else EVEN_WEIGHT
         }.sum()
-        return '0' + (10 - sum % 10) % 10
+        return '0' + (CHECK_MODULUS_13 - sum % CHECK_MODULUS_13) % CHECK_MODULUS_13
     }
 
     private fun isbn10To13(isbn10: String): String? {
-        val body = isbn10.substring(0, 9)
-        if (!body.all { it in '0'..'9' }) return null
-        val last = isbn10[9]
-        if (last != 'X' && last !in '0'..'9') return null
+        val body = isbn10.take(ISBN10_BODY_LENGTH)
+        val first12 = PREFIXES.first() + body
+        return first12.plus(checkDigit13(first12)).takeIf { isValidIsbn10(isbn10) }
+    }
 
-        val sum = isbn10.mapIndexed { index, c ->
-            val digit = if (c == 'X') 10 else c - '0'
-            digit * (10 - index)
-        }.sum()
-        if (sum % 11 != 0) return null
-
-        val first12 = "978$body"
-        return first12 + checkDigit13(first12)
+    /** Digits, with an optional X check digit in the last position, weighted 10 down to 1. */
+    private fun isValidIsbn10(isbn10: String): Boolean {
+        val digits = isbn10.mapIndexed { index, c ->
+            when {
+                c in '0'..'9' -> c - '0'
+                c == 'X' && index == ISBN10_LENGTH - 1 -> X_DIGIT_VALUE
+                else -> null
+            }
+        }
+        return digits.none { it == null } &&
+            digits.filterNotNull().withIndex().sumOf { (index, digit) ->
+                digit * (ISBN10_LENGTH - index)
+            } % CHECK_MODULUS_10 == 0
     }
 }

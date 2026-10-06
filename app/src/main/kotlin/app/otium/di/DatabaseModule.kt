@@ -16,6 +16,8 @@ import javax.inject.Singleton
 object DatabaseModule {
 
     // Phase 6 replaces this with a swappable holder so restore can close and reopen Room.
+    // Room only offers a varargs API. The array is tiny and spread once at startup.
+    @Suppress("SpreadOperator")
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): OtiumDatabase =

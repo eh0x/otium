@@ -72,12 +72,20 @@ class LibraryQueryBuilderTest {
 
     @Test
     fun `status clauses match the derived status rules`() {
-        val notStarted = LibraryQueryBuilder.build(LibraryFilter(status = BookStatus.NOT_STARTED)).sql
-        val inProgress = LibraryQueryBuilder.build(LibraryFilter(status = BookStatus.IN_PROGRESS)).sql
+        val notStarted = LibraryQueryBuilder.build(
+            LibraryFilter(status = BookStatus.NOT_STARTED),
+        ).sql
+        val inProgress = LibraryQueryBuilder.build(
+            LibraryFilter(status = BookStatus.IN_PROGRESS),
+        ).sql
         val read = LibraryQueryBuilder.build(LibraryFilter(status = BookStatus.READ)).sql
 
         assertTrue(notStarted.contains("(b.currentPage <= 0 OR b.totalPages <= 0)"))
-        assertTrue(inProgress.contains("(b.currentPage > 0 AND b.totalPages > 0 AND b.currentPage < b.totalPages)"))
+        assertTrue(
+            inProgress.contains(
+                "(b.currentPage > 0 AND b.totalPages > 0 AND b.currentPage < b.totalPages)",
+            ),
+        )
         assertTrue(read.contains("(b.totalPages > 0 AND b.currentPage >= b.totalPages)"))
     }
 

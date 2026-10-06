@@ -35,7 +35,8 @@ object LibraryQueryBuilder {
         if (filter.categories.isNotEmpty()) {
             val names = filter.categories.sorted()
             conditions += "b.id IN (SELECT bc.bookId FROM book_category bc " +
-                "JOIN category c ON c.id = bc.categoryId WHERE c.name IN (${placeholders(names.size)}))"
+                "JOIN category c ON c.id = bc.categoryId " +
+                "WHERE c.name IN (${placeholders(names.size)}))"
             args.addAll(names)
         }
 
@@ -74,17 +75,25 @@ object LibraryQueryBuilder {
 
     private fun statusCondition(status: BookStatus): String = when (status) {
         BookStatus.NOT_STARTED -> "(b.currentPage <= 0 OR b.totalPages <= 0)"
-        BookStatus.IN_PROGRESS -> "(b.currentPage > 0 AND b.totalPages > 0 AND b.currentPage < b.totalPages)"
+
+        BookStatus.IN_PROGRESS ->
+            "(b.currentPage > 0 AND b.totalPages > 0 AND b.currentPage < b.totalPages)"
+
         BookStatus.READ -> "(b.totalPages > 0 AND b.currentPage >= b.totalPages)"
     }
 
     private fun orderBy(sort: SortOrder): String = when (sort) {
         SortOrder.TITLE -> "b.title COLLATE NOCASE ASC, b.id ASC"
+
         SortOrder.AUTHOR -> "b.authors COLLATE NOCASE ASC, b.title COLLATE NOCASE ASC, b.id ASC"
+
         SortOrder.RECENTLY_ADDED -> "b.addedAt DESC, b.id DESC"
+
         SortOrder.LAST_UPDATED -> "b.updatedAt DESC, b.id DESC"
+
         SortOrder.PROGRESS ->
-            "(CASE WHEN b.totalPages > 0 THEN MIN(1.0, b.currentPage * 1.0 / b.totalPages) ELSE 0 END) DESC, " +
+            "(CASE WHEN b.totalPages > 0 " +
+                "THEN MIN(1.0, b.currentPage * 1.0 / b.totalPages) ELSE 0 END) DESC, " +
                 "b.title COLLATE NOCASE ASC, b.id ASC"
     }
 }

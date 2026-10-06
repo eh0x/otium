@@ -45,7 +45,12 @@ class SchemaMigrationTest {
     fun `database opens from the exported version 1 schema`() {
         helper.createDatabase("migration-test", 1).close()
 
-        helper.runMigrationsAndValidate("migration-test", OtiumDatabase.VERSION, true, *OtiumDatabase.migrations)
+        helper.runMigrationsAndValidate(
+            "migration-test",
+            OtiumDatabase.VERSION,
+            true,
+            *OtiumDatabase.migrations,
+        )
             .close()
     }
 }

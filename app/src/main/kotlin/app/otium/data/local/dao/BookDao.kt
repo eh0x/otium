@@ -225,11 +225,14 @@ abstract class BookDao {
         names.map(String::trim).filter(String::isNotEmpty).distinctBy { it.lowercase() }
 
     private suspend fun authorIdFor(name: String): Long =
-        authorId(name) ?: insertAuthor(AuthorEntity(name = name)).takeIf { it != -1L } ?: checkNotNull(authorId(name))
+        authorId(name) ?: insertAuthor(AuthorEntity(name = name)).takeIf { it != -1L }
+            ?: checkNotNull(authorId(name))
 
     private suspend fun categoryIdFor(name: String): Long =
-        categoryId(name) ?: insertCategory(CategoryEntity(name = name)).takeIf { it != -1L } ?: checkNotNull(categoryId(name))
+        categoryId(name) ?: insertCategory(CategoryEntity(name = name)).takeIf { it != -1L }
+            ?: checkNotNull(categoryId(name))
 
     private suspend fun tagIdFor(name: String): Long =
-        tagId(name) ?: insertTag(TagEntity(name = name)).takeIf { it != -1L } ?: checkNotNull(tagId(name))
+        tagId(name) ?: insertTag(TagEntity(name = name)).takeIf { it != -1L }
+            ?: checkNotNull(tagId(name))
 }

@@ -29,8 +29,12 @@ object MergeMetadata {
             publisher = sources.firstNotNullOfOrNull { it.publisher?.takeIf(String::isNotBlank) },
             publishedYear = sources.firstNotNullOfOrNull { it.publishedYear },
             language = sources.firstNotNullOfOrNull { it.language?.takeIf(String::isNotBlank) },
-            description = sources.firstNotNullOfOrNull { it.description?.takeIf(String::isNotBlank) },
-            totalPages = sources.firstNotNullOfOrNull { it.totalPages?.takeIf { pages -> pages > 0 } },
+            description = sources.firstNotNullOfOrNull {
+                it.description?.takeIf(String::isNotBlank)
+            },
+            totalPages = sources.firstNotNullOfOrNull {
+                it.totalPages?.takeIf { pages -> pages > 0 }
+            },
             categories = sources.firstOrNull { it.categories.isNotEmpty() }?.categories.orEmpty(),
             tags = sources.flatMap { it.tags }.distinct(),
             coverUrl = sources.firstNotNullOfOrNull { it.coverUrl?.takeIf(coverIsUsable) },

@@ -58,7 +58,9 @@ class FakeBookRepository : BookRepository {
         Try.Success(books.value.values.firstOrNull { it.isbn13 == isbn13 })
 
     override suspend fun add(book: Book): Try<Long> {
-        val existing = book.isbn13?.let { isbn -> books.value.values.firstOrNull { it.isbn13 == isbn } }
+        val existing = book.isbn13?.let { isbn ->
+            books.value.values.firstOrNull { it.isbn13 == isbn }
+        }
         if (existing != null) return Try.Failure(AppError.Duplicate(existing.id))
         return Try.Success(seed(book).id)
     }
@@ -72,7 +74,8 @@ class FakeBookRepository : BookRepository {
     override suspend fun updateProgress(id: Long, currentPage: Int, updatedAt: Long): Try<Unit> {
         val book = books.value[id] ?: return Try.Failure(AppError.NotFound)
         lastProgressUpdate = Triple(id, currentPage, updatedAt)
-        books.value = books.value + (id to book.copy(currentPage = currentPage, updatedAt = updatedAt))
+        books.value =
+            books.value + (id to book.copy(currentPage = currentPage, updatedAt = updatedAt))
         return Try.Success(Unit)
     }
 

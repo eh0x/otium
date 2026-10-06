@@ -10,8 +10,4 @@ import androidx.room.FtsOptions
  */
 @Fts4(contentEntity = BookEntity::class, tokenizer = FtsOptions.TOKENIZER_UNICODE61)
 @Entity(tableName = "book_fts")
-data class BookFtsEntity(
-    val title: String,
-    val subtitle: String?,
-    val authors: String,
-)
+data class BookFtsEntity(val title: String, val subtitle: String?, val authors: String)

@@ -19,8 +19,10 @@ object UseCaseModule {
     fun provideObserveLibrary(repository: BookRepository) = ObserveLibrary(repository)
 
     @Provides
-    fun provideUpdateProgress(repository: BookRepository, clock: Clock) = UpdateProgress(repository, clock)
+    fun provideUpdateProgress(repository: BookRepository, clock: Clock) =
+        UpdateProgress(repository, clock)
 
     @Provides
-    fun provideAddBookManually(repository: BookRepository, clock: Clock) = AddBookManually(repository, clock)
+    fun provideAddBookManually(repository: BookRepository, clock: Clock) =
+        AddBookManually(repository, clock)
 }

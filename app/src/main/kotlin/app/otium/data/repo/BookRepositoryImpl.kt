@@ -19,9 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
-class BookRepositoryImpl @Inject constructor(
-    private val dao: BookDao,
-) : BookRepository {
+class BookRepositoryImpl @Inject constructor(private val dao: BookDao) : BookRepository {
 
     override fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>> =
         dao.observeLibrary(LibraryQueryBuilder.build(filter).toSupportQuery())
@@ -44,7 +42,11 @@ class BookRepositoryImpl @Inject constructor(
     override suspend fun findByIsbn13(isbn13: String): Try<Book?> = guard {
         val entity = dao.findEntityByIsbn13(isbn13) ?: return@guard Try.Success(null)
         Try.Success(
-            entity.toDomain(dao.authorNames(entity.id), dao.categoryNames(entity.id), dao.tagNames(entity.id)),
+            entity.toDomain(
+                dao.authorNames(entity.id),
+                dao.categoryNames(entity.id),
+                dao.tagNames(entity.id),
+            ),
         )
     }
 
@@ -53,7 +55,7 @@ class BookRepositoryImpl @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: SQLiteConstraintException) {
-        val existing = book.isbn13?.let { runCatching { dao.findEntityByIsbn13(it) }.getOrNull() }
+        val existing = book.isbn13?.let { findExistingOrNull(it) }
         if (existing != null) {
             Try.Failure(AppError.Duplicate(existing.id))
         } else {
@@ -71,13 +73,14 @@ class BookRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateProgress(id: Long, currentPage: Int, updatedAt: Long): Try<Unit> = guard {
-        if (dao.updateProgress(id, currentPage, updatedAt) > 0) {
-            Try.Success(Unit)
-        } else {
-            Try.Failure(AppError.NotFound)
+    override suspend fun updateProgress(id: Long, currentPage: Int, updatedAt: Long): Try<Unit> =
+        guard {
+            if (dao.updateProgress(id, currentPage, updatedAt) > 0) {
+                Try.Success(Unit)
+            } else {
+                Try.Failure(AppError.NotFound)
+            }
         }
-    }
 
     override suspend fun delete(id: Long): Try<Unit> = guard {
         if (dao.deleteBook(id)) Try.Success(Unit) else Try.Failure(AppError.NotFound)
@@ -88,6 +91,16 @@ class BookRepositoryImpl @Inject constructor(
     override fun observeTags(): Flow<List<String>> = dao.observeAllTags()
 
     override fun observeAuthors(): Flow<List<String>> = dao.observeAllAuthors()
+
+    /** Best effort lookup used while reporting a constraint failure; never throws. */
+    @Suppress("SwallowedException") // The original constraint failure is already being reported.
+    private suspend fun findExistingOrNull(isbn13: String) = try {
+        dao.findEntityByIsbn13(isbn13)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: SQLiteException) {
+        null
+    }
 
     /** Converts database exceptions to [AppError.Storage]; cancellation is rethrown. */
     private inline fun <T> guard(block: () -> Try<T>): Try<T> = try {

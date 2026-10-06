@@ -9,11 +9,7 @@ import app.otium.domain.usecase.DeriveStatus
 
 private const val AUTHOR_SEPARATOR = ", "
 
-fun BookEntity.toDomain(
-    authors: List<String>,
-    categories: List<String>,
-    tags: List<String>,
-) = Book(
+fun BookEntity.toDomain(authors: List<String>, categories: List<String>, tags: List<String>) = Book(
     id = id,
     isbn13 = isbn13,
     isbn10 = isbn10,

@@ -124,7 +124,15 @@ class BookRepositoryTest {
 
     @Test
     fun `update replaces fields and labels and drops unused labels`() = runTest {
-        val id = add(testBook(title = "Old", authors = listOf("Old Author"), categories = listOf("OldCat"), tags = listOf("oldtag")))
+        val id =
+            add(
+                testBook(
+                    title = "Old",
+                    authors = listOf("Old Author"),
+                    categories = listOf("OldCat"),
+                    tags = listOf("oldtag"),
+                ),
+            )
         val stored = (repo.getBook(id) as Try.Success).value
 
         val result = repo.update(
@@ -187,7 +195,15 @@ class BookRepositoryTest {
 
     @Test
     fun `delete removes the book and its unused labels`() = runTest {
-        val id = add(testBook(title = "Gone", authors = listOf("Solo"), categories = listOf("Cat"), tags = listOf("t")))
+        val id =
+            add(
+                testBook(
+                    title = "Gone",
+                    authors = listOf("Solo"),
+                    categories = listOf("Cat"),
+                    tags = listOf("t"),
+                ),
+            )
         add(testBook(title = "Stays", authors = listOf("Other"), categories = listOf("Cat")))
 
         val result = repo.delete(id)
@@ -217,7 +233,13 @@ class BookRepositoryTest {
     // --- Search ---
 
     private suspend fun seedSearchLibrary() {
-        add(testBook(title = "The Hobbit", subtitle = "There and Back Again", authors = listOf("J. R. R. Tolkien")))
+        add(
+            testBook(
+                title = "The Hobbit",
+                subtitle = "There and Back Again",
+                authors = listOf("J. R. R. Tolkien"),
+            ),
+        )
         add(testBook(title = "Cien años de soledad", authors = listOf("Gabriel García Márquez")))
         add(testBook(title = "Dune", authors = listOf("Frank Herbert")))
     }
@@ -275,7 +297,13 @@ class BookRepositoryTest {
         val totals = listOf(0, 1, 10)
         for (total in totals) {
             for (current in pages) {
-                add(testBook(title = "b-$current-of-$total", totalPages = total, currentPage = current))
+                add(
+                    testBook(
+                        title = "b-$current-of-$total",
+                        totalPages = total,
+                        currentPage = current,
+                    ),
+                )
             }
         }
 
@@ -306,7 +334,10 @@ class BookRepositoryTest {
         add(testBook(title = "B", categories = listOf("Poetry")))
         add(testBook(title = "C", categories = listOf("History")))
 
-        assertEquals(listOf("A", "B"), titles(LibraryFilter(categories = setOf("Fiction", "Poetry"))))
+        assertEquals(
+            listOf("A", "B"),
+            titles(LibraryFilter(categories = setOf("Fiction", "Poetry"))),
+        )
         assertEquals(listOf("C"), titles(LibraryFilter(categories = setOf("history"))))
     }
 
@@ -332,10 +363,46 @@ class BookRepositoryTest {
 
     @Test
     fun `different filters combine with AND`() = runTest {
-        add(testBook(title = "Match", authors = listOf("Tolkien"), categories = listOf("Fantasy"), tags = listOf("fav"), totalPages = 100, currentPage = 50))
-        add(testBook(title = "WrongStatus", authors = listOf("Tolkien"), categories = listOf("Fantasy"), tags = listOf("fav"), totalPages = 100, currentPage = 0))
-        add(testBook(title = "WrongTag", authors = listOf("Tolkien"), categories = listOf("Fantasy"), tags = listOf("other"), totalPages = 100, currentPage = 50))
-        add(testBook(title = "WrongAuthor", authors = listOf("Other"), categories = listOf("Fantasy"), tags = listOf("fav"), totalPages = 100, currentPage = 50))
+        add(
+            testBook(
+                title = "Match",
+                authors = listOf("Tolkien"),
+                categories = listOf("Fantasy"),
+                tags = listOf("fav"),
+                totalPages = 100,
+                currentPage = 50,
+            ),
+        )
+        add(
+            testBook(
+                title = "WrongStatus",
+                authors = listOf("Tolkien"),
+                categories = listOf("Fantasy"),
+                tags = listOf("fav"),
+                totalPages = 100,
+                currentPage = 0,
+            ),
+        )
+        add(
+            testBook(
+                title = "WrongTag",
+                authors = listOf("Tolkien"),
+                categories = listOf("Fantasy"),
+                tags = listOf("other"),
+                totalPages = 100,
+                currentPage = 50,
+            ),
+        )
+        add(
+            testBook(
+                title = "WrongAuthor",
+                authors = listOf("Other"),
+                categories = listOf("Fantasy"),
+                tags = listOf("fav"),
+                totalPages = 100,
+                currentPage = 50,
+            ),
+        )
 
         val result = titles(
             LibraryFilter(
@@ -353,34 +420,76 @@ class BookRepositoryTest {
     // --- Sorting ---
 
     private suspend fun seedSortLibrary() {
-        add(testBook(title = "banana", authors = listOf("Zed"), addedAt = 3, updatedAt = 1, totalPages = 100, currentPage = 50))
-        add(testBook(title = "Apple", authors = listOf("Yan"), addedAt = 1, updatedAt = 3, totalPages = 100, currentPage = 10))
-        add(testBook(title = "cherry", authors = listOf("Xi"), addedAt = 2, updatedAt = 2, totalPages = 100, currentPage = 100))
+        add(
+            testBook(
+                title = "banana",
+                authors = listOf("Zed"),
+                addedAt = 3,
+                updatedAt = 1,
+                totalPages = 100,
+                currentPage = 50,
+            ),
+        )
+        add(
+            testBook(
+                title = "Apple",
+                authors = listOf("Yan"),
+                addedAt = 1,
+                updatedAt = 3,
+                totalPages = 100,
+                currentPage = 10,
+            ),
+        )
+        add(
+            testBook(
+                title = "cherry",
+                authors = listOf("Xi"),
+                addedAt = 2,
+                updatedAt = 2,
+                totalPages = 100,
+                currentPage = 100,
+            ),
+        )
     }
 
     @Test
     fun `sort by title ignores case`() = runTest {
         seedSortLibrary()
-        assertEquals(listOf("Apple", "banana", "cherry"), titles(LibraryFilter(sort = SortOrder.TITLE)))
+        assertEquals(
+            listOf("Apple", "banana", "cherry"),
+            titles(LibraryFilter(sort = SortOrder.TITLE)),
+        )
     }
 
     @Test
     fun `sort by author`() = runTest {
         seedSortLibrary()
-        assertEquals(listOf("cherry", "Apple", "banana"), titles(LibraryFilter(sort = SortOrder.AUTHOR)))
+        assertEquals(
+            listOf("cherry", "Apple", "banana"),
+            titles(LibraryFilter(sort = SortOrder.AUTHOR)),
+        )
     }
 
     @Test
     fun `sort by recently added and last updated are newest first`() = runTest {
         seedSortLibrary()
-        assertEquals(listOf("banana", "cherry", "Apple"), titles(LibraryFilter(sort = SortOrder.RECENTLY_ADDED)))
-        assertEquals(listOf("Apple", "cherry", "banana"), titles(LibraryFilter(sort = SortOrder.LAST_UPDATED)))
+        assertEquals(
+            listOf("banana", "cherry", "Apple"),
+            titles(LibraryFilter(sort = SortOrder.RECENTLY_ADDED)),
+        )
+        assertEquals(
+            listOf("Apple", "cherry", "banana"),
+            titles(LibraryFilter(sort = SortOrder.LAST_UPDATED)),
+        )
     }
 
     @Test
     fun `sort by progress puts the most read first`() = runTest {
         seedSortLibrary()
-        assertEquals(listOf("cherry", "banana", "Apple"), titles(LibraryFilter(sort = SortOrder.PROGRESS)))
+        assertEquals(
+            listOf("cherry", "banana", "Apple"),
+            titles(LibraryFilter(sort = SortOrder.PROGRESS)),
+        )
     }
 
     // --- Observation ---
@@ -394,7 +503,12 @@ class BookRepositoryTest {
 
             repo.updateProgress(id, 100, 10L)
 
-            assertEquals(BookStatus.READ, awaitUntil { it.single().status == BookStatus.READ }.single().status)
+            assertEquals(
+                BookStatus.READ,
+                awaitUntil {
+                    it.single().status == BookStatus.READ
+                }.single().status,
+            )
             cancelAndIgnoreRemainingEvents()
         }
     }

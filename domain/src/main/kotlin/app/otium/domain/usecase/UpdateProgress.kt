@@ -8,10 +8,7 @@ import app.otium.domain.port.Clock
 import app.otium.domain.repo.BookRepository
 
 /** Sets a book's current page, clamped to its total, and reports the derived status. */
-class UpdateProgress(
-    private val repository: BookRepository,
-    private val clock: Clock,
-) {
+class UpdateProgress(private val repository: BookRepository, private val clock: Clock) {
     suspend operator fun invoke(bookId: Long, page: Int): Try<Progress> =
         repository.getBook(bookId).flatMap { book ->
             val clamped = ClampPage(page, book.totalPages)

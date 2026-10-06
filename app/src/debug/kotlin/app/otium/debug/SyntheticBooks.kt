@@ -7,27 +7,34 @@ import kotlin.random.Random
 /** Deterministic fake library for performance checks. Debug builds and tests only. */
 object SyntheticBooks {
 
-    private val adjectives = listOf(
-        "Silent", "Golden", "Hidden", "Broken", "Last", "First", "Winter", "Crimson", "Distant", "Forgotten",
-        "Burning", "Quiet", "Endless", "Hollow", "Bright", "Pale", "Ancient", "Restless", "Gentle", "Wandering",
+    private val adjectives = words(
+        """
+        Silent Golden Hidden Broken Last First Winter Crimson Distant Forgotten
+        Burning Quiet Endless Hollow Bright Pale Ancient Restless Gentle Wandering
+        """,
     )
-    private val nouns = listOf(
-        "River", "Garden", "Empire", "Letter", "Harbour", "Mountain", "Library", "Orchard", "Lantern", "Voyage",
-        "Kingdom", "Machine", "Island", "Mirror", "Season", "Bridge", "Forest", "Archive", "Shadow", "Compass",
+    private val nouns = words(
+        """
+        River Garden Empire Letter Harbour Mountain Library Orchard Lantern Voyage
+        Kingdom Machine Island Mirror Season Bridge Forest Archive Shadow Compass
+        """,
     )
-    private val firstNames = listOf(
-        "Anna", "Marco", "Elena", "Tomas", "Ingrid", "Yusuf", "Mei", "Oskar", "Lucia", "Henrik",
-        "Amara", "Dmitri", "Sofia", "Kenji", "Nadia", "Pavel", "Rosa", "Felix", "Leila", "Viktor",
+    private val firstNames = words(
+        """
+        Anna Marco Elena Tomas Ingrid Yusuf Mei Oskar Lucia Henrik
+        Amara Dmitri Sofia Kenji Nadia Pavel Rosa Felix Leila Viktor
+        """,
     )
-    private val lastNames = listOf(
-        "Alder", "Brandt", "Castell", "Dvorak", "Eriksen", "Fontaine", "Garcia", "Haas", "Ivanov", "Jansen",
-        "Kovacs", "Lindqvist", "Moreau", "Novak", "Okafor", "Petrov", "Quist", "Rossi", "Sato", "Tanaka",
+    private val lastNames = words(
+        """
+        Alder Brandt Castell Dvorak Eriksen Fontaine Garcia Haas Ivanov Jansen
+        Kovacs Lindqvist Moreau Novak Okafor Petrov Quist Rossi Sato Tanaka
+        """,
     )
-    private val categories = listOf(
-        "Fiction", "History", "Poetry", "Science", "Philosophy", "Biography", "Fantasy", "Mystery",
-        "Travel", "Art", "Essays", "Classics",
+    private val categories = words(
+        "Fiction History Poetry Science Philosophy Biography Fantasy Mystery Travel Art Essays",
     )
-    private val tags = listOf("favourite", "lent", "reread", "gift", "signed", "to-reread", "reference", "paperback")
+    private val tags = words("favourite lent reread gift signed to-reread reference paperback")
 
     fun generate(count: Int, seed: Long = 42L): List<Book> {
         val random = Random(seed)
@@ -43,7 +50,7 @@ object SyntheticBooks {
                 isbn10 = null,
                 title = "${adjectives.random(random)} ${nouns.random(random)} ${index + 1}",
                 subtitle = if (random.nextInt(4) == 0) "A ${nouns.random(random)} story" else null,
-                authors = List(random.nextInt(1, 3)) { "${firstNames.random(random)} ${lastNames.random(random)}" }.distinct(),
+                authors = List(random.nextInt(1, 3)) { fullName(random) }.distinct(),
                 publisher = "Synthetic Press",
                 publishedYear = random.nextInt(1950, 2026),
                 language = "en",
@@ -60,6 +67,11 @@ object SyntheticBooks {
             )
         }
     }
+
+    private fun words(text: String): List<String> = text.trim().split(Regex("\\s+"))
+
+    private fun fullName(random: Random) =
+        "${firstNames.random(random)} ${lastNames.random(random)}"
 
     /** A valid, unique ISBN-13 per index (978 prefix plus a nine digit body and check digit). */
     private fun isbn13For(index: Int): String {
