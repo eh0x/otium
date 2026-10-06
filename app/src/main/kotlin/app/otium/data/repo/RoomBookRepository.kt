@@ -25,6 +25,8 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
         dao.observeLibrary(LibraryQueryBuilder.build(filter).toSupportQuery())
             .map { rows -> rows.map { it.toSummary() } }
 
+    override fun observeCount(): Flow<Int> = dao.observeCount()
+
     override fun observeBook(id: Long): Flow<Book?> = combine(
         dao.observeBookEntity(id),
         dao.observeAuthorNames(id),

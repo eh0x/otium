@@ -4,6 +4,7 @@ import app.otium.domain.port.Clock
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.usecase.AddBookManually
 import app.otium.domain.usecase.ObserveLibrary
+import app.otium.domain.usecase.SetTotalPages
 import app.otium.domain.usecase.UpdateProgress
 import dagger.Module
 import dagger.Provides
@@ -21,6 +22,10 @@ object UseCaseModule {
     @Provides
     fun provideUpdateProgress(repository: BookRepository, clock: Clock) =
         UpdateProgress(repository, clock)
+
+    @Provides
+    fun provideSetTotalPages(repository: BookRepository, clock: Clock) =
+        SetTotalPages(repository, clock)
 
     @Provides
     fun provideAddBookManually(repository: BookRepository, clock: Clock) =

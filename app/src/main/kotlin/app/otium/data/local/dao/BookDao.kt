@@ -33,6 +33,9 @@ abstract class BookDao {
     )
     abstract fun observeLibrary(query: SupportSQLiteQuery): Flow<List<BookListRow>>
 
+    @Query("SELECT COUNT(*) FROM book")
+    abstract fun observeCount(): Flow<Int>
+
     // --- Single book ---
 
     @Query("SELECT * FROM book WHERE id = :id")

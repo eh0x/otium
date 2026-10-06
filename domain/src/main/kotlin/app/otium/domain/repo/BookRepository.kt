@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.Flow
 interface BookRepository {
     fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>>
 
+    /** The number of books in the library, ignoring any filter. Drives the empty states. */
+    fun observeCount(): Flow<Int>
+
     fun observeBook(id: Long): Flow<Book?>
 
     suspend fun getBook(id: Long): Try<Book>

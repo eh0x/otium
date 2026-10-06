@@ -540,6 +540,30 @@ class BookRepositoryTest {
     }
 
     @Test
+    fun `observeCount counts every book`() = runTest {
+        assertEquals(0, repo.observeCount().first())
+
+        add(testBook(title = "A", categories = listOf("Fiction")))
+        add(testBook(title = "B"))
+
+        assertEquals(2, repo.observeCount().first())
+    }
+
+    @Test
+    fun `observeCount re-emits as books are added and deleted`() = runTest {
+        repo.observeCount().test {
+            assertEquals(0, awaitItem())
+
+            val id = add(testBook(title = "A"))
+            assertEquals(1, awaitUntil { it == 1 })
+
+            repo.delete(id)
+            assertEquals(0, awaitUntil { it == 0 })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `observeBook for an unknown id emits null`() = runTest {
         assertNull(repo.observeBook(123L).first())
     }

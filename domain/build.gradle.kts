@@ -2,6 +2,8 @@
 // Must never depend on Android, Room, Retrofit or Hilt (see DomainPurityTest).
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    // Shared fakes (FakeBookRepository, FixedClock) for the tests of both modules.
+    `java-test-fixtures`
 }
 
 kotlin {

@@ -20,6 +20,9 @@ class FakeBookRepository : BookRepository {
 
     var lastFilter: LibraryFilter? = null
         private set
+
+    /** Every filter passed to observeLibrary, oldest first. */
+    val filters = mutableListOf<LibraryFilter>()
     var lastProgressUpdate: Triple<Long, Int, Long>? = null
         private set
 
@@ -33,6 +36,7 @@ class FakeBookRepository : BookRepository {
 
     override fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>> {
         lastFilter = filter
+        filters += filter
         return books.map { map ->
             map.values.map {
                 BookSummary(
@@ -48,6 +52,8 @@ class FakeBookRepository : BookRepository {
             }
         }
     }
+
+    override fun observeCount(): Flow<Int> = books.map { it.size }
 
     override fun observeBook(id: Long): Flow<Book?> = books.map { it[id] }
 
