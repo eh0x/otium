@@ -2,6 +2,8 @@ package app.otium.di
 
 import app.otium.domain.port.Clock
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.MetadataRepository
+import app.otium.domain.usecase.AddBookFromIsbn
 import app.otium.domain.usecase.AddBookManually
 import app.otium.domain.usecase.MarkFinished
 import app.otium.domain.usecase.ObserveLibrary
@@ -31,6 +33,10 @@ object UseCaseModule {
     @Provides
     fun provideSetTotalPages(repository: BookRepository, clock: Clock) =
         SetTotalPages(repository, clock)
+
+    @Provides
+    fun provideAddBookFromIsbn(books: BookRepository, metadata: MetadataRepository) =
+        AddBookFromIsbn(books, metadata)
 
     @Provides
     fun provideAddBookManually(repository: BookRepository, clock: Clock) =
