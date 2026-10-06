@@ -120,6 +120,7 @@ dependencies {
     testImplementation(libs.androidx.test.core.ktx)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.konsist)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

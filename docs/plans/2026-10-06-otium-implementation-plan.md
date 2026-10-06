@@ -165,7 +165,7 @@ All business rules exist as pure, tested Kotlin; Room stores and queries the lib
 | `dao/LabelDao.kt` | Authors, categories, tags |
 | `row/BookListRow.kt` | Room projection for the list |
 | `mapper/*.kt` | Entity and row to domain mappers (extension functions) |
-| `repo/BookRepositoryImpl.kt` | Implements `BookRepository`, converts exceptions to `AppError` |
+| `repo/RoomBookRepository.kt` | Implements `BookRepository`, converts exceptions to `AppError` |
 | `di/DatabaseModule.kt`, `RepositoryModule.kt`, `UseCaseModule.kt` | Hilt bindings and `@Provides` |
 
 ### Tasks (test first in each)
@@ -179,7 +179,7 @@ All business rules exist as pure, tested Kotlin; Room stores and queries the lib
    - In-memory Room instrumented tests: FTS prefix search on title, subtitle and author; each filter alone and combined (status, multiple categories, multiple tags, author); every sort order; duplicate ISBN constraint; status SQL boundaries (0, mid, equal total, over total, total 0); delete cascades join rows.
    - Validate: `./gradlew connectedDebugAndroidTest` (or Robolectric for DAO tests if no device is available; decide at setup).
 7. **Query builder.** `LibraryFilter` to a `SupportSQLiteQuery` or a set of DAO queries, covering the AND-combined filters and FTS join. Unit test the SQL string generation where practical; behaviour covered by task 6.
-8. **Mappers and `BookRepositoryImpl`.** Map `BookListRow` to `BookSummary`; wrap exceptions (`SQLiteConstraintException` on ISBN becomes `Duplicate(existingId)`).
+8. **Mappers and `RoomBookRepository`.** Map `BookListRow` to `BookSummary`; wrap exceptions (`SQLiteConstraintException` on ISBN becomes `Duplicate(existingId)`).
 9. **Use cases.** `ObserveLibrary` (filter, sort, debounce stays in the ViewModel), `UpdateProgress` (clamp, derive, `updatedAt`), `AddBookManually` (dedupe by ISBN, normalise authors into tables). Tests against a fake `BookRepository`.
 10. **Migration scaffolding.** Add `MigrationTestHelper` setup and a schema-version test so future migrations are tested from exported schemas.
 11. **Debug seeder.** A debug-only source set that inserts about 5,000 synthetic books, used in Phase 3 for performance checks.
@@ -226,7 +226,8 @@ Browse, search, filter, sort and update progress, all offline, against seeded or
 6. **Progress update.** Tap progress card, number input or slider, confirm; `UpdateProgress` clamps and re-derives; "mark finished" sets `currentPage = totalPages`; prompt to set total pages when unknown. No streaks, badges or confetti.
 7. **Accessibility basics.** Content descriptions on covers, minimum 48dp touch targets, status text alongside color, TalkBack labels for the progress card.
 8. **Transitions.** Gentle shelf-to-detail fade, disabled when reduced motion is on.
-9. **Performance check** with the debug seeder: scroll 5,000 books at 60fps on a mid-range device or emulator; fix with stable keys, image downsampling and avoiding per-item recomposition if needed.
+9. **Performance check** with the debug seeder: scroll 5,000 books at 60fps on a mid-range device or emulator; fix with stable keys, image downsampling and avoiding per-item recomposition if needed. Measure it with a Macrobenchmark (`:benchmark` module, `FrameTimingMetric` for scroll jank and search latency) rather than by eye, per the Android architecture recommendations. Needs a device or emulator.
+10. **UI architecture rules** (docs/STYLE_GUIDE.md section 3.2): one immutable UI state per screen exposed as `StateFlow`, `collectAsStateWithLifecycle`, no one-off events from ViewModels (outcomes such as "open existing book" are state the UI reports handled), screen-level ViewModels only, plain state holders in reusable components. `ArchitectureTest` rules start applying as soon as the ViewModels exist.
 
 ### Tests
 - ViewModel unit tests (Turbine, fakes).
@@ -262,18 +263,18 @@ Complexity: Medium. Needs Phase 2. Parallel with Phase 3.
 | `data/remote/openlibrary/OpenLibraryApi.kt`, `OpenLibraryDto.kt`, `OpenLibraryMapper.kt` | `/isbn/X.json`, work and author lookups as needed, search fallback |
 | `di/RemoteModule.kt` | OkHttp (8 s timeouts, user agent, API key interceptor), Retrofit, JSON config with `ignoreUnknownKeys` |
 | `data/remote/ErrorMapping.kt` | HTTP and IO exceptions to `AppError` |
-| `data/repo/MetadataRepositoryImpl.kt` | Parallel calls, one retry with backoff on 429/5xx, fallback to the other API, merge via `MergeMetadata` |
-| `data/cover/CoverStoreImpl.kt` | Coil download to files dir, placeholder rejection (tiny image or 404 with `default=false`) |
+| `data/repo/RemoteMetadataRepository.kt` | Parallel calls, one retry with backoff on 429/5xx, fallback to the other API, merge via `MergeMetadata` |
+| `data/cover/FileCoverStore.kt` | Coil download to files dir, placeholder rejection (tiny image or 404 with `default=false`) |
 | `app/src/test/resources/fixtures/` | Recorded JSON fixtures for both APIs |
 
 ### Tasks
 1. **DTOs and mappers from fixtures first.** Fixtures: full record, missing pages, missing cover, missing authors, empty result, malformed field types.
    - Validate: parser unit tests.
 2. **API interfaces and OkHttp setup.** API key via interceptor only when present; no key still works (low quota).
-3. **`MetadataRepositoryImpl` flow.** Parallel `async` calls with 8 s timeout each; merge with `MergeMetadata`; on 429/5xx retry once with backoff, then rely on the other source; both fail yields `Offline`, `RateLimited`, `Timeout` or `NotFound` accordingly.
+3. **`RemoteMetadataRepository` flow.** Parallel `async` calls with 8 s timeout each; merge with `MergeMetadata`; on 429/5xx retry once with backoff, then rely on the other source; both fail yields `Offline`, `RateLimited`, `Timeout` or `NotFound` accordingly.
    - Validate with MockWebServer: success on both; Google only; Open Library only; 429 then success; 5xx on one API; timeout; both fail; slow API does not block the fast one longer than the timeout.
 4. **Title/author search.** Google first (up to 20 results with thumbnails); Open Library only when Google returns nothing.
-5. **Cover pipeline.** `CoverStoreImpl` downloads the chosen cover once, stores the path; placeholder check rejects tiny images; user-picked cover overrides remote URL. Test with MockWebServer and temp directories.
+5. **Cover pipeline.** `FileCoverStore` downloads the chosen cover once, stores the path; placeholder check rejects tiny images; user-picked cover overrides remote URL. Test with MockWebServer and temp directories.
 6. **`AddBookFromIsbn` use case.** Local ISBN check returns `Duplicate`; otherwise lookup. Tests with fakes.
 7. **Google Books terms.** Add attribution string/resource for later display (Phase 7) and ensure cover caching is limited to the user's own library.
 
@@ -354,11 +355,11 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
 `:app`:
 | File | Purpose |
 |------|---------|
-| `data/backup/DriveBackupClientImpl.kt` | REST via Retrofit/OkHttp (P2), `drive.appdata` scope |
+| `data/backup/GoogleDriveBackupClient.kt` | REST via Retrofit/OkHttp (P2), `drive.appdata` scope |
 | `data/backup/GoogleAuthManager.kt` | Google Identity Services authorization, token retrieval, re-sign-in signal |
 | `data/backup/BackupArchiver.kt` | Zip DB plus covers plus metadata JSON; unzip and verify |
-| `data/backup/DatabaseSwapperImpl.kt` | WAL checkpoint, close Room, swap files, rebuild database |
-| `data/repo/BackupRepositoryImpl.kt` | Ties it together, error mapping |
+| `data/backup/RoomDatabaseSwapper.kt` | WAL checkpoint, close Room, swap files, rebuild database |
+| `data/repo/DriveBackupRepository.kt` | Ties it together, error mapping |
 | `work/BackupWorker.kt` | Periodic worker with user constraints and backoff |
 | `ui/backup/BackupScreen.kt`, `BackupViewModel.kt` | Sign-in, Back up now, Restore, auto-backup toggle, frequency, Wi-Fi-only, charging-only, last backup time and size |
 | `di/BackupModule.kt` | Bindings; Room database provided through a swappable holder |
@@ -402,6 +403,8 @@ Complexity: Medium. Last.
 6. **Play listing prep.** Data safety form (no data collected by the developer), content rating, permission justifications (camera in-app, `INTERNET`, `POST_NOTIFICATIONS`), screenshots, short and full description.
 7. **CI additions.** Release assemble check, dependency vulnerability scan (for example Dependabot), optional instrumented test job on demand.
 8. **Cleanup.** Remove debug seeder from release, strip logging, delete the theme catalog from release builds.
+9. **Baseline Profile and Startup Profile.** Add a `:baselineprofile` module, generate a profile covering cold start, library scroll and opening a book, and ship it in the release build. Measure cold start and scroll jank before and after with Macrobenchmark and record the numbers. Needs a device or emulator.
+10. **Re-run the architecture audit** (docs/STYLE_GUIDE.md section 3.3) against Google's current recommendations and update the matrix.
 
 ### Acceptance
 - [ ] Release build passes the smoke test on a real device.

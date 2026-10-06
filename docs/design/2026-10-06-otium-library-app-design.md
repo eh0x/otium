@@ -79,9 +79,9 @@ Two Gradle modules: a pure-Kotlin `:domain` module and the Android `:app` module
   data/
     local/       Room: entities, FTS table, DAOs, row projections, mappers
     remote/      GoogleBooksApi, OpenLibraryApi (Retrofit + kotlinx.serialization), DTOs, mappers
-    repo/        BookRepositoryImpl, MetadataRepositoryImpl, BackupRepositoryImpl
-    backup/      DriveBackupClientImpl, DatabaseSwapperImpl
-    cover/       CoverStoreImpl (files directory, Coil)
+    repo/        RoomBookRepository, RemoteMetadataRepository, DriveBackupRepository
+    backup/      GoogleDriveBackupClient, RoomDatabaseSwapper
+    cover/       FileCoverStore (files directory, Coil)
     scan/        MlKitBarcodeScanner
   work/        BackupWorker, LookupRetryWorker (WorkManager entry points)
   di/          Hilt modules (@Binds for every domain interface)
@@ -96,6 +96,10 @@ Dependency rules: `:app` depends on `:domain`; `:domain` depends on nothing but 
 
 #### Layer rules
 
+The UI layer and ViewModels also follow Google's Android architecture recommendations. How they
+are applied, and the audit of this project against each one, is in `docs/STYLE_GUIDE.md`
+section 3. Rules that can be tested are enforced by `ArchitectureTest`.
+
 - **Domain models are plain Kotlin data classes.** No Room, serialization or Android annotations.
 - **Entities and DTOs never reach the UI.** Room entities and row projections (for example the DAO's `BookListRow`) and network DTOs stay in `data/`. Repository implementations map them to domain models (`Book`, `BookSummary`, `BookCandidate`) with extension-function mappers kept next to the data models.
 - **Interfaces belong to the consumer.** Repository and port interfaces are defined in `:domain`, implemented in `:app/data`, and bound in `di/` with Hilt `@Binds`. ViewModels depend on use cases or repository interfaces, never on implementations.
@@ -103,7 +107,7 @@ Dependency rules: `:app` depends on `:domain`; `:domain` depends on nothing but 
 - **ViewModels hold no business rules.** They map domain results and `AppError` values to UI state and strings, and launch work in `viewModelScope`.
 - **Workers are thin.** `BackupWorker` and `LookupRetryWorker` only call use cases and translate the result into `Result.success/retry/failure`.
 - **Structured concurrency only.** No `GlobalScope`. Dispatchers are injected through `DispatcherProvider` so tests can control them.
-- **Backup crosses a Room boundary.** `BackupRepositoryImpl` uses a `DatabaseSwapper` port (implemented in `:app/data`) to checkpoint the WAL, close Room, replace files and reopen it. `:domain` only sees `RunBackup`, `RestoreBackup` and their `AppError` results.
+- **Backup crosses a Room boundary.** `DriveBackupRepository` uses a `DatabaseSwapper` port (implemented in `:app/data`) to checkpoint the WAL, close Room, replace files and reopen it. `:domain` only sees `RunBackup`, `RestoreBackup` and their `AppError` results.
 
 #### Error model
 
@@ -149,7 +153,7 @@ Search and filters:
 - Author, category and tag names are unique case-insensitively (`NOCASE`), and labels no longer used by any book are deleted.
 - Status in SQL: not started = `currentPage = 0`; in progress = `0 < currentPage < totalPages`; read = `currentPage >= totalPages` (with `totalPages > 0`).
 - Sort: title, author, recently added, last updated, progress.
-- A single DAO query is built from a `LibraryFilter` object and returns `Flow<List<BookListRow>>` (a Room projection kept in `data/local/`). `BookRepositoryImpl` maps rows to the domain `BookSummary`, so the UI never sees Room types.
+- A single DAO query is built from a `LibraryFilter` object and returns `Flow<List<BookListRow>>` (a Room projection kept in `data/local/`). `RoomBookRepository` maps rows to the domain `BookSummary`, so the UI never sees Room types.
 
 Edge cases:
 - Unknown or zero `totalPages`: status shows "not started" and the user is prompted to set pages.

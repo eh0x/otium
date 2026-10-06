@@ -21,6 +21,7 @@ rules the tools cannot see.
 | Compiler warnings | Kotlin `allWarningsAsErrors` | module `build.gradle.kts` | every build |
 | Android correctness, security, resources | Android Lint with `warningsAsErrors` | `app/build.gradle.kts` | CI (`lint`) |
 | Layering (`:domain` stays pure Kotlin) | `DomainPurityTest` | `domain/src/test` | every `:domain:test` |
+| Architecture rules (UI/data boundaries, ViewModels, single activity, naming) | Konsist `ArchitectureTest` | `app/src/test/.../architecture` | every `testDebugUnitTest`, CI |
 | Commit messages | `commit-msg` hook | `.githooks/commit-msg` | every commit |
 | Everything else in this guide | Code review | this file | pull requests |
 
@@ -78,7 +79,7 @@ becomes the gate. Bypassing a hook with `--no-verify` is for emergencies only; C
 | Element | Rule | Example |
 |---------|------|---------|
 | Package | lowercase, no underscores | `app.otium.data.local` |
-| Class, interface, object, enum | `UpperCamelCase` | `BookRepositoryImpl` |
+| Class, interface, object, enum | `UpperCamelCase` | `RoomBookRepository` |
 | Function, property, variable | `lowerCamelCase` | `observeLibrary` |
 | `@Composable` function | `UpperCamelCase` (it is a UI node) | `ProgressCard` |
 | `const val`, top-level or `object` immutable value | `SCREAMING_SNAKE_CASE` | `AUTHOR_SEPARATOR` |
@@ -86,9 +87,9 @@ becomes the gate. Bypassing a hook with `--no-verify` is for emergencies only; C
 | Test function | sentence in backticks | `` `page above total is clamped` `` |
 | Acronyms | treated as words | `isbn13`, `Isbn13`, `HttpClient` |
 
-Interfaces are not prefixed (`BookRepository`, not `IBookRepository`). Implementations add the
-suffix `Impl` only when there is a single obvious one (`BookRepositoryImpl`); prefer a
-descriptive name (`MlKitBarcodeScanner`, `DriveBackupClientImpl`).
+Interfaces are not prefixed (`BookRepository`, not `IBookRepository`). Implementations are named
+for what backs them (`RoomBookRepository`, `MlKitBarcodeScanner`, `GoogleDriveBackupClient`), or
+get a `Default` prefix when nothing better fits. The `Impl` suffix is not allowed. See 3.2.
 
 ### Documentation
 
@@ -127,10 +128,18 @@ descriptive name (`MlKitBarcodeScanner`, `DriveBackupClientImpl`).
   and `work/`, convert them to `AppError`, and let nothing else escape.
 - Exceptions are for programmer errors (`check`, `require`), not for control flow.
 
-## 3. Architecture rules
+## 3. Architecture
 
-These come from the design doc, section 4.1 "Layer rules", and are reviewed rather than linted
-(except where noted).
+Two sources, both binding:
+
+- Our own layer rules (design doc, section 4.1 "Layer rules"), listed in 3.1.
+- Google's [Android architecture recommendations](https://developer.android.com/topic/architecture/recommendations),
+  applied in 3.2 and audited item by item in 3.3.
+
+Rules marked *(test)* are enforced by `ArchitectureTest` (`app/src/test/.../architecture`), which
+reads the source files and fails the build. The rest are checked in review.
+
+### 3.1 Layer rules
 
 - `:domain` is pure Kotlin/JVM: no Android, Room, Retrofit or Hilt imports. (`DomainPurityTest`)
 - Interfaces belong to the consumer: repository and port interfaces live in `:domain`,
@@ -140,6 +149,114 @@ These come from the design doc, section 4.1 "Layer rules", and are reviewed rath
 - Use cases exist only where there is logic. Plain reads go from ViewModel to repository.
 - ViewModels hold no business rules: they map domain results and `AppError` to UI state.
 - Workers (`work/`) are thin: call a use case, translate the result.
+- The UI layer never imports `app.otium.data`, Room or network libraries, and the data layer
+  never imports the UI layer. *(test)*
+- Room `@Entity` and `@Dao` classes live only in `data.local.entity` and `data.local.dao`. *(test)*
+
+### 3.2 Applying the Android recommendations
+
+**UI layer**
+
+- **Unidirectional data flow.** State flows down (ViewModel to composables as one immutable UI
+  state), events flow up (composables call ViewModel functions). No two-way bindings.
+- **One UI state per screen**, exposed as `StateFlow<XUiState>`. The mutable twin is private;
+  expose it with `asStateFlow()` or `stateIn`. *(test)*
+- **Lifecycle-aware collection.** Collect with `collectAsStateWithLifecycle()`, never bare
+  `collectAsState()` on a ViewModel flow.
+- **Do not send events from the ViewModel to the UI.** No `SharedFlow`/`Channel` of one-off
+  events. Model the outcome as state and let the UI report it handled. Example: a duplicate ISBN
+  becomes `uiState.openBookId = existingId`, the UI navigates, then calls `onNavigated()` and the
+  ViewModel clears it.
+- **Single activity.** `MainActivity` hosts everything through Navigation Compose. *(test)*
+- **Jetpack Compose** for all UI.
+
+**ViewModels**
+
+- **Screen level only.** One ViewModel per screen or navigation destination. Reusable
+  components use plain state holder classes (remembered via `rememberXState`), not ViewModels.
+- **Independent of the Android lifecycle.** No `Context`, `Activity`, `Lifecycle` or any
+  `android.*` import in a ViewModel's file. *(test)*
+- **No `AndroidViewModel`.** *(test)* Anything needing a `Context` sits behind a port in
+  `:domain`, implemented in `data/`.
+- ViewModels are `@HiltViewModel` classes in `app.otium.ui`. *(test)*
+- Use coroutines and flows; launch in `viewModelScope`.
+
+**Lifecycle**
+
+- Use lifecycle-aware effects in composables (`LaunchedEffect`, `DisposableEffect`,
+  `LifecycleEventEffect`, `rememberUpdatedState`) rather than overriding Activity callbacks. The
+  CameraX scanner binds to the composable's lifecycle owner.
+
+**Dependencies**
+
+- Hilt everywhere. Scope only where an instance must be shared: the database, repositories and
+  clock are `@Singleton`; use cases and ViewModels are unscoped. Do not widen a scope to "fix" a
+  wiring problem.
+
+**Models**
+
+- A model per layer: Room entities and network DTOs (`data/`), domain models (`:domain`), UI
+  state (`ui/`). A UI state class is only needed when the screen shows something the domain
+  model does not already provide (formatted text, selection, loading flags); simple screens may
+  render domain models directly.
+
+**Naming** (optional in Google's guide, adopted here)
+
+- Methods are verb phrases (`updateProgress`, `findByIsbn13`); properties are noun phrases.
+- Flows are named `observe{Thing}` (`observeLibrary`), and suspending one-shot reads `get{Thing}`.
+  This deliberately differs from Google's `get{Model}Stream`: the verb makes the hot/cold
+  difference visible at the call site.
+- Implementations have a meaningful name that says what they are backed by (`RoomBookRepository`,
+  `GoogleDriveBackupClient`, `MlKitBarcodeScanner`). If nothing better fits, prefix `Default`
+  (`DefaultDispatcherProvider`). The `Impl` suffix is not used. *(test)*
+
+**Performance**
+
+- R8 shrinking and optimization are on for release (`isMinifyEnabled`, `isShrinkResources`).
+  Keep rules are verified against a release build before shipping (Phase 7).
+- Baseline Profiles and Startup Profiles are generated and shipped (Phase 7).
+- Performance claims are measured with Macrobenchmark on a real device, not assumed. The library
+  scroll and search budgets (design doc, section 2) are verified this way (Phases 3 and 7).
+
+### 3.3 Compliance matrix
+
+Audit of this repository against every item on Google's page. Status as of Phase 2:
+**Met** (in place), **Planned** (phase that delivers it), **Gap** (not yet in the plan, now added).
+
+| Recommendation | Google's strength | Otium status | Where |
+|---|---|---|---|
+| Clearly defined data layer | Strongly | Met | `app/data`, `RoomBookRepository`; layering test |
+| Clearly defined UI layer | Strongly | Planned, Phase 3 | `app/ui`; rules in 3.2 |
+| Expose data through repositories | Strongly | Met | `BookRepository` port in `:domain` |
+| Coroutines and flows | Strongly | Met | detekt coroutine rules |
+| Domain layer (big apps) | Recommended in big apps | Met, kept small | `:domain`: rules and orchestration only |
+| Unidirectional data flow | Strongly | Planned, Phase 3 | review |
+| AAC ViewModels | Strongly | Planned, Phase 3 | *(test)* |
+| Lifecycle-aware UI state collection | Strongly | Planned, Phase 3 | review |
+| No events from ViewModel to UI | Strongly | Planned, Phase 3 | review; pattern in 3.2 |
+| Single activity | Strongly | Met | `MainActivity`; *(test)* |
+| Jetpack Compose | Strongly | Met | Compose UI; theme in Phase 1 |
+| ViewModels independent of lifecycle | Strongly | Planned, Phase 3 | *(test)* |
+| ViewModels at screen level | Strongly | Planned, Phase 3 | review |
+| Plain state holders in reusable components | Strongly | Planned, Phases 1 and 3 | review |
+| Do not use `AndroidViewModel` | Recommended | Planned, Phase 3 | *(test)* |
+| Expose a UI state | Recommended | Planned, Phase 3 | *(test)* for private mutable flows |
+| Lifecycle-aware effects, not Activity callbacks | Strongly | Planned, Phase 5 | review |
+| Use dependency injection | Strongly | Met | Hilt modules in `app/di` |
+| Scope to a component when necessary | Strongly | Met | singletons only for database, repositories, clock |
+| Use Hilt | Recommended | Met | |
+| Know what to test | Strongly | Met | section 5 |
+| Prefer fakes to mocks | Strongly | Met | `FakeBookRepository`, `FixedClock` |
+| Test StateFlows | Strongly | Met for repository flows; Planned for ViewModels, Phase 3 | Turbine |
+| Use R8 | Strongly | Met | release build verified; keep rules in Phase 7 |
+| Baseline Profiles and Startup Profiles | Strongly | **Gap, added to Phase 7** | needs a device or emulator |
+| Test performance with Macrobenchmark | Strongly | **Gap, added to Phases 3 and 7** | needs a device or emulator |
+| A model per layer | Recommended | Met | entity, DTO, domain; UI state in Phase 3 |
+| Naming: verb methods, noun properties | Optional | Met | |
+| Naming: `get{Model}Stream` for flows | Optional | Deviation, documented | `observe*`, see 3.2 |
+| Naming: meaningful implementation names or `Default` | Optional | Met | *(test)* |
+
+Re-run this audit when Google updates the page, and at the end of Phases 3, 5 and 7.
 
 ## 4. Jetpack Compose (from Phase 1 on)
 
