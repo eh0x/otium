@@ -301,6 +301,11 @@ Re-run this audit when Google updates the page, and at the end of Phases 3, 5 an
   (`libs.androidx.core.ktx`).
 - Group dependencies by purpose, `implementation` before `debugImplementation` before tests.
 - Secrets come from `local.properties` or the environment, never from the repository.
+- Dependabot (`.github/dependabot.yml`) proposes updates to Gradle dependencies, plugins, the
+  wrapper and GitHub Actions every Monday, against `develop`. Minor and patch updates arrive in
+  groups; new releases wait seven days (security fixes do not). Kotlin, KSP, AGP and Gradle major
+  versions are upgraded by hand, together. A Dependabot PR merges like any other: CI is green and
+  the changes are read first.
 
 ### Android XML resources
 
