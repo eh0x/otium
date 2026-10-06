@@ -1,0 +1,86 @@
+{
+  "kind": "books#volumes",
+  "totalItems": 1,
+  "items": [
+    {
+      "kind": "books#volume",
+      "id": "B1hSG45JCX4C",
+      "etag": "D6oWwpWKRGQ",
+      "selfLink": "https://www.googleapis.com/books/v1/volumes/B1hSG45JCX4C",
+      "volumeInfo": {
+        "title": "Dune",
+        "authors": [
+          "Frank Herbert"
+        ],
+        "publisher": "Penguin Publishing Group",
+        "publishedDate": "2005-08-02",
+        "description": "<b><b>Frank Herbert’s classic masterpiece—a triumph of the imagination and one of the bestselling science fiction novels of all time.</b></b><br><br>Set on the desert planet Arrakis, <i>Dune</i> is the story of Paul Atreides—who would become known as Muad'Dib—and of a great family's ambition to bring to fruition humankind's most ancient and unattainable dream.<br><br>A stunning blend of adventure and mysticism, environmentalism and politics, <i>Dune</i> won the first Nebula Award, shared the Hugo Award, and formed the basis of what is undoubtedly the grandest epic in science fiction.",
+        "industryIdentifiers": [
+          {
+            "type": "ISBN_10",
+            "identifier": "0441013597"
+          },
+          {
+            "type": "ISBN_13",
+            "identifier": "9780441013593"
+          }
+        ],
+        "readingModes": {
+          "text": false,
+          "image": false
+        },
+        "pageCount": 704,
+        "printedPageCount": 548,
+        "dimensions": {
+          "height": "23.00 cm",
+          "width": "13.80 cm",
+          "thickness": "3.20 cm"
+        },
+        "printType": "BOOK",
+        "categories": [
+          "Fiction / Science Fiction / Space Opera",
+          "Fiction / Classics",
+          "Fiction / Fantasy / Epic"
+        ],
+        "averageRating": 4.5,
+        "ratingsCount": 25,
+        "maturityRating": "NOT_MATURE",
+        "allowAnonLogging": false,
+        "contentVersion": "3.8.10.0.preview.0",
+        "panelizationSummary": {
+          "containsEpubBubbles": false,
+          "containsImageBubbles": false
+        },
+        "imageLinks": {
+          "smallThumbnail": "http://books.google.com/books/content?id=B1hSG45JCX4C&printsec=frontcover&img=1&zoom=5&imgtk=AFLRE736j-Y82BEyvG898j1ags0d3TNK2QhYvbFPC1LN3YgCMvRBcoXENsYx7MzHWXg1OKtp2C9eW0ZZk0bk1F9war1WTxikAQoAYVQLfjVp3kR0ZkTw0iFoScwJH0quMC5V_Jq2a_mO&source=gbs_api",
+          "thumbnail": "http://books.google.com/books/content?id=B1hSG45JCX4C&printsec=frontcover&img=1&zoom=1&imgtk=AFLRE71BmoixytQD1YnWfynuRFsq9oQV9xrXDbTR3An8z3oBa0luN68S9dG1ur4T3fRoQC8je3zt8zeI2rm0h4E-OaFByF4UBYuzO3Yo9Or7EMucIX4lcSTosHa7gIFMjrNM4LBaFSJQ&source=gbs_api"
+        },
+        "language": "en",
+        "previewLink": "http://books.google.nl/books?id=B1hSG45JCX4C&hl=&source=gbs_api",
+        "infoLink": "https://play.google.com/store/books/details?id=B1hSG45JCX4C&source=gbs_api",
+        "canonicalVolumeLink": "https://play.google.com/store/books/details?id=B1hSG45JCX4C"
+      },
+      "saleInfo": {
+        "country": "NL",
+        "saleability": "NOT_FOR_SALE",
+        "isEbook": false
+      },
+      "accessInfo": {
+        "country": "NL",
+        "viewability": "NO_PAGES",
+        "embeddable": false,
+        "publicDomain": false,
+        "textToSpeechPermission": "ALLOWED",
+        "epub": {
+          "isAvailable": false
+        },
+        "pdf": {
+          "isAvailable": true
+        },
+        "webReaderLink": "http://play.google.com/books/reader?id=B1hSG45JCX4C&hl=&source=gbs_api",
+        "accessViewStatus": "NONE",
+        "quoteSharingAllowed": false
+      }
+    }
+  ]
+}

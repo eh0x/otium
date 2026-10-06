@@ -1,0 +1,58 @@
+{
+  "publishers": [
+    "Random House Publishing Group"
+  ],
+  "covers": [
+    6395681
+  ],
+  "physical_format": "Electronic resource",
+  "last_modified": {
+    "type": "/type/datetime",
+    "value": "2012-07-29T23:05:14.078041"
+  },
+  "latest_revision": 4,
+  "key": "/books/OL24248458M",
+  "authors": [
+    {
+      "key": "/authors/OL763801A"
+    }
+  ],
+  "publish_places": [
+    "New York"
+  ],
+  "languages": [
+    {
+      "key": "/languages/eng"
+    }
+  ],
+  "source_records": [
+    "marc_overdrive/InternetArchiveCrMarc-2010-06-11b.mrc:5242703:3228"
+  ],
+  "title": "The Google Story",
+  "identifiers": {
+    "overdrive": [
+      "E11648D5-5166-469C-85AD-1559430C9FFC"
+    ]
+  },
+  "created": {
+    "type": "/type/datetime",
+    "value": "2010-06-16T23:58:33.260737"
+  },
+  "isbn_13": [
+    "9780440335702"
+  ],
+  "publish_date": "2005",
+  "publish_country": "nyu",
+  "oclc_numbers": [
+    "427693283"
+  ],
+  "works": [
+    {
+      "key": "/works/OL4079406W"
+    }
+  ],
+  "type": {
+    "key": "/type/edition"
+  },
+  "revision": 4
+}
