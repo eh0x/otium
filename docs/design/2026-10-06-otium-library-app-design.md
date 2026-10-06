@@ -47,32 +47,92 @@ Status: Validated through brainstorming, ready for implementation planning
 | D16 | Visual identity "analog sanctity" (see 4.7) | Neutral Material look | User-provided brand reference; the app should feel like a quiet study, not a utility |
 | D17 | Shelf-styled library view as a presentation of the existing lazy grid, plus a plain list mode | Illustrated 3D bookshelves | Keeps scrolling fast at 5,000 books; shelf look comes from styling, not heavy assets |
 | D18 | Quiet progress only (percentage bar, "Page X of Y"), no streaks, goals or gamification | Streaks, daily targets | Matches the brand ("art of reading leisure") and the v1 non-goal of reading stats |
+| D19 | Two Gradle modules: pure-Kotlin `:domain` plus `:app` | One module with package boundaries; full multi-module split (data, presentation, design-system) | Compiler-enforced "no Android in domain" for the price of one extra build file. A full split costs build time and boilerplate a solo app does not need; it can be done later if needed |
+| D20 | Typed `Try<T>` / `AppError` returned from repositories and use cases | Exceptions; `kotlin.Result` | The failure cases in 4.3 and 4.4 (offline, 429, duplicate, expired auth, incompatible backup) are expected outcomes the UI handles differently. A sealed type makes each one explicit and testable |
+| D21 | Use cases only where logic exists; ViewModels call repositories directly for plain reads | A use case per repository call | Avoids pass-through classes while keeping business rules out of ViewModels |
+| D22 | Domain interfaces for scanner, Drive client, cover store, database swapper and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
 
 ## 4. Final Design
 
 ### 4.1 Architecture
 
-Single Gradle module `app`, package-by-feature, MVVM with repositories and unidirectional state (`StateFlow`).
+Two Gradle modules: a pure-Kotlin `:domain` module and the Android `:app` module. Clean Architecture layering (presentation, domain, data), MVVM with repositories and unidirectional state (`StateFlow`). Inside `:app`, code is package-by-feature for UI and package-by-role for data.
 
 ```
-ui/        Compose screens + ViewModels
-  library/   list, grid, search, filters
-  add/       scan, manual ISBN, title search, result picker
-  detail/    book detail, progress update, edit
-  backup/    backup/restore, schedule settings
-data/
-  local/     Room: entities, FTS table, DAOs
-  remote/    GoogleBooksApi, OpenLibraryApi (Retrofit + kotlinx.serialization)
-  repo/      BookRepository, MetadataRepository (merge logic), BackupRepository
-  backup/    DriveBackupClient, BackupWorker (WorkManager)
-domain/    pure models + use cases (DeriveStatus, MergeMetadata)
-di/        Hilt modules
+:domain  (pure Kotlin/JVM, no Android or framework imports)
+  model/       Book, BookSummary, BookCandidate, BookStatus, LibraryFilter, SortOrder
+  error/       AppError, Try
+  repo/        BookRepository, MetadataRepository, BackupRepository   (interfaces)
+  port/        BarcodeScanner, DriveBackupClient, CoverStore,
+               DatabaseSwapper, DispatcherProvider                    (interfaces)
+  usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
+               ObserveLibrary, AddBookFromIsbn, AddBookManually,
+               UpdateProgress, RunBackup, RestoreBackup
+
+:app
+  ui/          Compose screens + ViewModels + UI state
+    library/     list, grid, search, filters
+    add/         scan, manual ISBN, title search, result picker
+    detail/      book detail, progress update, edit
+    backup/      backup/restore, schedule settings
+    theme/       OtiumTheme, OtiumColors, typography, shapes
+  data/
+    local/       Room: entities, FTS table, DAOs, row projections, mappers
+    remote/      GoogleBooksApi, OpenLibraryApi (Retrofit + kotlinx.serialization), DTOs, mappers
+    repo/        BookRepositoryImpl, MetadataRepositoryImpl, BackupRepositoryImpl
+    backup/      DriveBackupClientImpl, DatabaseSwapperImpl
+    cover/       CoverStoreImpl (files directory, Coil)
+    scan/        MlKitBarcodeScanner
+  work/        BackupWorker, LookupRetryWorker (WorkManager entry points)
+  di/          Hilt modules (@Binds for every domain interface)
 ```
+
+Dependency rules: `:app` depends on `:domain`; `:domain` depends on nothing but the Kotlin standard library and `kotlinx-coroutines-core` (for `Flow`). The compiler enforces that `:domain` cannot import Android, Room, Retrofit or Hilt.
 
 - Room is the source of truth. The UI only observes DB flows. Network results are written into the DB.
-- `MetadataRepository` queries Google Books by ISBN, fills missing fields from Open Library, and returns one normalized `BookCandidate`.
+- `MetadataRepository` (interface in `:domain`, implementation in `:app`) queries Google Books by ISBN, fills missing fields from Open Library, and returns one normalized `BookCandidate`. The merge rules themselves live in the `MergeMetadata` use case so they are testable as plain JVM code.
 - Covers are downloaded once into the app files directory (Coil) and the path is stored. A user-picked cover overrides the remote URL.
 - Stack: Hilt, coroutines/Flow, CameraX, ML Kit barcode scanning, Coil, WorkManager, Google Identity Services.
+
+#### Layer rules
+
+- **Domain models are plain Kotlin data classes.** No Room, serialization or Android annotations.
+- **Entities and DTOs never reach the UI.** Room entities and row projections (for example the DAO's `BookListRow`) and network DTOs stay in `data/`. Repository implementations map them to domain models (`Book`, `BookSummary`, `BookCandidate`) with extension-function mappers kept next to the data models.
+- **Interfaces belong to the consumer.** Repository and port interfaces are defined in `:domain`, implemented in `:app/data`, and bound in `di/` with Hilt `@Binds`. ViewModels depend on use cases or repository interfaces, never on implementations.
+- **Use cases only where there is logic.** A use case exists when it holds a business rule or coordinates more than one repository (dedupe plus lookup plus merge, progress clamp plus status plus timestamp, backup orchestration). Pass-through reads such as "get book by id" are called directly on the repository from the ViewModel.
+- **ViewModels hold no business rules.** They map domain results and `AppError` values to UI state and strings, and launch work in `viewModelScope`.
+- **Workers are thin.** `BackupWorker` and `LookupRetryWorker` only call use cases and translate the result into `Result.success/retry/failure`.
+- **Structured concurrency only.** No `GlobalScope`. Dispatchers are injected through `DispatcherProvider` so tests can control them.
+- **Backup crosses a Room boundary.** `BackupRepositoryImpl` uses a `DatabaseSwapper` port (implemented in `:app/data`) to checkpoint the WAL, close Room, replace files and reopen it. `:domain` only sees `RunBackup`, `RestoreBackup` and their `AppError` results.
+
+#### Error model
+
+`:domain` defines a typed error instead of exceptions or the untyped `kotlin.Result`:
+
+```kotlin
+sealed interface Try<out T> {
+    data class Success<T>(val value: T) : Try<T>
+    data class Failure(val error: AppError) : Try<Nothing>
+}
+
+sealed interface AppError {
+    data object Offline : AppError
+    data object RateLimited : AppError
+    data object Timeout : AppError
+    data object NotFound : AppError
+    data class Duplicate(val existingBookId: Long) : AppError
+    data class InvalidIsbn(val input: String) : AppError
+    data object AuthExpired : AppError
+    data object InsufficientDriveSpace : AppError
+    data class IncompatibleBackup(val backupSchema: Int, val appSchema: Int) : AppError
+    data class Storage(val message: String) : AppError
+    data class Unexpected(val message: String) : AppError
+}
+```
+
+- Data-layer code catches framework exceptions (`IOException`, `HttpException`, `SQLiteException`, Google auth exceptions) at the repository boundary and converts them to `AppError`. Nothing outside `data/` and `work/` handles framework exceptions.
+- The duplicate-ISBN rule (D15) is `Failure(Duplicate(existingBookId))`; the UI uses the id to open the existing book.
+- ViewModels map `AppError` to user-facing strings in one place per feature.
 
 ### 4.2 Data model and search
 
@@ -86,7 +146,7 @@ Search and filters:
 - Filters combine with AND: status, categories (multi), tags (multi), optional author.
 - Status in SQL: not started = `currentPage = 0`; in progress = `0 < currentPage < totalPages`; read = `currentPage >= totalPages` (with `totalPages > 0`).
 - Sort: title, author, recently added, last updated, progress.
-- A single DAO query is built from a `LibraryFilter` object and returns `Flow<List<BookListItem>>`.
+- A single DAO query is built from a `LibraryFilter` object and returns `Flow<List<BookListRow>>` (a Room projection kept in `data/local/`). `BookRepositoryImpl` maps rows to the domain `BookSummary`, so the UI never sees Room types.
 
 Edge cases:
 - Unknown or zero `totalPages`: status shows "not started" and the user is prompted to set pages.
@@ -175,7 +235,7 @@ Reference: a bridge between the analog and digital worlds. Otium should feel lik
 
 ### 4.5 Testing strategy
 
-- **Unit (JUnit, Turbine, MockK):** `DeriveStatus`, ISBN-13 validation, `MergeMetadata` (gap fill, placeholder cover rejection), `LibraryFilter` to query, page clamping.
+- **Unit (JUnit, Turbine, MockK):** `DeriveStatus`, ISBN-13 validation, `MergeMetadata` (gap fill, placeholder cover rejection), `LibraryFilter` to query, page clamping, and the use cases (`AddBookFromIsbn`, `UpdateProgress`, `RunBackup`, `RestoreBackup`) against fake repositories and ports. `:domain` tests run on the plain JVM with no Android dependencies. ViewModel tests assert `AppError` to UI-state mapping.
 - **Data (Room in-memory, instrumented):** FTS search, combined filter and sort, duplicate ISBN constraint, migrations from exported schemas.
 - **Remote (MockWebServer):** Google Books and Open Library parsing against fixtures, including missing fields, 429, 5xx, timeout, fallback.
 - **UI (Compose test):** manual ISBN to saved book, filter chips, progress update. Camera scanning is tested manually on a device; the decoder sits behind an interface so the flow can use a fake.
@@ -199,6 +259,7 @@ Reference: a bridge between the analog and digital worlds. Otium should feel lik
 
 ## 6. Open Items for Implementation Planning
 
-- Exact library versions (CameraX, ML Kit, Room, Hilt) to be pinned at project setup.
+- Exact library versions (CameraX, ML Kit, Room, Hilt) to be pinned at project setup in a Gradle version catalog.
+- `:domain` build setup: Kotlin/JVM module with only `kotlinx-coroutines-core` as a dependency. Decide whether Hilt-annotated use cases are constructor-`@Inject`ed (needs `javax.inject`, a pure-Java dependency, in `:domain`) or provided from `@Provides` functions in `:app/di` (keeps `:domain` free of any DI dependency; preferred).
 - Package name and app id (needed for the API key restriction and Drive OAuth client).
 - Choice of Drive client: REST via OkHttp/Retrofit versus the Google API client library.
