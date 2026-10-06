@@ -11,9 +11,17 @@ data object LibraryRoute
 @Serializable
 data class DetailRoute(val bookId: Long)
 
-/** Stub until the add flow is built. */
+/** Adding a book by scanning its barcode. */
 @Serializable
-data object AddRoute
+data object ScanRoute
+
+/** Adding a book by typing its ISBN. */
+@Serializable
+data object IsbnEntryRoute
+
+/** Adding a book by searching its title or author. */
+@Serializable
+data object TitleSearchRoute
 
 /**
  * The confirm/edit screen. With a [bookId] it edits that book; otherwise it confirms a new book
@@ -38,7 +46,8 @@ data class ConfirmRoute(
     val tags: List<String> = emptyList(),
     val coverUrl: String? = null,
     val alternateCoverUrls: List<String> = emptyList(),
-    val source: BookSource = BookSource.MANUAL,
+    /** A [BookSource] name. Kept as text so R8 has no domain enum serializer to keep. */
+    val source: String = BookSource.MANUAL.name,
 ) {
     companion object {
         const val NEW_BOOK = 0L
@@ -60,7 +69,7 @@ data class ConfirmRoute(
             tags = candidate.tags,
             coverUrl = candidate.coverUrl,
             alternateCoverUrls = candidate.alternateCoverUrls,
-            source = candidate.source,
+            source = candidate.source.name,
         )
     }
 
@@ -81,7 +90,7 @@ data class ConfirmRoute(
         tags = tags,
         coverUrl = coverUrl,
         alternateCoverUrls = alternateCoverUrls,
-        source = source,
+        source = BookSource.entries.firstOrNull { it.name == source } ?: BookSource.MANUAL,
     )
 }
 

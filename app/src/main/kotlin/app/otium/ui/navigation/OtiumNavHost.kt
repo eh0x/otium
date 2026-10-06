@@ -14,11 +14,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import app.otium.BuildConfig
 import app.otium.R
+import app.otium.ui.add.AddDestination
+import app.otium.ui.add.AddMethod
+import app.otium.ui.add.confirm.ConfirmScreen
+import app.otium.ui.add.isbn.IsbnEntryScreen
 import app.otium.ui.catalog.ThemeCatalogScreen
 import app.otium.ui.detail.DetailScreen
 import app.otium.ui.library.LibraryScreen
@@ -46,19 +53,56 @@ fun OtiumNavHost(modifier: Modifier = Modifier) {
         composable<LibraryRoute> {
             LibraryScreen(
                 onOpenBook = { navController.navigate(DetailRoute(it)) },
-                onAddBook = { _ -> navController.navigate(AddRoute) },
+                onAddBook = { navController.navigate(it.route()) },
                 onOpenCatalog = { navController.navigate(CatalogRoute) },
             )
         }
         composable<DetailRoute> {
             DetailScreen(onBack = { navController.popBackStack() })
         }
-        composable<AddRoute> {
-            AddBookStub()
-        }
+        addFlow(navController)
         if (BuildConfig.DEBUG) {
             composable<CatalogRoute> { ThemeCatalogScreen() }
         }
+    }
+}
+
+private fun AddMethod.route(): Any = when (this) {
+    AddMethod.SCAN -> ScanRoute
+    AddMethod.ISBN -> IsbnEntryRoute
+    AddMethod.TITLE_SEARCH -> TitleSearchRoute
+}
+
+/**
+ * The add flow: the three ways in, all ending on the confirm screen. Leaving the flow for a book
+ * (just saved, or already owned) clears the flow from the back stack, so back returns to the
+ * library.
+ */
+private fun NavGraphBuilder.addFlow(navController: NavHostController) {
+    val openBook = { bookId: Long ->
+        navController.navigate(DetailRoute(bookId)) { popUpTo<LibraryRoute>() }
+    }
+    val goTo = { destination: AddDestination ->
+        when (destination) {
+            is AddDestination.Confirm -> navController.navigate(
+                ConfirmRoute.from(destination.candidate),
+            )
+
+            is AddDestination.Book -> openBook(destination.bookId)
+        }
+    }
+    composable<ScanRoute> { AddBookStub() }
+    composable<IsbnEntryRoute> {
+        IsbnEntryScreen(onBack = { navController.popBackStack() }, onDestination = goTo)
+    }
+    composable<TitleSearchRoute> { AddBookStub() }
+    composable<ConfirmRoute> { entry ->
+        val isEdit = entry.toRoute<ConfirmRoute>().isEdit
+        ConfirmScreen(
+            onBack = { navController.popBackStack() },
+            onSaved = { bookId -> if (isEdit) navController.popBackStack() else openBook(bookId) },
+            onOpenBook = openBook,
+        )
     }
 }
 

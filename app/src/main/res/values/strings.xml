@@ -84,6 +84,16 @@
     <string name="add_method_search_hint">Find the edition by title or author</string>
     <string name="add_book_coming_soon">Adding books by scan, ISBN or title is coming soon.</string>
 
+    <!-- Enter ISBN -->
+    <string name="isbn_title">Enter ISBN</string>
+    <string name="isbn_field">ISBN</string>
+    <string name="isbn_hint">The 10 or 13 digits above the barcode</string>
+    <string name="isbn_look_up">Look up</string>
+    <string name="isbn_try_again">Try again</string>
+    <string name="isbn_save_for_later">Save the ISBN, fill in details later</string>
+    <string name="isbn_save_for_later_hint">Otium looks it up once you are back online.</string>
+    <string name="add_enter_manually">Type the details yourself</string>
+
     <!-- Confirm and edit -->
     <string name="confirm_title_new">Check the details</string>
     <string name="confirm_title_edit">Edit book</string>
