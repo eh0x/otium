@@ -2,18 +2,8 @@ package app.otium.ui.navigation
 
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -21,16 +11,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import app.otium.BuildConfig
-import app.otium.R
 import app.otium.ui.add.AddDestination
 import app.otium.ui.add.AddMethod
 import app.otium.ui.add.confirm.ConfirmScreen
 import app.otium.ui.add.isbn.IsbnEntryScreen
+import app.otium.ui.add.scan.ScanScreen
 import app.otium.ui.add.search.TitleSearchScreen
 import app.otium.ui.catalog.ThemeCatalogScreen
 import app.otium.ui.detail.DetailScreen
 import app.otium.ui.library.LibraryScreen
-import app.otium.ui.theme.PaperBackground
 import app.otium.ui.theme.otiumFade
 import app.otium.ui.theme.rememberReducedMotion
 
@@ -92,7 +81,15 @@ private fun NavGraphBuilder.addFlow(navController: NavHostController) {
             is AddDestination.Book -> openBook(destination.bookId)
         }
     }
-    composable<ScanRoute> { AddBookStub() }
+    composable<ScanRoute> {
+        ScanScreen(
+            onBack = { navController.popBackStack() },
+            onEnterIsbn = {
+                navController.navigate(IsbnEntryRoute) { popUpTo<ScanRoute> { inclusive = true } }
+            },
+            onDestination = goTo,
+        )
+    }
     composable<IsbnEntryRoute> {
         IsbnEntryScreen(onBack = { navController.popBackStack() }, onDestination = goTo)
     }
@@ -106,29 +103,5 @@ private fun NavGraphBuilder.addFlow(navController: NavHostController) {
             onSaved = { bookId -> if (isEdit) navController.popBackStack() else openBook(bookId) },
             onOpenBook = openBook,
         )
-    }
-}
-
-/** Stands in for the add flow until it is built. */
-@Composable
-private fun AddBookStub() {
-    PaperBackground(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .safeDrawingPadding()
-                .padding(32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = stringResource(R.string.add_book_title),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(
-                text = stringResource(R.string.add_book_coming_soon),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
     }
 }

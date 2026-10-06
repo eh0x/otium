@@ -82,7 +82,18 @@
     <string name="add_method_isbn_hint">Type the 10 or 13 digit number</string>
     <string name="add_method_search">Search by title</string>
     <string name="add_method_search_hint">Find the edition by title or author</string>
-    <string name="add_book_coming_soon">Adding books by scan, ISBN or title is coming soon.</string>
+
+    <!-- Scan barcode -->
+    <string name="scan_title">Scan barcode</string>
+    <string name="scan_hint">Hold the barcode on the back cover inside the frame</string>
+    <string name="scan_looking_up">Looking up %1$s</string>
+    <string name="scan_again">Scan again</string>
+    <string name="scan_enter_isbn">Enter the ISBN instead</string>
+    <string name="scan_camera_rationale">Otium uses the camera only to read the barcode on a book. Nothing is recorded or sent anywhere.</string>
+    <string name="scan_camera_allow">Allow camera</string>
+    <string name="scan_camera_settings">Camera access is turned off for Otium. You can turn it on in the app settings.</string>
+    <string name="scan_open_settings">Open settings</string>
+    <string name="scan_no_camera">This device has no camera. You can still add books by ISBN or title.</string>
 
     <!-- Enter ISBN -->
     <string name="isbn_title">Enter ISBN</string>
