@@ -4,7 +4,12 @@
 # Makes sure a JDK is reachable. Git clients such as Android Studio often start hooks
 # without the shell profile, so fall back to well known install locations.
 ensure_java() {
-    if [ -n "$JAVA_HOME" ] || command -v java >/dev/null 2>&1; then
+    # Check that java actually runs: macOS ships a /usr/bin/java stub that exists on PATH
+    # but fails with "Unable to locate a Java Runtime" when no JDK is installed.
+    if [ -n "$JAVA_HOME" ] && "$JAVA_HOME/bin/java" -version >/dev/null 2>&1; then
+        return 0
+    fi
+    if command -v java >/dev/null 2>&1 && java -version >/dev/null 2>&1; then
         return 0
     fi
     for candidate in \
@@ -12,7 +17,7 @@ ensure_java() {
         /usr/local/opt/openjdk@17 \
         /usr/lib/jvm/java-17-openjdk \
         "/Applications/Android Studio.app/Contents/jbr/Contents/Home"; do
-        if [ -x "$candidate/bin/java" ]; then
+        if [ -x "$candidate/bin/java" ] && "$candidate/bin/java" -version >/dev/null 2>&1; then
             JAVA_HOME="$candidate"
             export JAVA_HOME
             return 0
