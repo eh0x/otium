@@ -159,11 +159,31 @@ class SaveBookTest {
     }
 
     @Test
-    fun `a cover the user picked is used as stored`() = runTest {
-        add(cover = CoverChoice.Stored("covers/picked.jpg"))
+    fun `a photo the user picked is stored with the book`() = runTest {
+        add(cover = CoverChoice.Picked("content://photos/1"))
 
-        assertEquals("covers/picked.jpg", repo.all.single().coverPath)
+        assertEquals(listOf("content://photos/1"), covers.pickedUris)
+        assertEquals(covers.stored.single(), repo.all.single().coverPath)
         assertNull(repo.all.single().coverSourceUrl)
+    }
+
+    @Test
+    fun `a picked photo that cannot be read stops the save`() = runTest {
+        covers.missing += "content://photos/gone"
+
+        val result = add(cover = CoverChoice.Picked("content://photos/gone"))
+
+        assertEquals(Try.Failure(AppError.InvalidInput("cover")), result)
+        assertTrue(repo.all.isEmpty())
+    }
+
+    @Test
+    fun `a stored photo is removed again when the book cannot be saved`() = runTest {
+        repo.failWith = AppError.Storage("disk full")
+
+        add(cover = CoverChoice.Picked("content://photos/1"))
+
+        assertTrue(covers.stored.isEmpty())
     }
 
     @Test
@@ -233,9 +253,9 @@ class SaveBookTest {
     fun `an edit with a new cover stores it and deletes the old one`() = runTest {
         val original = stored()
 
-        saveBook.update(original.id, candidate(), CoverChoice.Stored("covers/new.jpg"))
+        saveBook.update(original.id, candidate(), CoverChoice.Picked("content://photos/2"))
 
-        assertEquals("covers/new.jpg", repo.all.single().coverPath)
+        assertEquals(covers.stored.single(), repo.all.single().coverPath)
         assertEquals(listOf("covers/old.jpg"), covers.deleted)
     }
 

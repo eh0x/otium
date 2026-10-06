@@ -3,6 +3,7 @@ package app.otium.domain.usecase
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.error.flatMap
+import app.otium.domain.error.map
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
@@ -16,8 +17,9 @@ import app.otium.domain.repo.BookRepository
  * one. The title is required, an ISBN (if given) is checked and normalized to ISBN-13, and an
  * ISBN that belongs to another book is rejected with that book's id.
  *
- * A remote cover is downloaded here, once. A cover that cannot be downloaded never stops the
- * save: the book is kept without one.
+ * The chosen cover is put in the cover store here, once. A remote cover that cannot be downloaded
+ * never stops the save: the book is kept without one. Any cover stored for a save that then fails
+ * is removed again, so nothing is left behind.
  */
 class SaveBook(
     private val books: BookRepository,
@@ -29,94 +31,103 @@ class SaveBook(
      * anything a lookup filled in; manual entries always count as edited, so a later metadata
      * refresh never overwrites them.
      */
-    suspend fun add(candidate: BookCandidate, cover: CoverChoice, edited: Boolean): Try<Long> {
-        if (candidate.title.isBlank()) return Try.Failure(AppError.InvalidInput("title"))
-
-        return resolveIsbn(candidate).flatMap { isbn13 ->
-            ensureIsbnFree(isbn13, ownerId = null).flatMap {
-                val stored = store(cover)
-                val now = clock.nowMillis()
-                val book = Book(
-                    isbn13 = isbn13,
-                    isbn10 = null,
-                    title = "",
-                    subtitle = null,
-                    authors = emptyList(),
-                    publisher = null,
-                    publishedYear = null,
-                    language = null,
-                    description = null,
-                    totalPages = 0,
-                    categories = emptyList(),
-                    tags = emptyList(),
-                    coverPath = stored.path,
-                    coverSourceUrl = stored.sourceUrl,
-                    source = candidate.source,
-                    addedAt = now,
-                    updatedAt = now,
-                    userEdited = edited || candidate.source == BookSource.MANUAL,
-                ).withDetailsOf(candidate, isbn13)
-                books.add(book).also { if (it is Try.Failure) discard(stored) }
-            }
+    suspend fun add(candidate: BookCandidate, cover: CoverChoice, edited: Boolean): Try<Long> =
+        prepare(candidate, cover, existing = null).flatMap { (isbn13, stored) ->
+            val now = clock.nowMillis()
+            val book = Book(
+                isbn13 = isbn13,
+                isbn10 = null,
+                title = "",
+                subtitle = null,
+                authors = emptyList(),
+                publisher = null,
+                publishedYear = null,
+                language = null,
+                description = null,
+                totalPages = 0,
+                categories = emptyList(),
+                tags = emptyList(),
+                coverPath = stored.path,
+                coverSourceUrl = stored.sourceUrl,
+                source = candidate.source,
+                addedAt = now,
+                updatedAt = now,
+                userEdited = edited || candidate.source == BookSource.MANUAL,
+            ).withDetailsOf(candidate, isbn13)
+            books.add(book).also { if (it is Try.Failure) discard(stored) }
         }
-    }
 
     /**
      * Replaces the details of book [bookId] with [candidate]. Reading progress and the date the
      * book was added are kept; the current page is clamped to a lowered total. The book counts as
      * edited by the user from now on and stops waiting for a lookup.
      */
-    suspend fun update(bookId: Long, candidate: BookCandidate, cover: CoverChoice): Try<Unit> {
-        if (candidate.title.isBlank()) return Try.Failure(AppError.InvalidInput("title"))
-
-        return books.getBook(bookId).flatMap { existing ->
-            resolveIsbn(candidate).flatMap { isbn13 ->
-                ensureIsbnFree(isbn13, ownerId = bookId).flatMap {
-                    val stored = if (cover == CoverChoice.Unchanged) {
-                        StoredCover(existing.coverPath, existing.coverSourceUrl, downloaded = false)
-                    } else {
-                        store(cover)
-                    }
-                    val details = existing.withDetailsOf(candidate, isbn13)
-                    val updated = details.copy(
-                        currentPage = ClampPage(existing.currentPage, details.totalPages),
-                        coverPath = stored.path,
-                        coverSourceUrl = stored.sourceUrl,
-                        updatedAt = clock.nowMillis(),
-                        userEdited = true,
-                        needsLookup = false,
-                    )
-                    books.update(updated).also { result ->
-                        when (result) {
-                            is Try.Success -> replaceOldCover(existing.coverPath, stored.path)
-                            is Try.Failure -> discard(stored)
-                        }
+    suspend fun update(bookId: Long, candidate: BookCandidate, cover: CoverChoice): Try<Unit> =
+        books.getBook(bookId).flatMap { existing ->
+            prepare(candidate, cover, existing).flatMap { (isbn13, stored) ->
+                val details = existing.withDetailsOf(candidate, isbn13)
+                val updated = details.copy(
+                    currentPage = ClampPage(existing.currentPage, details.totalPages),
+                    coverPath = stored.path,
+                    coverSourceUrl = stored.sourceUrl,
+                    updatedAt = clock.nowMillis(),
+                    userEdited = true,
+                    needsLookup = false,
+                )
+                books.update(updated).also { result ->
+                    when (result) {
+                        is Try.Success -> replaceOldCover(existing.coverPath, stored.path)
+                        is Try.Failure -> discard(stored)
                     }
                 }
             }
         }
-    }
 
-    private data class StoredCover(
-        val path: String?,
-        val sourceUrl: String?,
-        val downloaded: Boolean,
-    )
+    /** The checked ISBN-13 (null when there is none) and the stored cover. */
+    private data class Prepared(val isbn13: String?, val cover: StoredCover)
 
-    private suspend fun store(cover: CoverChoice): StoredCover = when (cover) {
-        CoverChoice.None, CoverChoice.Unchanged -> StoredCover(null, null, downloaded = false)
-
-        is CoverChoice.Stored -> StoredCover(cover.path, null, downloaded = false)
-
-        is CoverChoice.Remote -> when (val result = covers.saveFromUrl(cover.url)) {
-            is Try.Success -> StoredCover(result.value, cover.url, downloaded = true)
-            is Try.Failure -> StoredCover(null, cover.url, downloaded = false)
+    /** Checks the candidate against [existing] (null for a new book) and stores its cover. */
+    private suspend fun prepare(
+        candidate: BookCandidate,
+        cover: CoverChoice,
+        existing: Book?,
+    ): Try<Prepared> {
+        if (candidate.title.isBlank()) return Try.Failure(AppError.InvalidInput("title"))
+        return resolveIsbn(candidate).flatMap { isbn13 ->
+            ensureIsbnFree(isbn13, ownerId = existing?.id)
+                .flatMap { store(cover, existing) }
+                .map { Prepared(isbn13, it) }
         }
     }
 
-    /** Removes a cover this use case downloaded for a save that then failed. */
+    /** The cover a book ends up with. [isNew] when this save put the file in the store. */
+    private data class StoredCover(val path: String?, val sourceUrl: String?, val isNew: Boolean)
+
+    /**
+     * Puts the chosen cover in the store. A remote cover that cannot be downloaded leaves the book
+     * without one; a picked photo that cannot be read fails, because the user chose it.
+     */
+    private suspend fun store(cover: CoverChoice, existing: Book?): Try<StoredCover> {
+        val stored = when (cover) {
+            CoverChoice.None -> StoredCover(null, null, isNew = false)
+
+            CoverChoice.Unchanged ->
+                StoredCover(existing?.coverPath, existing?.coverSourceUrl, isNew = false)
+
+            is CoverChoice.Picked -> return covers.saveFromDevice(cover.uri)
+                .map { StoredCover(it, null, isNew = true) }
+
+            is CoverChoice.Remote -> when (val result = covers.saveFromUrl(cover.url)) {
+                is Try.Success -> StoredCover(result.value, cover.url, isNew = true)
+                is Try.Failure -> StoredCover(null, cover.url, isNew = false)
+            }
+        }
+        return Try.Success(stored)
+    }
+
+    /** Removes a cover this save stored when the save itself then failed. */
     private suspend fun discard(stored: StoredCover) {
-        if (stored.downloaded && stored.path != null) covers.delete(stored.path)
+        if (stored.isNew && stored.path != null) covers.delete(stored.path)
     }
 
     private suspend fun replaceOldCover(oldPath: String?, newPath: String?) {

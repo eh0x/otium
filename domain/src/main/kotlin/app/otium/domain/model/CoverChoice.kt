@@ -8,8 +8,11 @@ sealed interface CoverChoice {
     /** A cover offered by a metadata service. It is downloaded once, when the book is saved. */
     data class Remote(val url: String) : CoverChoice
 
-    /** A picture the user took or picked, already kept by the cover store at [path]. */
-    data class Stored(val path: String) : CoverChoice
+    /**
+     * A photo the user picked from the gallery or took with the camera, at [uri] on the device.
+     * It is copied into the cover store when the book is saved.
+     */
+    data class Picked(val uri: String) : CoverChoice
 
     /** Editing only: keep the cover the book already has. Adding treats it as [None]. */
     data object Unchanged : CoverChoice
