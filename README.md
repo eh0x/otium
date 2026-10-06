@@ -166,6 +166,7 @@ build opens the theme catalog shown above.
 | `./gradlew installDebug` | Install the debug build on a device or emulator |
 | `./gradlew assembleRelease` | Build the unsigned, R8-shrunk release APK |
 | `./gradlew testDebugUnitTest :domain:test` | Run all unit tests |
+| `./gradlew :benchmark:connectedBenchmarkAndroidTest` | Run the scroll and search benchmarks on a device or emulator (see below) |
 | `./gradlew spotlessApply` | Fix formatting of Kotlin, Gradle, XML and text files |
 | `./gradlew spotlessCheck detekt lint` | Check formatting, static analysis and Android Lint |
 | `./gradlew checkDocs lintMarkdown` | Check that docs match the repository, and lint Markdown |
@@ -189,8 +190,11 @@ Everything runs on the JVM, so no device or emulator is needed:
 - **Architecture tests** fail the build when a layering rule breaks, for example when the UI layer
   imports the data layer or a ViewModel imports an Android type.
 
-Instrumented tests on a device are not set up yet. The 5,000-book timings measured on the JVM are
-a regression guard, not device numbers; device measurements are planned with Macrobenchmark.
+The 5,000-book timings measured on the JVM are a regression guard, not device numbers. Device
+numbers come from the `:benchmark` module, which seeds 5,000 books through the debug seeder and
+records frame timing while scrolling the shelf and typing in search. It needs a device or emulator.
+On an emulator add `-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR`;
+its numbers only compare one run with another.
 
 ## Architecture
 
@@ -203,8 +207,9 @@ flowchart LR
     Data -.->|planned| Remote["Google Books, Open Library, Google Drive"]
 ```
 
-- **Two Gradle modules.** `:domain` is pure Kotlin and cannot import Android, Room or Hilt; the
-  compiler enforces it. `:app` holds the UI, the data layer and the wiring.
+- **Three Gradle modules.** `:domain` is pure Kotlin and cannot import Android, Room or Hilt; the
+  compiler enforces it. `:app` holds the UI, the data layer and the wiring. `:benchmark` holds the
+  Macrobenchmark tests and ships nothing.
 - **Room is the source of truth.** The UI observes database flows; network results are written into
   the database.
 - **Interfaces belong to the consumer.** Repository and port interfaces live in `:domain` and are
@@ -225,6 +230,7 @@ otium/
 │       ├── ui/          Compose theme, shared components, theme catalog
 │       ├── data/        Room store and repositories
 │       └── di/          Hilt modules
+├── benchmark/       Macrobenchmark tests for scroll and search (:benchmark)
 ├── domain/          Pure Kotlin (:domain): models, rules, use cases, ports
 ├── docs/            Design, plan, style and Markdown guides
 ├── config/detekt/   Static analysis rules

@@ -256,7 +256,7 @@ Audit of this repository against every item on Google's page. Status as of Phase
 | Test StateFlows | Strongly | Met for repository flows; Planned for ViewModels, Phase 3 | Turbine |
 | Use R8 | Strongly | Met | release build verified; keep rules in Phase 7 |
 | Baseline Profiles and Startup Profiles | Strongly | **Gap, added to Phase 7** | needs a device or emulator |
-| Test performance with Macrobenchmark | Strongly | **Gap, added to Phases 3 and 7** | needs a device or emulator |
+| Test performance with Macrobenchmark | Strongly | Met for scroll and search (Phase 7 adds startup) | `:benchmark` module; needs a device or emulator |
 | A model per layer | Recommended | Met | entity, DTO, domain; UI state in Phase 3 |
 | Naming: verb methods, noun properties | Optional | Met | |
 | Naming: `get{Model}Stream` for flows | Optional | Deviation, documented | `observe*`, see 3.2 |

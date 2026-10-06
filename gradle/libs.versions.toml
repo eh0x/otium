@@ -10,6 +10,8 @@ ktlint = "1.8.0"
 detekt = "1.23.8"
 
 # AndroidX
+benchmarkMacro = "1.5.0"
+uiautomator = "2.4.0"
 composeBom = "2026.09.00"
 coreKtx = "1.19.1"
 activityCompose = "1.13.0"
@@ -89,6 +91,10 @@ hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hil
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
+# Benchmarks
+androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmarkMacro" }
+androidx-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
+
 # Kotlin libraries
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
@@ -118,6 +124,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 
 [plugins]
+android-test = { id = "com.android.test", version.ref = "agp" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

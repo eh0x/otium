@@ -43,6 +43,13 @@ android {
                 "proguard-rules.pro",
             )
         }
+        // Release-like and not debuggable, so the :benchmark module measures real speed. Signed
+        // with the debug key so it installs without a keystore.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
     }
 
     compileOptions {
@@ -71,6 +78,8 @@ android {
         // Exported Room schemas for MigrationTestHelper under Robolectric. AGP does not merge
         // test source set assets, so the schemas ride along in debug assets (debug builds only).
         getByName("debug").assets.directories.add("$projectDir/schemas")
+        // The benchmark build reuses the debug seeder to fill the library with 5,000 books.
+        getByName("benchmark").kotlin.directories.add("src/debug/kotlin")
     }
 }
 

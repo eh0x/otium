@@ -2,6 +2,7 @@
 // and hosts the repository-wide style and static analysis checks (see docs/STYLE_GUIDE.md).
 plugins {
     alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.test) apply false
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false

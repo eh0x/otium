@@ -24,3 +24,4 @@ rootProject.name = "otium"
 
 include(":app")
 include(":domain")
+include(":benchmark")
