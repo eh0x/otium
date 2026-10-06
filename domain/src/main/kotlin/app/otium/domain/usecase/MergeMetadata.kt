@@ -8,8 +8,8 @@ import app.otium.domain.model.BookSource
  * Google wins; any field Google leaves empty is filled from Open Library.
  *
  * Covers are tried in order (Google, then Open Library) and the first one accepted by
- * [coverIsUsable] wins. Detecting placeholder images needs I/O, so the data layer supplies
- * that decision through the predicate.
+ * [coverIsUsable] wins; the other accepted covers become alternates the user can pick. Detecting
+ * placeholder images needs I/O, so the data layer supplies that decision through the predicate.
  */
 object MergeMetadata {
     operator fun invoke(
@@ -19,6 +19,10 @@ object MergeMetadata {
     ): BookCandidate? {
         if (google == null && openLibrary == null) return null
         val sources = listOfNotNull(google, openLibrary)
+        val covers = sources
+            .mapNotNull { it.coverUrl?.takeIf(String::isNotBlank) }
+            .distinct()
+            .filter(coverIsUsable)
 
         return BookCandidate(
             isbn13 = sources.firstNotNullOfOrNull { it.isbn13?.takeIf(String::isNotBlank) },
@@ -37,7 +41,8 @@ object MergeMetadata {
             },
             categories = sources.firstOrNull { it.categories.isNotEmpty() }?.categories.orEmpty(),
             tags = sources.flatMap { it.tags }.distinct(),
-            coverUrl = sources.firstNotNullOfOrNull { it.coverUrl?.takeIf(coverIsUsable) },
+            coverUrl = covers.firstOrNull(),
+            alternateCoverUrls = covers.drop(1),
             source = if (google != null) BookSource.GOOGLE else BookSource.OPEN_LIBRARY,
         )
     }

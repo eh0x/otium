@@ -18,5 +18,7 @@ data class BookCandidate(
     val categories: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
     val coverUrl: String? = null,
+    /** Other covers the services offer for this book, which the user can pick instead. */
+    val alternateCoverUrls: List<String> = emptyList(),
     val source: BookSource,
 )
