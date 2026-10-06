@@ -53,6 +53,16 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
+    sourceSets {
+        // Exported Room schemas for MigrationTestHelper under Robolectric. AGP does not merge
+        // test source set assets, so the schemas ride along in debug assets (debug builds only).
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 kotlin {
@@ -93,6 +103,10 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core.ktx)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.room.testing)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

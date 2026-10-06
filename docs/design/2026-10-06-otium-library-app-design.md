@@ -122,6 +122,7 @@ sealed interface AppError {
     data object NotFound : AppError
     data class Duplicate(val existingBookId: Long) : AppError
     data class InvalidIsbn(val input: String) : AppError
+    data class InvalidInput(val field: String) : AppError
     data object AuthExpired : AppError
     data object InsufficientDriveSpace : AppError
     data class IncompatibleBackup(val backupSchema: Int, val appSchema: Int) : AppError
@@ -143,7 +144,9 @@ Tables:
 
 Search and filters:
 - FTS prefix match on the text input, debounced about 200 ms.
-- Filters combine with AND: status, categories (multi), tags (multi), optional author.
+- Filters combine with AND: status, categories (multi), tags (multi), optional author. Within the categories group and within the tags group a book matches when it has any of the selected values (OR inside a group, AND between groups).
+- Text input becomes an FTS4 prefix query over letters and digits only (`the hobb` becomes `the* hobb*`), so FTS operator syntax typed by the user is neutralized. FTS uses the `unicode61` tokenizer, giving case and diacritic insensitive matching. Input with no searchable characters is ignored rather than matching nothing.
+- Author, category and tag names are unique case-insensitively (`NOCASE`), and labels no longer used by any book are deleted.
 - Status in SQL: not started = `currentPage = 0`; in progress = `0 < currentPage < totalPages`; read = `currentPage >= totalPages` (with `totalPages > 0`).
 - Sort: title, author, recently added, last updated, progress.
 - A single DAO query is built from a `LibraryFilter` object and returns `Flow<List<BookListRow>>` (a Room projection kept in `data/local/`). `BookRepositoryImpl` maps rows to the domain `BookSummary`, so the UI never sees Room types.
