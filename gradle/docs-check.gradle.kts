@@ -50,11 +50,17 @@ tasks.register("checkDocs") {
 
         fun read(path: String) = root.resolve(path).takeIf { it.isFile }?.readText()
 
-        // 1. Relative markdown links must resolve.
+        // 1. Relative markdown links must resolve. Links shown as examples inside code blocks
+        //    or code spans are not links, so they are skipped.
         val link = Regex("""\[[^\]]*]\(([^)\s]+)\)""")
+        val codeBlock = Regex("```.*?```", RegexOption.DOT_MATCHES_ALL)
+        val codeSpan = Regex("`[^`\\n]*`")
         for (doc in linkCheckedDocs) {
             val file = root.resolve(doc)
-            val text = file.takeIf { it.isFile }?.readText() ?: continue
+            val text = file.takeIf { it.isFile }?.readText()
+                ?.replace(codeBlock, "")
+                ?.replace(codeSpan, "")
+                ?: continue
             for (match in link.findAll(text)) {
                 val target = match.groupValues[1].substringBefore('#')
                 val external = target.startsWith("http") || target.startsWith("mailto:")
