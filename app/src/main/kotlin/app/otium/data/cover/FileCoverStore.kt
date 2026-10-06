@@ -6,6 +6,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import androidx.core.graphics.scale
+import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
 import app.otium.data.remote.await
 import app.otium.data.remote.toAppError
@@ -91,7 +93,7 @@ class FileCoverStore internal constructor(
         }
 
     override suspend fun saveFromDevice(uri: String): Try<String> = withContext(dispatchers.io) {
-        readScaled(Uri.parse(uri))?.takeIf(::isUsablePicture)?.let(::store)
+        readScaled(uri.toUri())?.takeIf(::isUsablePicture)?.let(::store)
             ?: Try.Failure(AppError.InvalidInput("cover"))
     }
 
@@ -178,11 +180,10 @@ class FileCoverStore internal constructor(
     private fun Bitmap.scaledToFit(maxSide: Int): Bitmap {
         val longest = maxOf(width, height)
         if (longest <= maxSide) return this
-        return Bitmap.createScaledBitmap(
-            this,
+        return scale(
             width * maxSide / longest,
             height * maxSide / longest,
-            true,
+            filter = true,
         )
     }
 
