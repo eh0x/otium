@@ -18,5 +18,5 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Lint, unit tests, assemble
-        run: ./gradlew lint testDebugUnitTest :domain:test assembleDebug
+      - name: Style, static analysis, lint, unit tests, assemble
+        run: ./gradlew spotlessCheck detekt lint testDebugUnitTest :domain:test assembleDebug

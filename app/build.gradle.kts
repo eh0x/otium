@@ -19,14 +19,14 @@ val booksApiKey: String = localProperties.getProperty("books.api.key", "")
 
 android {
     namespace = "app.otium"
-    // Latest AndroidX releases require compiling against API 37. targetSdk stays at 36
-    // so runtime behavior changes of 37 are adopted deliberately (revisit in Phase 7).
+    // Latest AndroidX releases require compiling against API 37. Greenfield app, so it
+    // targets the latest API too (lint enforces this via OldTargetApi).
     compileSdk = 37
 
     defaultConfig {
         applicationId = "app.otium"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
 
@@ -37,6 +37,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -58,15 +59,27 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
+    lint {
+        // Style rule: lint findings fail the build. Fix them or suppress with a reason.
+        abortOnError = true
+        warningsAsErrors = true
+        // Dependency freshness is tracked by Dependabot, not by failing local builds.
+        disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion")
+    }
+
     sourceSets {
         // Exported Room schemas for MigrationTestHelper under Robolectric. AGP does not merge
         // test source set assets, so the schemas ride along in debug assets (debug builds only).
-        getByName("debug").assets.srcDir("$projectDir/schemas")
+        getByName("debug").assets.directories.add("$projectDir/schemas")
     }
 }
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        // Style rule: the build stays free of compiler warnings.
+        allWarningsAsErrors.set(true)
+    }
 }
 
 room {

@@ -4,6 +4,11 @@ agp = "9.4.1"
 kotlin = "2.4.20"
 ksp = "2.3.12"
 
+# Code quality
+spotless = "8.10.3"
+ktlint = "1.8.0"
+detekt = "1.23.8"
+
 # AndroidX
 composeBom = "2026.09.00"
 coreKtx = "1.19.1"
@@ -117,3 +122,5 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 room = { id = "androidx.room", version.ref = "room" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

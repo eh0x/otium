@@ -1,0 +1,10 @@
+#!/bin/sh
+# Blocks commits that break formatting. Fix with: ./gradlew spotlessApply
+# Emergency bypass: git commit --no-verify
+. "$(dirname "$0")/lib.sh"
+
+if ! run_gradle spotlessCheck; then
+    echo >&2
+    echo "pre-commit: formatting check failed. Run ./gradlew spotlessApply and re-stage." >&2
+    exit 1
+fi

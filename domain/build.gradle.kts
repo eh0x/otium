@@ -6,6 +6,10 @@ plugins {
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        // Style rule: the build stays free of compiler warnings.
+        allWarningsAsErrors.set(true)
+    }
 }
 
 dependencies {

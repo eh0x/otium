@@ -31,17 +31,31 @@ Application id: `app.otium`. minSdk 26.
    books.api.key=YOUR_GOOGLE_BOOKS_API_KEY
    ```
 
-2. Build and test:
+2. Install the git hooks (formatting, commit message and push checks):
 
    ```bash
-   ./gradlew lint testDebugUnitTest :domain:test assembleDebug
+   ./gradlew installGitHooks
    ```
+
+3. Build and verify:
+
+   ```bash
+   ./gradlew spotlessCheck detekt lint testDebugUnitTest :domain:test assembleDebug
+   ```
+
+   Fix formatting with `./gradlew spotlessApply`.
 
    Instrumented tests (device or emulator required):
 
    ```bash
    ./gradlew :app:connectedDebugAndroidTest
    ```
+
+## Code style
+
+Kotlin follows the [Android Kotlin style guide](https://developer.android.com/kotlin/style-guide).
+The rules, project decisions and how each one is enforced are in
+[`docs/STYLE_GUIDE.md`](docs/STYLE_GUIDE.md).
 
 ## Secrets
 

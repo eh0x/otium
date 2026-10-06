@@ -1,0 +1,91 @@
+# Overrides on top of detekt's default configuration (buildUponDefaultConfig = true).
+# Formatting is owned by ktlint; detekt covers design, complexity and bug-prone code.
+# See docs/STYLE_GUIDE.md. No baseline: findings are fixed or suppressed with a reason.
+
+build:
+  maxIssues: 0
+
+style:
+  MaxLineLength:
+    maxLineLength: 100
+    excludeCommentStatements: true
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreEnums: true
+    excludes:
+      - '**/test/**'
+      - '**/testDebug/**'
+      - '**/androidTest/**'
+      - '**/debug/**'
+      - '**/*.kts'
+  ReturnCount:
+    max: 3
+    excludeGuardClauses: true
+  ForbiddenComment:
+    comments:
+      - 'FIXME:'
+      - 'STOPSHIP:'
+  UnusedPrivateMember:
+    active: true
+  UnnecessaryAbstractClass:
+    active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - 'Composable'
+    excludes:
+      - '**/test/**'
+      - '**/testDebug/**'
+      - '**/androidTest/**'
+
+complexity:
+  LongParameterList:
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+  TooManyFunctions:
+    # Repository ports and their implementations are intentionally wide.
+    thresholdInInterfaces: 15
+    thresholdInClasses: 15
+    ignoreAnnotated:
+      - 'Dao'
+    excludes:
+      - '**/test/**'
+      - '**/testDebug/**'
+      - '**/androidTest/**'
+  LongMethod:
+    excludes:
+      - '**/test/**'
+      - '**/testDebug/**'
+      - '**/androidTest/**'
+
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+  InjectDispatcher:
+    active: true
+    excludes:
+      - '**/test/**'
+      - '**/testDebug/**'
+      - '**/androidTest/**'
+  SuspendFunSwallowedCancellation:
+    active: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
+  SwallowedException:
+    active: true
+  PrintStackTrace:
+    active: true
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    active: true
+    excludes:
+      - '**/test/**'
+      - '**/testDebug/**'
+      - '**/androidTest/**'

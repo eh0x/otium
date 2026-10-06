@@ -1,0 +1,10 @@
+#!/bin/sh
+# Runs static analysis and unit tests before pushing. CI runs the same checks.
+# Emergency bypass: git push --no-verify
+. "$(dirname "$0")/lib.sh"
+
+if ! run_gradle spotlessCheck detekt testDebugUnitTest :domain:test; then
+    echo >&2
+    echo "pre-push: checks failed. Fix them or bypass with --no-verify." >&2
+    exit 1
+fi
