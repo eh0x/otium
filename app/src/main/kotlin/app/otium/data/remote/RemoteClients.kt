@@ -10,6 +10,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 private const val TIMEOUT_SECONDS = 8L
+private const val TRANSFER_SILENCE_SECONDS = 60L
 private const val JSON_MEDIA_TYPE = "application/json"
 
 /** How the app builds its HTTP clients, in one place so the app and its tests agree. */
@@ -39,6 +40,16 @@ internal object RemoteClients {
     } else {
         base.newBuilder().addInterceptor(ApiKeyInterceptor(apiKey)).build()
     }
+
+    /**
+     * [base] for moving a whole backup, which takes far longer than a book lookup: no limit on the
+     * call as a whole, but a connection that goes quiet for a minute is given up on.
+     */
+    fun transferClient(base: OkHttpClient): OkHttpClient = base.newBuilder()
+        .callTimeout(0, TimeUnit.SECONDS)
+        .readTimeout(TRANSFER_SILENCE_SECONDS, TimeUnit.SECONDS)
+        .writeTimeout(TRANSFER_SILENCE_SECONDS, TimeUnit.SECONDS)
+        .build()
 
     fun retrofit(baseUrl: HttpUrl, client: OkHttpClient): Retrofit = Retrofit.Builder()
         .baseUrl(baseUrl)
