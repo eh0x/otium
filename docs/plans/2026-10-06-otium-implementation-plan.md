@@ -4,7 +4,8 @@ Date: 2026-10-06
 Source design: `docs/design/2026-10-06-otium-library-app-design.md` (commit `c55b61b`)
 Complexity: Large (8 phases, solo project)
 Status: In progress. Phases 0 to 5 complete (device checks for 3 to 5 still to take). Phase 6 is
-partly built: see its Status section.
+built and tested without a device; the Cloud project setup and the device checks are still to do
+(see its Status section).
 
 ## 1. Summary
 
@@ -521,11 +522,12 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
 |------|---------|
 | `data/backup/drive/` | `GoogleDriveBackupClient` (REST via Retrofit/OkHttp, P2, `drive.appdata`), API, DTOs, error mapping |
 | `data/backup/archive/` | `BackupZip` and `BackupManifest`: zip, unzip and verify with zip-slip and size limits |
-| `data/backup/ZipBackupArchiver.kt` | Snapshot with `VACUUM INTO`, zip with covers |
+| `data/backup/ZipBackupArchiver.kt` | Copy the library into a fresh database file, zip with covers |
 | `data/backup/RoomLibraryRestorer.kt` | Import a backup into the live database in one transaction |
 | `data/backup/GoogleAuthManager.kt` | Identity Services authorization, token, re-sign-in signal |
+| `auth/DriveConsent.kt` | What the screen does to give Drive access (launch Google's consent, take the result) |
 | `data/prefs/DataStoreBackupPreferences.kt` | Settings and bookkeeping |
-| `work/BackupWorker.kt`, `WorkManagerBackupScheduler.kt` | Periodic work with user constraints and backoff |
+| `work/BackupWorker.kt`, `WorkManagerBackupScheduler.kt`, `BackupNotifier.kt` | Periodic work with user constraints and backoff; the notice after repeated failures |
 | `ui/backup/BackupScreen.kt`, `BackupViewModel.kt` | Sign-in, Back up now, Restore, auto-backup toggle, frequency, Wi-Fi-only, charging-only, last backup time and size |
 | `di/BackupModule.kt` | Bindings |
 
@@ -568,8 +570,8 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
 
 ### Status
 
-Built and tested without Android (domain tests, plus the archive and Drive client compiled and run
-on the JVM, since both are free of Android classes):
+Built and tested (domain tests; the archive and the Drive client on the JVM; the rest under
+Robolectric):
 
 - [x] Domain ports, models and use cases, with fakes: backup, two-step restore, schema-version
   refusal, scheduled runs with a failure policy, no overlapping runs, no upload of an empty library.
@@ -577,14 +579,21 @@ on the JVM, since both are free of Android classes):
 - [x] `GoogleDriveBackupClient` against an in-memory Drive: upload, rotation, healing after a
   stop part way, checksum checks, 401, 403 (full Drive, rate limit, permission), retries, offline.
 
-Still to build (needs the Android SDK, so it could not be compiled where the first part was written):
+- [x] `ZipBackupArchiver` and `RoomLibraryRestorer` with round-trip tests: labels, progress, covers
+  and full-text search come back; a damaged backup, a newer schema and a failure part way leave the
+  library and its covers as they were. The restore approach is in the design doc. The backup copies
+  the library through Room instead of using `VACUUM INTO`, which Android 8 to 10 lack.
+- [x] `GoogleAuthManager` and the consent flow (`DriveConsent`), `DataStoreBackupPreferences`,
+  `BackupWorker`, `WorkManagerBackupScheduler` and the failure notification.
+- [x] `BackupModule`, the Backup screen and its entry in the library menu, with ViewModel and
+  screen tests.
 
-- [ ] `ZipBackupArchiver` and `RoomLibraryRestorer`, with the Task 1 spike and the round-trip test.
-- [ ] `GoogleAuthManager` and the consent flow.
-- [ ] `DataStoreBackupPreferences`, `BackupWorker`, scheduler and failure notification.
-- [ ] `BackupModule`, the Backup screen and its entry point.
-- [ ] Device checks, and the Cloud project setup from decision P4 (OAuth client for the debug and
-  release SHA-1).
+Still to do (needs a device and a Google account):
+
+- [ ] The Cloud project setup from decision P4 (OAuth client for the debug and release SHA-1).
+  Until it exists, asking for access fails with a Google setup error.
+- [ ] Device checks: back up, uninstall, reinstall, sign in, restore; restore the previous backup;
+  an automatic backup run; the consent screen; the failure notice.
 
 ### Acceptance
 

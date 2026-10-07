@@ -93,10 +93,13 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
     local/       Room: entities, FTS table, DAOs, row projections, mappers
     remote/      GoogleBooksApi, OpenLibraryApi (Retrofit + kotlinx.serialization), DTOs, mappers
     repo/        RoomBookRepository, RemoteMetadataRepository
-    backup/      GoogleDriveBackupClient, BackupZip, ZipBackupArchiver, RoomLibraryRestorer
+    backup/      GoogleDriveBackupClient, BackupZip, ZipBackupArchiver, RoomLibraryRestorer,
+                 GoogleAuthManager
+    prefs/       DataStoreLibraryPreferences, DataStoreBackupPreferences
     cover/       FileCoverStore (files directory, Coil)
     scan/        MlKitBarcodeScanner
-  work/        BackupWorker, LookupRetryWorker (WorkManager entry points)
+  auth/        DriveConsent (what the screen does to give Drive access)
+  work/        BackupWorker, BackupNotifier, LookupRetryWorker (WorkManager entry points)
   di/          Hilt modules (@Binds for every domain interface)
 ```
 
@@ -139,12 +142,23 @@ section 3. Rules that can be tested are enforced by `ArchitectureTest`.
   result into `Result.success/retry/failure`.
 - **Structured concurrency only.** No `GlobalScope`. Dispatchers are injected through
   `DispatcherProvider` so tests can control them.
-- **Backup crosses a Room boundary.** A backup snapshots the live database with `VACUUM INTO`. A
-  restore never closes or swaps Room: `RoomLibraryRestorer` (implemented in `:app/data`) opens the
-  downloaded database in a temporary Room instance, which runs any migrations, and imports its
-  books into the live database in one transaction. The change is all or nothing, repositories never
-  hold a stale instance, and the screens update on their own because the same database stays open.
-  `:domain` only sees `RunBackup`, `RestoreBackup` and their `AppError` results.
+- **Backup crosses a Room boundary.** A backup reads the whole library from one consistent view of
+  the live database and writes it into a fresh stand-alone Room file (`ZipBackupArchiver`). It does
+  not copy the database file or use `VACUUM INTO`, which needs SQLite 3.27 and so Android 11, while
+  Otium supports Android 8. A restore never closes or swaps Room: `RoomLibraryRestorer`
+  (implemented in `:app/data`) opens the downloaded database in a temporary Room instance, which
+  runs any migrations, and imports its books into the live database in one transaction. The change
+  is all or nothing, repositories never hold a stale instance, and the screens update on their own
+  because the same database stays open. `:domain` only sees `RunBackup`, `RestoreBackup` and their
+  `AppError` results.
+- **A damaged backup can look empty.** Room's default error handler deletes a database it finds
+  damaged and starts an empty one, so opening a corrupt `library.db` succeeds with no books. The
+  restore therefore compares the book count in the manifest with the books it read, and refuses a
+  backup where they differ.
+- **Asking for Drive access needs the screen.** Google's consent is an Activity result, so
+  `DriveConsent` (in `app.otium.auth`, which extends `DriveAuth`) hands the backup screen a
+  `PendingIntent` to launch and takes the result back. ViewModels never see Android types; the
+  rest of the app only sees `DriveAuth`.
 
 #### Error model
 
@@ -272,7 +286,7 @@ Progress update: tap the progress card, enter a number or use the slider, confir
 Drive backup:
 
 - Auth with Google Identity Services, scope `drive.appdata`.
-- Backup: snapshot the database with `VACUUM INTO`, zip it with the covers and a manifest, upload
+- Backup: copy the library into a fresh database file, zip it with the covers and a manifest, upload
   as the latest file and keep the one it replaces as the previous copy. The file lands under a
   temporary name and is renamed in only once its checksum matches, so a failed upload never
   touches an earlier backup. An empty library is never uploaded.
