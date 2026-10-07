@@ -10,6 +10,7 @@ import app.otium.domain.error.AppError
  * compile error until it has a message.
  */
 @StringRes
+@Suppress("CyclomaticComplexMethod") // One flat branch per error; there is no logic to split.
 fun AppError.messageRes(): Int = when (this) {
     AppError.Offline -> R.string.error_offline
     AppError.RateLimited -> R.string.error_rate_limited

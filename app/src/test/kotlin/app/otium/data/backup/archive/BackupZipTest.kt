@@ -138,7 +138,7 @@ class BackupZipTest {
             assertEquals("$name should be refused", Try.Failure(AppError.CorruptBackup), result)
             assertTrue("$name left files behind", into.listFiles().isNullOrEmpty())
             assertFalse(File(into.parentFile, "evil.db").exists())
-            assertFalse(File(into.parentFile.parentFile, "evil.jpg").exists())
+            assertFalse(File(into.parentFile?.parentFile, "evil.jpg").exists())
         }
     }
 

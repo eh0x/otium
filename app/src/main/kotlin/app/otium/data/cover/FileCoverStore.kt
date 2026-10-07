@@ -45,6 +45,9 @@ private const val DEGREES_90 = 90
 private const val DEGREES_180 = 180
 private const val DEGREES_270 = 270
 
+/** Where [FileCoverStore] keeps covers, which a backup also reads and a restore fills. */
+internal fun coversDirectory(context: Context): File = File(context.filesDir, COVERS_DIRECTORY)
+
 /**
  * Stores covers as files in the app's private storage. A cover is downloaded once, checked, and
  * written to a temporary file that is renamed into place, so a failed or cancelled download never
@@ -64,7 +67,7 @@ class FileCoverStore internal constructor(
         client: OkHttpClient,
         dispatchers: DispatcherProvider,
     ) : this(
-        File(context.filesDir, COVERS_DIRECTORY),
+        coversDirectory(context),
         context.contentResolver,
         client,
         dispatchers,
