@@ -1,6 +1,8 @@
 package app.otium.di
 
+import app.otium.domain.port.BackupScheduler
 import app.otium.domain.port.LookupScheduler
+import app.otium.work.WorkManagerBackupScheduler
 import app.otium.work.WorkManagerLookupScheduler
 import dagger.Binds
 import dagger.Module
@@ -14,4 +16,7 @@ abstract class WorkModule {
 
     @Binds
     abstract fun bindLookupScheduler(impl: WorkManagerLookupScheduler): LookupScheduler
+
+    @Binds
+    abstract fun bindBackupScheduler(impl: WorkManagerBackupScheduler): BackupScheduler
 }

@@ -162,4 +162,46 @@
     <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
     <string name="error_storage">Something went wrong saving your library. Please try again.</string>
     <string name="error_unexpected">Something went wrong. Please try again.</string>
+
+    <!-- Backup and restore -->
+    <string name="library_backup">Backup and restore</string>
+    <string name="backup_title">Backup</string>
+    <string name="backup_back">Back</string>
+    <string name="backup_drive_heading">Google Drive</string>
+    <string name="backup_drive_signed_out">Not connected. Your library is only on this phone.</string>
+    <string name="backup_drive_signed_in">Connected as %1$s</string>
+    <string name="backup_drive_signed_in_unknown">Connected</string>
+    <string name="backup_drive_expired">Your Google sign-in expired.</string>
+    <string name="backup_connect">Connect Google Drive</string>
+    <string name="backup_reconnect">Sign in again</string>
+    <string name="backup_disconnect">Disconnect</string>
+    <string name="backup_drive_note">Backups go to a private folder in your Drive that only Otium can see.</string>
+    <string name="backup_now">Back up now</string>
+    <string name="backup_in_progress">Backing up…</string>
+    <string name="backup_done">Backup saved to Google Drive.</string>
+    <string name="backup_never">No backup yet</string>
+    <string name="backup_last">Last backup %1$s · %2$s · %3$s</string>
+    <plurals name="backup_book_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+    <string name="restore_heading">Restore</string>
+    <string name="restore_action">Restore from Drive</string>
+    <string name="restore_previous_action">Restore the previous backup</string>
+    <string name="restore_in_progress">Restoring…</string>
+    <string name="restore_done">Your library was restored.</string>
+    <string name="restore_confirm_title">Replace your library?</string>
+    <string name="restore_confirm_message">Your current library will be replaced by %1$s from the backup made %2$s. This cannot be undone.</string>
+    <string name="restore_confirm_action">Replace library</string>
+    <string name="restore_cancel">Cancel</string>
+    <string name="auto_backup_heading">Automatic backup</string>
+    <string name="auto_backup_toggle">Back up automatically</string>
+    <string name="auto_backup_daily">Daily</string>
+    <string name="auto_backup_weekly">Weekly</string>
+    <string name="auto_backup_wifi_only">Only on Wi-Fi</string>
+    <string name="auto_backup_charging_only">Only while charging</string>
+    <string name="auto_backup_needs_drive">Connect Google Drive to back up automatically.</string>
+    <string name="backup_channel_name">Backups</string>
+    <string name="backup_channel_description">Tells you when automatic backups keep failing.</string>
+    <string name="backup_failed_title">Backup did not run</string>
 </resources>

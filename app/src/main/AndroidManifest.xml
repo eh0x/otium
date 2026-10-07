@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Tells the user when automatic backups keep failing (asked for when they turn them on). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Barcode scanning and cover photos. Without a camera, books are added by ISBN or title. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
