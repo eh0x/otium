@@ -94,6 +94,10 @@ data class ConfirmRoute(
     )
 }
 
+/** Backing up the library to Google Drive and restoring it. */
+@Serializable
+data object BackupRoute
+
 /** Debug builds only: the theme catalog. */
 @Serializable
 data object CatalogRoute

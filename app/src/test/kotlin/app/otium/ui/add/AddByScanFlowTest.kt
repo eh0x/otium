@@ -12,6 +12,7 @@ import app.otium.di.RepositoryModule
 import app.otium.di.ScanModule
 import app.otium.di.WorkModule
 import app.otium.domain.error.Try
+import app.otium.domain.fakes.FakeBackupScheduler
 import app.otium.domain.fakes.FakeBarcodeScanner
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeCoverStore
@@ -19,6 +20,7 @@ import app.otium.domain.fakes.FakeMetadataRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
+import app.otium.domain.port.BackupScheduler
 import app.otium.domain.port.BarcodeScanner
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
@@ -82,6 +84,9 @@ class AddByScanFlowTest {
 
     @BindValue @JvmField
     val scheduler: LookupScheduler = LookupScheduler {}
+
+    @BindValue @JvmField
+    val backupScheduler: BackupScheduler = FakeBackupScheduler()
 
     @BindValue @JvmField
     val scanner: BarcodeScanner = camera

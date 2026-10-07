@@ -299,9 +299,24 @@ class LibraryContentTest {
     }
 
     @Test
-    fun `without developer tools there is no extra menu`() {
+    fun `the menu opens backup and restore`() {
+        var opened = 0
+        show(stateOf(), LibraryActions(onOpenBackup = { opened++ }))
+
+        rule.onNodeWithContentDescription("More options").performClick()
+        rule.onNodeWithText("Backup and restore").performClick()
+
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun `without developer tools the menu holds no developer items`() {
         show(stateOf())
 
-        rule.onAllNodesWithContentDescription("More options").assertCountEquals(0)
+        rule.onNodeWithContentDescription("More options").performClick()
+
+        rule.onNodeWithText("Backup and restore").assertIsDisplayed()
+        rule.onAllNodesWithText("Seed 5,000 test books").assertCountEquals(0)
+        rule.onAllNodesWithText("Theme catalog").assertCountEquals(0)
     }
 }

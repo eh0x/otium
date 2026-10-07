@@ -14,6 +14,7 @@ import app.otium.di.RepositoryModule
 import app.otium.di.WorkModule
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
+import app.otium.domain.fakes.FakeBackupScheduler
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeCoverStore
 import app.otium.domain.fakes.FakeMetadataRepository
@@ -21,6 +22,7 @@ import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
+import app.otium.domain.port.BackupScheduler
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
 import app.otium.domain.port.LookupScheduler
@@ -87,6 +89,9 @@ class AddByIsbnFlowTest {
 
     @BindValue @JvmField
     val scheduler: LookupScheduler = LookupScheduler { lookupsPlanned++ }
+
+    @BindValue @JvmField
+    val backupScheduler: BackupScheduler = FakeBackupScheduler()
 
     private fun waitFor(text: String) = rule.waitUntil(TIMEOUT) {
         rule.onAllNodes(hasText(text)).fetchSemanticsNodes().isNotEmpty()

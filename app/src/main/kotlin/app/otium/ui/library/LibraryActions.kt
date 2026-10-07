@@ -25,4 +25,5 @@ data class LibraryActions(
     val onAddBook: (AddMethod) -> Unit = {},
     val onSeedDebugData: () -> Unit = {},
     val onOpenCatalog: () -> Unit = {},
+    val onOpenBackup: () -> Unit = {},
 )

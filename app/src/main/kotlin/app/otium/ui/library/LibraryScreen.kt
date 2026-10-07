@@ -67,11 +67,12 @@ fun LibraryScreen(
     onOpenBook: (Long) -> Unit,
     onAddBook: (AddMethod) -> Unit,
     onOpenCatalog: () -> Unit,
+    onOpenBackup: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val actions = remember(viewModel, onOpenBook, onAddBook, onOpenCatalog) {
+    val actions = remember(viewModel, onOpenBook, onAddBook, onOpenCatalog, onOpenBackup) {
         LibraryActions(
             onQueryChange = viewModel::onQueryChange,
             onStatusSelected = viewModel::onStatusSelected,
@@ -84,6 +85,7 @@ fun LibraryScreen(
             onAddBook = onAddBook,
             onSeedDebugData = viewModel::onSeedDebugData,
             onOpenCatalog = onOpenCatalog,
+            onOpenBackup = onOpenBackup,
         )
     }
     LibraryContent(state = state, actions = actions, modifier = modifier)
@@ -149,9 +151,7 @@ private fun LibraryTopBar(state: LibraryUiState, actions: LibraryActions) {
         title = stringResource(R.string.library_title),
         actions = {
             ViewModeAction(selected = state.viewMode, onSelected = actions.onViewModeSelected)
-            if (state.debugToolsAvailable) {
-                DebugMenu(onSeed = actions.onSeedDebugData, onOpenCatalog = actions.onOpenCatalog)
-            }
+            MoreMenu(showDebugTools = state.debugToolsAvailable, actions = actions)
         },
     )
 }
@@ -295,7 +295,7 @@ private fun ViewModeAction(selected: LibraryViewMode, onSelected: (LibraryViewMo
 }
 
 @Composable
-private fun DebugMenu(onSeed: () -> Unit, onOpenCatalog: () -> Unit) {
+private fun MoreMenu(showDebugTools: Boolean, actions: LibraryActions) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
         Icon(
@@ -305,18 +305,27 @@ private fun DebugMenu(onSeed: () -> Unit, onOpenCatalog: () -> Unit) {
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.library_debug_seed)) },
+            text = { Text(stringResource(R.string.library_backup)) },
             onClick = {
                 open = false
-                onSeed()
+                actions.onOpenBackup()
             },
         )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.library_debug_catalog)) },
-            onClick = {
-                open = false
-                onOpenCatalog()
-            },
-        )
+        if (showDebugTools) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.library_debug_seed)) },
+                onClick = {
+                    open = false
+                    actions.onSeedDebugData()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.library_debug_catalog)) },
+                onClick = {
+                    open = false
+                    actions.onOpenCatalog()
+                },
+            )
+        }
     }
 }

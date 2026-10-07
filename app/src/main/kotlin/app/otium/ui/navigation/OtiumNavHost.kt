@@ -17,6 +17,7 @@ import app.otium.ui.add.confirm.ConfirmScreen
 import app.otium.ui.add.isbn.IsbnEntryScreen
 import app.otium.ui.add.scan.ScanScreen
 import app.otium.ui.add.search.TitleSearchScreen
+import app.otium.ui.backup.BackupScreen
 import app.otium.ui.catalog.ThemeCatalogScreen
 import app.otium.ui.detail.DetailScreen
 import app.otium.ui.library.LibraryScreen
@@ -45,7 +46,11 @@ fun OtiumNavHost(modifier: Modifier = Modifier) {
                 onOpenBook = { navController.navigate(DetailRoute(it)) },
                 onAddBook = { navController.navigate(it.route()) },
                 onOpenCatalog = { navController.navigate(CatalogRoute) },
+                onOpenBackup = { navController.navigate(BackupRoute) },
             )
+        }
+        composable<BackupRoute> {
+            BackupScreen(onBack = { navController.popBackStack() })
         }
         composable<DetailRoute> { entry ->
             val bookId = entry.toRoute<DetailRoute>().bookId
