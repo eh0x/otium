@@ -3,8 +3,8 @@
 Date: 2026-10-06
 Source design: `docs/design/2026-10-06-otium-library-app-design.md` (commit `c55b61b`)
 Complexity: Large (8 phases, solo project)
-Status: In progress. Phases 0 to 5 complete (device checks for 3 to 5 still to take); next up is
-Phase 6.
+Status: In progress. Phases 0 to 5 complete (device checks for 3 to 5 still to take). Phase 6 is
+partly built: see its Status section.
 
 ## 1. Summary
 
@@ -506,32 +506,39 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
 
 | File | Purpose |
 |------|---------|
-| `repo/BackupRepository.kt` | Backup, restore, status |
-| `port/DriveBackupClient.kt` | Upload, download, list, delete, quota check, auth state |
-| `port/DatabaseSwapper.kt` | Checkpoint, close, replace, reopen |
-| `model/BackupInfo.kt`, `BackupSettings.kt` | Last backup time and size, schedule settings |
-| `usecase/RunBackup.kt`, `RestoreBackup.kt`, `ConfigureAutoBackup.kt` | Orchestration |
+| `port/DriveBackupClient.kt` | Upload (rotating), list, download, free space |
+| `port/DriveAuth.kt` | Sign-in state and sign-out |
+| `port/BackupArchiver.kt` | Snapshot the library to a file; describe a backup file |
+| `port/LibraryRestorer.kt` | Replace the library with a backup, all or nothing |
+| `port/BackupPreferences.kt`, `BackupScheduler.kt` | Settings, last backup, failed-run count; scheduling |
+| `model/BackupInfo.kt`, `BackupSettings.kt`, `RemoteBackup.kt`, `DriveAuthState.kt` | Models |
+| `usecase/RunBackup.kt`, `PrepareRestore.kt`, `RestoreBackup.kt`, `FindBackups.kt` | Orchestration |
+| `usecase/ConfigureAutoBackup.kt`, `RunScheduledBackup.kt`, `BackupLock.kt` | Schedule and policy |
 
 `:app`:
 
 | File | Purpose |
 |------|---------|
-| `data/backup/GoogleDriveBackupClient.kt` | REST via Retrofit/OkHttp (P2), `drive.appdata` scope |
-| `data/backup/GoogleAuthManager.kt` | Google Identity Services authorization, token retrieval, re-sign-in signal |
-| `data/backup/BackupArchiver.kt` | Zip DB plus covers plus metadata JSON; unzip and verify |
-| `data/backup/RoomDatabaseSwapper.kt` | WAL checkpoint, close Room, swap files, rebuild database |
-| `data/repo/DriveBackupRepository.kt` | Ties it together, error mapping |
-| `work/BackupWorker.kt` | Periodic worker with user constraints and backoff |
+| `data/backup/drive/` | `GoogleDriveBackupClient` (REST via Retrofit/OkHttp, P2, `drive.appdata`), API, DTOs, error mapping |
+| `data/backup/archive/` | `BackupZip` and `BackupManifest`: zip, unzip and verify with zip-slip and size limits |
+| `data/backup/ZipBackupArchiver.kt` | Snapshot with `VACUUM INTO`, zip with covers |
+| `data/backup/RoomLibraryRestorer.kt` | Import a backup into the live database in one transaction |
+| `data/backup/GoogleAuthManager.kt` | Identity Services authorization, token, re-sign-in signal |
+| `data/prefs/DataStoreBackupPreferences.kt` | Settings and bookkeeping |
+| `work/BackupWorker.kt`, `WorkManagerBackupScheduler.kt` | Periodic work with user constraints and backoff |
 | `ui/backup/BackupScreen.kt`, `BackupViewModel.kt` | Sign-in, Back up now, Restore, auto-backup toggle, frequency, Wi-Fi-only, charging-only, last backup time and size |
-| `di/BackupModule.kt` | Bindings; Room database provided through a swappable holder |
+| `di/BackupModule.kt` | Bindings |
 
 ### Tasks
 
-1. **Prototype the Room swap first (spike).** Prove that closing Room, replacing the DB file and
-   covers, and reopening works with Hilt-provided singletons (use a database holder or provider so
-   repositories do not hold a stale instance). Write the finding into the design doc if it changes
-   the approach.
-   - Validate: instrumented test that restores a known DB and queries it.
+1. **Prove the restore first (spike).** The plan was to close Room, replace the DB file and reopen
+   it behind a database holder. Reading the code showed a simpler and safer way: repositories hold
+   the DAO directly, so a swap would need every query rewired. Instead, import the backup into the
+   live database in one transaction (open the downloaded file in a temporary Room instance, which
+   runs the migrations, then copy its books, labels and progress across and rewrite cover paths).
+   It is atomic, keeps the same Room instance, and the screens update on their own.
+   - Validate: Robolectric test that restores a known DB (also one from an older schema) and
+     queries it, and that a failure part way leaves the library unchanged.
 2. **`BackupArchiver`.** Zip format: `library.db`, `covers/`, `manifest.json` (app version, schema
    version, created at, book count). Unzip to a temp directory and verify before swapping. Zip-slip
    protection when extracting.
@@ -546,9 +553,9 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
      (`InsufficientDriveSpace`), network drop.
 5. **Google authorization.** Identity Services authorization for `drive.appdata`; handle consent
    intent in the UI layer; surface `AuthExpired` as a re-sign-in prompt.
-6. **`RunBackup` and `RestoreBackup` use cases.** Order for backup: checkpoint, archive, upload,
-   rotate; local data untouched on any failure. Restore: download, verify, confirm (UI), swap,
-   reopen. Tests against fakes covering each failure point and that local data survives.
+6. **`RunBackup` and `RestoreBackup` use cases.** Order for backup: snapshot, archive, upload,
+   rotate; local data untouched on any failure. Restore: download, verify, confirm (UI), import.
+   Tests against fakes covering each failure point and that local data survives.
 7. **Backup screen.** Sign-in state, Back up now with progress, Restore with a confirm dialog
    ("replaces current library"), last backup time and size.
 8. **Auto backup.** `PeriodicWorkRequest` (daily or weekly) with network type (unmetered when
@@ -558,6 +565,26 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
    - Validate: `TestListenableWorkerBuilder` and WorkManager test driver.
 9. **Real-device end-to-end:** back up, uninstall, reinstall, sign in, restore; also test restore
    after the `.prev` rotation.
+
+### Status
+
+Built and tested without Android (domain tests, plus the archive and Drive client compiled and run
+on the JVM, since both are free of Android classes):
+
+- [x] Domain ports, models and use cases, with fakes: backup, two-step restore, schema-version
+  refusal, scheduled runs with a failure policy, no overlapping runs, no upload of an empty library.
+- [x] `BackupZip` with a round trip, path-traversal, entry-count and size-limit tests.
+- [x] `GoogleDriveBackupClient` against an in-memory Drive: upload, rotation, healing after a
+  stop part way, checksum checks, 401, 403 (full Drive, rate limit, permission), retries, offline.
+
+Still to build (needs the Android SDK, so it could not be compiled where the first part was written):
+
+- [ ] `ZipBackupArchiver` and `RoomLibraryRestorer`, with the Task 1 spike and the round-trip test.
+- [ ] `GoogleAuthManager` and the consent flow.
+- [ ] `DataStoreBackupPreferences`, `BackupWorker`, scheduler and failure notification.
+- [ ] `BackupModule`, the Backup screen and its entry point.
+- [ ] Device checks, and the Cloud project setup from decision P4 (OAuth client for the debug and
+  release SHA-1).
 
 ### Acceptance
 
@@ -616,7 +643,7 @@ Complexity: Medium. Last.
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
-| Restore corrupts or loses data | Medium | High | Spike the Room swap first; verify archive before swapping; keep `.prev`; confirm dialog; round-trip tests; build restore before auto-backup |
+| Restore corrupts or loses data | Medium | High | Spike the restore first; verify the archive before importing; import in one transaction; keep the previous backup; confirm dialog; round-trip tests; build restore before auto-backup |
 | Drive OAuth setup delays (consent screen, SHA-1 per build type, testing-mode user list) | High | Medium | Create the Cloud project in Phase 0; register debug SHA-1 now and release SHA-1 (and Play App Signing SHA-1) before Phase 7 |
 | Stale Room instance after restore | Medium | High | Database holder/provider pattern chosen in the spike; repositories never cache the database |
 | Shelf-styled grid slows scrolling at 5,000 books | Medium | Medium | Style only, no heavy assets; stable keys; measure with seeder in Phase 3 |
@@ -653,5 +680,5 @@ Complexity: Medium. Last.
 - [ ] All phase acceptance checklists complete.
 - [ ] Every non-goal in the design remains out of scope.
 - [ ] The design doc matches what was built (update it where implementation diverged, for example
-  after the Room swap spike).
+  after the restore spike).
 - [ ] README documents setup, keys and build.

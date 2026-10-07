@@ -64,7 +64,7 @@ The work follows [the implementation plan](docs/plans/2026-10-06-otium-implement
 | 3 | Library and book detail screens | Done (device timings still to take) |
 | 4 | Metadata lookup (Google Books, Open Library) | Done (device check still to do) |
 | 5 | Add flow: scan, ISBN, title search | Done (device scan check still to do) |
-| 6 | Backup and restore with Google Drive | Planned |
+| 6 | Backup and restore with Google Drive | In progress |
 | 7 | Polish, accessibility, Play Store release | Planned |
 
 The plan holds the detail and is kept current; this table is a summary.
