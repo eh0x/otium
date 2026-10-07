@@ -21,6 +21,8 @@ fun AppError.messageRes(): Int = when (this) {
     AppError.AuthExpired -> R.string.error_auth_expired
     AppError.InsufficientDriveSpace -> R.string.error_drive_space
     is AppError.IncompatibleBackup -> R.string.error_incompatible_backup
+    AppError.CorruptBackup -> R.string.error_corrupt_backup
+    AppError.NothingToBackUp -> R.string.error_nothing_to_back_up
     is AppError.Storage -> R.string.error_storage
     is AppError.Unexpected -> R.string.error_unexpected
 }

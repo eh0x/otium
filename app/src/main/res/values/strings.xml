@@ -158,6 +158,8 @@
     <string name="error_auth_expired">Your Google sign-in expired. Please sign in again.</string>
     <string name="error_drive_space">Your Google Drive is full, so the backup could not be saved.</string>
     <string name="error_incompatible_backup">That backup was made by a newer version of Otium.</string>
+    <string name="error_corrupt_backup">That backup is damaged and could not be read.</string>
+    <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
     <string name="error_storage">Something went wrong saving your library. Please try again.</string>
     <string name="error_unexpected">Something went wrong. Please try again.</string>
 </resources>

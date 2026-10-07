@@ -12,6 +12,8 @@ sealed interface AppError {
     data object AuthExpired : AppError
     data object InsufficientDriveSpace : AppError
     data class IncompatibleBackup(val backupSchema: Int, val appSchema: Int) : AppError
+    data object CorruptBackup : AppError
+    data object NothingToBackUp : AppError
     data class Storage(val message: String) : AppError
     data class Unexpected(val message: String) : AppError
 }
