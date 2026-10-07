@@ -127,6 +127,8 @@ dependencies {
     implementation(libs.androidx.camera.view)
     // Bundled model: works without Google Play services and needs no download on first scan.
     implementation(libs.mlkit.barcode.scanning)
+    // Identity Services authorization for the Drive app data scope (no sign-in screen of ours).
+    implementation(libs.play.services.auth)
     implementation(libs.okhttp)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
