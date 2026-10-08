@@ -19,6 +19,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
 import retrofit2.HttpException
@@ -41,6 +43,9 @@ private const val BUFFER_BYTES = 64 * 1024
  * Calls that are safe to repeat are retried a couple of times when Drive is busy or failing.
  * The upload itself is not, as it would send the whole file again; a scheduled backup tries
  * again later instead.
+ *
+ * The upload address Drive hands back is used only when [trustsUploadAddress] accepts it, so the
+ * token is never sent anywhere else.
  */
 internal class GoogleDriveBackupClient(
     private val api: DriveApi,
@@ -48,6 +53,7 @@ internal class GoogleDriveBackupClient(
     private val cacheDir: File,
     private val dispatchers: DispatcherProvider,
     private val retryDelayMillis: Long = RETRY_DELAY_MILLIS,
+    private val trustsUploadAddress: (HttpUrl) -> Boolean = ::isGoogleUploadAddress,
 ) : DriveBackupClient {
 
     override suspend fun freeSpace(): Try<Long?> = drive { auth ->
@@ -110,11 +116,9 @@ internal class GoogleDriveBackupClient(
             parents = listOf(APP_DATA_FOLDER),
             appProperties = info.toProperties(),
         )
-        val session = api.startUpload(auth, ZIP_TYPE, file.length(), metadata)
-            .requireSuccess()
-            .headers()["Location"]
-            ?: throw DriveFailure(AppError.Unexpected("Drive gave no upload address"))
-        val sent = api.uploadContent(session, auth, file.asRequestBody(ZIP_TYPE.toMediaType()))
+        val session = uploadAddress(api.startUpload(auth, ZIP_TYPE, file.length(), metadata))
+        val content = file.asRequestBody(ZIP_TYPE.toMediaType())
+        val sent = api.uploadContent(session.toString(), auth, content)
         val stored = retrying { api.getFile(sent.id, auth) }
         val expected = withContext(dispatchers.io) { md5Of(file) }
         if (stored.md5Checksum != null && !stored.md5Checksum.equals(expected, ignoreCase = true)) {
@@ -122,6 +126,14 @@ internal class GoogleDriveBackupClient(
             throw DriveFailure(AppError.Unexpected("Drive stored a different file"))
         }
         return stored
+    }
+
+    /** Where to send the bytes, from the `Location` of [started]; only an address we trust. */
+    private fun uploadAddress(started: Response<Unit>): HttpUrl {
+        val location = started.requireSuccess().headers()["Location"]
+            ?: throw DriveFailure(AppError.Unexpected("Drive gave no upload address"))
+        return location.toHttpUrlOrNull()?.takeIf(trustsUploadAddress)
+            ?: throw DriveFailure(AppError.Unexpected("Drive gave an unexpected upload address"))
     }
 
     /** Streams [remote] into [target], checking its checksum. */

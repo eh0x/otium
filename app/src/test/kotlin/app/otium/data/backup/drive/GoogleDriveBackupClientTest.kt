@@ -55,6 +55,9 @@ class GoogleDriveBackupClientTest {
         )
 
         lateinit var origin: String
+
+        /** Where upload sessions point; [origin] unless a test sends them elsewhere. */
+        var uploadOrigin: String? = null
         val files = LinkedHashMap<String, Stored>()
         val log = CopyOnWriteArrayList<String>()
         val authorizations = CopyOnWriteArrayList<String?>()
@@ -117,7 +120,8 @@ class GoogleDriveBackupClientTest {
             uploadedLength = request.getHeader("X-Upload-Content-Length")
             val id = "s${nextId++}"
             sessions[id] = metadata
-            return MockResponse().addHeader("Location", "$origin$UPLOAD_SESSION$id")
+            val target = uploadOrigin ?: origin
+            return MockResponse().addHeader("Location", "$target$UPLOAD_SESSION$id")
         }
 
         private fun finish(request: RecordedRequest, path: String): MockResponse {
@@ -223,6 +227,8 @@ class GoogleDriveBackupClientTest {
             cacheDir = cacheDir,
             dispatchers = RealDispatchers,
             retryDelayMillis = 1,
+            // The fake Drive is plain http on localhost; trust it and nothing else.
+            trustsUploadAddress = { it.host == server.hostName && it.port == server.port },
         )
     }
 
@@ -477,6 +483,25 @@ class GoogleDriveBackupClientTest {
 
         assertEquals(Try.Failure(AppError.InsufficientDriveSpace), result)
         assertTrue(drive.files.isEmpty())
+    }
+
+    @Test
+    fun `an upload address on another host gets neither the token nor the file`() {
+        val foreign = MockWebServer().apply { start() }
+        try {
+            drive.uploadOrigin = foreign.url("/").toString().trimEnd('/')
+
+            val result = run { upload(localBackup("data"), backupInfo()) }
+
+            assertEquals(
+                Try.Failure(AppError.Unexpected("Drive gave an unexpected upload address")),
+                result,
+            )
+            assertEquals(0, foreign.requestCount)
+            assertTrue(drive.files.isEmpty())
+        } finally {
+            foreign.shutdown()
+        }
     }
 
     @Test
