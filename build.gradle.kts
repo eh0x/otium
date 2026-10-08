@@ -15,6 +15,7 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kover)
+    alias(libs.plugins.cyclonedx)
 }
 
 // Coverage: one report over :domain's tests and :app's debug unit tests (Robolectric included).
@@ -129,6 +130,20 @@ tasks.register<Exec>("scanSecrets") {
     commandLine("sh", "scripts/scan-secrets.sh")
 }
 tasks.matching { it.name == "check" }.configureEach { dependsOn("scanSecrets") }
+
+// Known vulnerabilities in the shipped dependencies: OSV-Scanner on the CycloneDX SBOM that
+// `cyclonedxBom` builds from each module's runtime classpath (scripts/scan-dependencies.sh). Not
+// part of `check`: it needs the network. CI runs it on every pull request and push.
+tasks.cyclonedxDirectBom {
+    // The root project ships nothing; its build tooling is covered by the dependency graph.
+    includeConfigs = listOf("runtimeClasspath")
+}
+tasks.register<Exec>("scanDependencies") {
+    group = "verification"
+    description = "Scans the shipped dependencies for known vulnerabilities with OSV-Scanner."
+    dependsOn(tasks.cyclonedxBom)
+    commandLine("sh", "scripts/scan-dependencies.sh")
+}
 
 // Points git at the tracked hooks in .githooks (formatting, commit message and push checks).
 tasks.register<Exec>("installGitHooks") {

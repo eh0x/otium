@@ -97,7 +97,7 @@ Already right, and to keep as it is:
 | S19 | Security | Lower the backup unpack limit | S | Open |
 | S20 | Security | Use a portable path in `.claude/settings.json` | S | Open |
 | S21 | Security | Register the theme catalog route only in debug builds | S | Open |
-| S22 | Security | Scan dependencies for known vulnerabilities | S | Open |
+| S22 | Security | Scan dependencies for known vulnerabilities | S | Done |
 
 Sizes: S is under a day, M is one to three days, L is a phase of its own.
 
@@ -713,6 +713,10 @@ Change:
 - `.github/workflows/dependency-submission.yml` submits the resolved Gradle tree, transitive
   dependencies and plugins included, on every push to `main` and `develop`, so Dependabot alerts
   and security updates cover it.
+- CI gates every pull request and push with OSV-Scanner on a CycloneDX SBOM of the release
+  runtime classpath (`scripts/scan-dependencies.sh`, `./gradlew scanDependencies`). The pinned
+  binary is checked by SHA256, like gitleaks; findings fail the job and are kept as a SARIF
+  artifact. Accepted findings go in `osv-scanner.toml` with a reason and an expiry date.
 - If the repository goes public, the dependency review action becomes free and can be added on
   pull requests; the dependency submission keeps feeding it.
 

@@ -10,6 +10,11 @@ plugins {
     alias(libs.plugins.kover)
 }
 
+// SBOM for the dependency scan (scanDependencies in the root build file): the release app only.
+tasks.named<org.cyclonedx.gradle.CyclonedxDirectTask>("cyclonedxDirectBom") {
+    includeConfigs = listOf("releaseRuntimeClasspath")
+}
+
 // Secrets come from local.properties (never committed). A missing key means
 // keyless Google Books access with the low public quota.
 val localProperties = Properties().apply {

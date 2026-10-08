@@ -114,6 +114,7 @@ Library versions are pinned in [`gradle/libs.versions.toml`](gradle/libs.version
 - Git
 - gitleaks (`brew install gitleaks`), for the secret scan in the git hooks; skipped with a notice
   when missing, CI runs it either way
+- OSV-Scanner, optional (`brew install osv-scanner`): only `./gradlew scanDependencies` needs it
 - Node.js, optional: only the Markdown lint needs it, and it is skipped when Node.js is missing
 
 The minimum supported Android version is 8.0 (minSdk 26). The application id is `app.otium`.
@@ -183,13 +184,18 @@ build opens the theme catalog shown above.
 | `./gradlew spotlessApply` | Fix formatting of Kotlin, Gradle, XML and text files |
 | `./gradlew spotlessCheck detekt lint` | Check formatting, static analysis and Android Lint |
 | `./gradlew checkDocs lintMarkdown` | Check that docs match the repository, and lint Markdown |
+| `./gradlew scanSecrets` | Scan the git history for secrets with gitleaks |
+| `./gradlew scanDependencies` | Scan the shipped dependencies for known vulnerabilities (OSV-Scanner) |
 | `./gradlew check` | Run every verification task |
 
 CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run locally:
 
 ```bash
-./gradlew spotlessCheck detekt checkDocs lintMarkdown lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
+./gradlew spotlessCheck detekt checkDocs lintMarkdown scanSecrets scanDependencies lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
 ```
+
+`.github/workflows/dependency-submission.yml` also sends the resolved Gradle dependency tree to
+GitHub on every push to `main` and `develop`, so Dependabot alerts cover transitive dependencies.
 
 ## Testing
 

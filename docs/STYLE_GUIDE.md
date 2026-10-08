@@ -28,6 +28,8 @@ rules the tools cannot see.
 | Docs missing after build, tooling or CI changes | `scripts/docs-impact.sh` (warning) | `scripts/docs-impact.sh` | `pre-push` hook, CI |
 | Markdown style (100 columns, lists, fences, links, headings) | markdownlint | `.markdownlint-cli2.jsonc`, [Markdown guidelines](MARKDOWN_GUIDE.md) | `pre-commit` (staged files), `check` via `lintMarkdown`, `pre-push`, CI |
 | Secrets in commits (API keys, tokens, private keys) | gitleaks via `scripts/scan-secrets.sh` | `.gitleaks.toml` | `pre-commit` (staged changes), `pre-push` and `check` via `scanSecrets` (history), CI |
+| Known vulnerabilities in shipped dependencies | OSV-Scanner on a CycloneDX SBOM via `scripts/scan-dependencies.sh` | `osv-scanner.toml` | `scanDependencies`, CI |
+| Vulnerable dependencies, transitive and build tooling included | Dependabot alerts and security updates, fed by `dependency-submission.yml` | `.github/dependabot.yml` | every push to `main` and `develop` |
 | Everything else in this guide | Code review | this file | pull requests |
 
 ### Daily commands

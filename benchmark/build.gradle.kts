@@ -2,6 +2,9 @@ plugins {
     alias(libs.plugins.android.test)
 }
 
+// Test-only module: it never ships, so it stays out of the dependency scan's SBOM.
+tasks.named("cyclonedxDirectBom") { enabled = false }
+
 android {
     namespace = "app.otium.benchmark"
     compileSdk = 37
