@@ -701,10 +701,20 @@ way once deep links or shortcuts arrive (U8, U9).
 
 ### S22. Scan dependencies for known vulnerabilities
 
-CI runs no vulnerability scan, and Dependabot security updates depend on repository settings this
-review cannot see. Turn on Dependabot alerts and security updates (see the
-[open source guidelines](../OPEN_SOURCE_GUIDELINES.md)), and consider the OSV scanner or GitHub's
-dependency review action on pull requests.
+CI runs no vulnerability scan. Dependabot alerts and security updates are on (checked through the
+GitHub API on 2026-10-08), and `.github/dependabot.yml` already covers Gradle and GitHub Actions,
+but the dependency graph they read held no Gradle library: GitHub cannot read version catalogs or
+transitive dependencies from the build files, so the alerts were blind to the whole Gradle tree.
+GitHub's dependency review action is not an option while the repository is private without
+Advanced Security (its API answers 403); the same goes for uploading SARIF to code scanning.
+
+Change:
+
+- `.github/workflows/dependency-submission.yml` submits the resolved Gradle tree, transitive
+  dependencies and plugins included, on every push to `main` and `develop`, so Dependabot alerts
+  and security updates cover it.
+- If the repository goes public, the dependency review action becomes free and can be added on
+  pull requests; the dependency submission keeps feeding it.
 
 ### AgentShield results
 
