@@ -1,4 +1,18 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(./local.properties)",
+      "Read(./keystore.properties)",
+      "Read(**/*.jks)",
+      "Read(**/*.keystore)",
+      "Read(~/.keys/**)",
+      "Bash(*local.properties*)",
+      "Bash(*keystore.properties*)",
+      "Bash(**/*.jks*)",
+      "Bash(**/*.keystore*)",
+      "Bash(*~/.keys/**)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
