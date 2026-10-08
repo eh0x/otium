@@ -9,12 +9,16 @@ on:
 permissions:
   contents: read
 
+# Cancel in-progress runs when a new commit is pushed to a PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  static-checks:
+    name: Static Analysis & Docs
     runs-on: ubuntu-latest
     steps:
-      # Actions are pinned to a commit SHA, because a tag can be moved. Dependabot keeps the SHAs
-      # and the version comments current (.github/dependabot.yml).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -27,17 +31,20 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
-      # Needs Node.js, which the runner image provides. Rules: docs/MARKDOWN_GUIDE.md.
       - name: Markdown lint
         run: scripts/lint-markdown.sh
 
-      # assembleRelease runs R8 over the real release build, so a missing keep rule or a class R8
-      # cannot resolve fails here, not on a user's device. With no keystore.properties in CI it is
-      # signed with the debug key.
-      - name: Style, static analysis, docs, lint, unit tests, assemble
-        run: ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
+      - name: Spotless, Detekt, CheckDocs
+        run: ./gradlew spotlessCheck detekt checkDocs --build-cache --parallel
 
-      # Warns (does not fail) when build, setup or tooling files changed without a docs update.
+      - name: Upload Detekt Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: detekt-reports
+          path: '**/build/reports/detekt/'
+          retention-days: 7
+
       - name: Documentation impact
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -45,3 +52,84 @@ jobs:
           else
             scripts/docs-impact.sh "${{ github.event.before }}" HEAD
           fi
+
+  lint:
+    name: Android Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Android Lint
+        run: ./gradlew lint --build-cache --parallel
+
+      - name: Upload Lint Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-reports
+          path: '**/build/reports/lint-results*.html'
+          retention-days: 7
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Unit Tests & Coverage
+        run: ./gradlew testDebugUnitTest :domain:test koverVerifyCoverage --build-cache --parallel
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kover-coverage-reports
+          path: '**/build/reports/kover/'
+          retention-days: 7
+
+  build:
+    name: Assemble
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Assemble Debug & Release
+        run: ./gradlew assembleDebug assembleRelease --build-cache --parallel
