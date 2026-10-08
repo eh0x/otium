@@ -46,11 +46,15 @@ jobs:
           retention-days: 7
 
       - name: Documentation impact
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            scripts/docs-impact.sh "origin/${{ github.base_ref }}" HEAD
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            scripts/docs-impact.sh "origin/$BASE_REF" HEAD
           else
-            scripts/docs-impact.sh "${{ github.event.before }}" HEAD
+            scripts/docs-impact.sh "$BEFORE" HEAD
           fi
 
   lint:
