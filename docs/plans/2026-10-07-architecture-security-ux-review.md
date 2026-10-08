@@ -36,24 +36,24 @@ Already right, and to keep as it is:
 
 ## 2. Priority summary
 
-| ID | Area | Change | Size |
-|----|------|--------|------|
-| S1 | Security | Build and test the release variant in CI | M |
-| S2 | Security | Validate the Drive upload session URL | S |
-| S3 | Security | Restrict the Google Books API key | S |
-| S4 | Security | Encrypted backups, then app lock; defer SQLCipher | L |
-| S5 | Security | Network security config, manifest cap, dependency verification | S |
-| S6 | Security | Store cover file names, not absolute paths | M |
-| A1 | Architecture | Keep the draft out of `ConfirmRoute` | M |
-| A2 | Architecture | Keep library controls across process death | S |
-| A3 | Architecture | Settle the schema before the first release | S |
-| A4 | Architecture | Module split: not now, with a trigger | - |
-| U1 | UX | Simplify the library header | M |
-| U2 | UX | Add a Settings screen and a backup nudge | M |
-| U3 | UX | Undo for destructive actions | M |
-| U4 | UX | Adaptive layout | M |
-| U5 | UX | Copy and accessibility fixes | S |
-| U6 | UX | Play listing privacy material | S |
+| ID | Area | Change | Size | Status |
+|----|------|--------|------|--------|
+| S1 | Security | Build and test the release variant in CI | M | CI part done; device check open |
+| S2 | Security | Validate the Drive upload session URL | S | Done |
+| S3 | Security | Restrict the Google Books API key | S | Documented; Cloud console steps open |
+| S4 | Security | Encrypted backups, then app lock; defer SQLCipher | L | Open |
+| S5 | Security | Network security config, manifest cap, dependency verification | S | Open |
+| S6 | Security | Store cover file names, not absolute paths | M | Open |
+| A1 | Architecture | Keep the draft out of `ConfirmRoute` | M | Open |
+| A2 | Architecture | Keep library controls across process death | S | Open |
+| A3 | Architecture | Settle the schema before the first release | S | Open |
+| A4 | Architecture | Module split: not now, with a trigger | - | Open |
+| U1 | UX | Simplify the library header | M | Open |
+| U2 | UX | Add a Settings screen and a backup nudge | M | Open |
+| U3 | UX | Undo for destructive actions | M | Open |
+| U4 | UX | Adaptive layout | M | Open |
+| U5 | UX | Copy and accessibility fixes | S | Open |
+| U6 | UX | Play listing privacy material | S | Open |
 
 Sizes: S is under a day, M is one to three days, L is a phase of its own.
 
