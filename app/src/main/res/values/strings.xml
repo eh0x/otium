@@ -61,6 +61,7 @@
     <!-- Book detail -->
     <string name="detail_back">Back</string>
     <string name="detail_more_options">More options</string>
+    <string name="detail_edit">Edit book</string>
     <string name="detail_delete">Delete book</string>
     <string name="detail_delete_title">Delete this book?</string>
     <string name="detail_delete_message">\"%1$s\" will be removed from your library. This cannot be undone.</string>
@@ -74,9 +75,72 @@
     <string name="detail_language">Language</string>
     <string name="detail_isbn">ISBN-13</string>
 
-    <!-- Add book (stub until the add flow exists) -->
+    <!-- Add book -->
     <string name="add_book_title">Add a book</string>
-    <string name="add_book_coming_soon">Adding books by scan, ISBN or title is coming soon.</string>
+    <string name="add_method_scan">Scan barcode</string>
+    <string name="add_method_scan_hint">Point the camera at the barcode on the back cover</string>
+    <string name="add_method_isbn">Enter ISBN</string>
+    <string name="add_method_isbn_hint">Type the 10 or 13 digit number</string>
+    <string name="add_method_search">Search by title</string>
+    <string name="add_method_search_hint">Find the edition by title or author</string>
+
+    <!-- Scan barcode -->
+    <string name="scan_title">Scan barcode</string>
+    <string name="scan_hint">Hold the barcode on the back cover inside the frame</string>
+    <string name="scan_looking_up">Looking up %1$s</string>
+    <string name="scan_again">Scan again</string>
+    <string name="scan_enter_isbn">Enter the ISBN instead</string>
+    <string name="scan_camera_rationale">Otium uses the camera only to read the barcode on a book. Nothing is recorded or sent anywhere.</string>
+    <string name="scan_camera_allow">Allow camera</string>
+    <string name="scan_camera_settings">Camera access is turned off for Otium. You can turn it on in the app settings.</string>
+    <string name="scan_open_settings">Open settings</string>
+    <string name="scan_no_camera">This device has no camera. You can still add books by ISBN or title.</string>
+
+    <!-- Enter ISBN -->
+    <string name="isbn_title">Enter ISBN</string>
+    <string name="isbn_field">ISBN</string>
+    <string name="isbn_hint">The 10 or 13 digits above the barcode</string>
+    <string name="isbn_look_up">Look up</string>
+    <string name="isbn_try_again">Try again</string>
+    <string name="isbn_save_for_later">Save the ISBN, fill in details later</string>
+    <string name="isbn_save_for_later_hint">Otium looks it up once you are back online.</string>
+    <string name="add_enter_manually">Type the details yourself</string>
+
+    <!-- Search by title -->
+    <string name="search_title">Search by title</string>
+    <string name="search_field">Title or author</string>
+    <string name="search_action">Search</string>
+    <string name="search_no_results">No editions found. Try other words, or type the details yourself.</string>
+    <string name="search_result_description">%1$s by %2$s</string>
+
+    <!-- Confirm and edit -->
+    <string name="confirm_title_new">Check the details</string>
+    <string name="confirm_title_edit">Edit book</string>
+    <string name="confirm_not_found">This book is no longer in your library.</string>
+    <string name="confirm_field_title">Title</string>
+    <string name="confirm_field_title_required">A title is needed to save the book</string>
+    <string name="confirm_field_subtitle">Subtitle</string>
+    <string name="confirm_field_authors">Authors</string>
+    <string name="confirm_field_list_hint">Separate names with commas</string>
+    <string name="confirm_field_isbn">ISBN</string>
+    <string name="confirm_field_pages">Number of pages</string>
+    <string name="confirm_field_pages_prompt">Add the page count to follow your progress</string>
+    <string name="confirm_field_publisher">Publisher</string>
+    <string name="confirm_field_year">Year published</string>
+    <string name="confirm_field_language">Language</string>
+    <string name="confirm_field_categories">Categories</string>
+    <string name="confirm_field_description">Description</string>
+    <string name="confirm_tags">Tags</string>
+    <string name="confirm_tag_add">Add a tag</string>
+    <string name="confirm_tag_remove">Remove tag %1$s</string>
+    <string name="confirm_cover_option">Cover option %1$d</string>
+    <string name="confirm_cover_gallery">Choose photo</string>
+    <string name="confirm_cover_camera">Take photo</string>
+    <string name="confirm_cover_remove">No cover</string>
+    <string name="confirm_camera_denied">Camera access is off, so a cover photo cannot be taken.</string>
+    <string name="confirm_duplicate_title">Already in your library</string>
+    <string name="confirm_duplicate_message">A book with this ISBN is already on your shelves.</string>
+    <string name="confirm_duplicate_open">Open book</string>
 
     <!-- Shared actions -->
     <string name="action_cancel">Cancel</string>
@@ -94,6 +158,50 @@
     <string name="error_auth_expired">Your Google sign-in expired. Please sign in again.</string>
     <string name="error_drive_space">Your Google Drive is full, so the backup could not be saved.</string>
     <string name="error_incompatible_backup">That backup was made by a newer version of Otium.</string>
+    <string name="error_corrupt_backup">That backup is damaged and could not be read.</string>
+    <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
     <string name="error_storage">Something went wrong saving your library. Please try again.</string>
     <string name="error_unexpected">Something went wrong. Please try again.</string>
+
+    <!-- Backup and restore -->
+    <string name="library_backup">Backup and restore</string>
+    <string name="backup_title">Backup</string>
+    <string name="backup_back">Back</string>
+    <string name="backup_drive_heading">Google Drive</string>
+    <string name="backup_drive_signed_out">Not connected. Your library is only on this phone.</string>
+    <string name="backup_drive_signed_in">Connected as %1$s</string>
+    <string name="backup_drive_signed_in_unknown">Connected</string>
+    <string name="backup_drive_expired">Your Google sign-in expired.</string>
+    <string name="backup_connect">Connect Google Drive</string>
+    <string name="backup_reconnect">Sign in again</string>
+    <string name="backup_disconnect">Disconnect</string>
+    <string name="backup_drive_note">Backups go to a private folder in your Drive that only Otium can see.</string>
+    <string name="backup_now">Back up now</string>
+    <string name="backup_in_progress">Backing up…</string>
+    <string name="backup_done">Backup saved to Google Drive.</string>
+    <string name="backup_never">No backup yet</string>
+    <string name="backup_last">Last backup %1$s · %2$s · %3$s</string>
+    <plurals name="backup_book_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+    <string name="restore_heading">Restore</string>
+    <string name="restore_action">Restore from Drive</string>
+    <string name="restore_previous_action">Restore the previous backup</string>
+    <string name="restore_in_progress">Restoring…</string>
+    <string name="restore_done">Your library was restored.</string>
+    <string name="restore_confirm_title">Replace your library?</string>
+    <string name="restore_confirm_message">Your current library will be replaced by %1$s from the backup made %2$s. This cannot be undone.</string>
+    <string name="restore_confirm_action">Replace library</string>
+    <string name="restore_cancel">Cancel</string>
+    <string name="auto_backup_heading">Automatic backup</string>
+    <string name="auto_backup_toggle">Back up automatically</string>
+    <string name="auto_backup_daily">Daily</string>
+    <string name="auto_backup_weekly">Weekly</string>
+    <string name="auto_backup_wifi_only">Only on Wi-Fi</string>
+    <string name="auto_backup_charging_only">Only while charging</string>
+    <string name="auto_backup_needs_drive">Connect Google Drive to back up automatically.</string>
+    <string name="backup_channel_name">Backups</string>
+    <string name="backup_channel_description">Tells you when automatic backups keep failing.</string>
+    <string name="backup_failed_title">Backup did not run</string>
 </resources>

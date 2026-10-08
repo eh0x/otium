@@ -9,6 +9,7 @@ data class DetailActions(
     val onProgressConfirmed: (Int) -> Unit = {},
     val onMarkFinished: () -> Unit = {},
     val onTotalPagesConfirmed: (Int) -> Unit = {},
+    val onEdit: () -> Unit = {},
     val onDelete: () -> Unit = {},
     val onErrorShown: () -> Unit = {},
 )

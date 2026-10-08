@@ -19,6 +19,9 @@ interface BookRepository {
 
     suspend fun findByIsbn13(isbn13: String): Try<Book?>
 
+    /** Books saved offline from an ISBN alone, oldest first, still waiting for their details. */
+    suspend fun getBooksNeedingLookup(): Try<List<Book>>
+
     /** Fails with AppError.Duplicate when the ISBN already exists. Returns the new id. */
     suspend fun add(book: Book): Try<Long>
 

@@ -59,7 +59,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D19 | Two Gradle modules: pure-Kotlin `:domain` plus `:app` | One module with package boundaries; full multi-module split (data, presentation, design-system) | Compiler-enforced "no Android in domain" for the price of one extra build file. A full split costs build time and boilerplate a solo app does not need; it can be done later if needed |
 | D20 | Typed `Try<T>` / `AppError` returned from repositories and use cases | Exceptions; `kotlin.Result` | The failure cases in 4.3 and 4.4 (offline, 429, duplicate, expired auth, incompatible backup) are expected outcomes the UI handles differently. A sealed type makes each one explicit and testable |
 | D21 | Use cases only where logic exists; ViewModels call repositories directly for plain reads | A use case per repository call | Avoids pass-through classes while keeping business rules out of ViewModels |
-| D22 | Domain interfaces for scanner, Drive client, cover store, database swapper and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
+| D22 | Domain interfaces for scanner, Drive client, cover store, backup archiver and restorer, and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
 
 ## 4. Final Design
 
@@ -73,12 +73,14 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
 :domain  (pure Kotlin/JVM, no Android or framework imports)
   model/       Book, BookSummary, BookCandidate, BookStatus, LibraryFilter, SortOrder
   error/       AppError, Try
-  repo/        BookRepository, MetadataRepository, BackupRepository   (interfaces)
-  port/        BarcodeScanner, DriveBackupClient, CoverStore,
-               DatabaseSwapper, DispatcherProvider                    (interfaces)
+  repo/        BookRepository, MetadataRepository                     (interfaces)
+  port/        BarcodeScanner, CoverStore, DispatcherProvider,
+               DriveBackupClient, DriveAuth, BackupArchiver,
+               LibraryRestorer, BackupPreferences, BackupScheduler    (interfaces)
   usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
                ObserveLibrary, AddBookFromIsbn, AddBookManually,
-               UpdateProgress, RunBackup, RestoreBackup
+               UpdateProgress, RunBackup, PrepareRestore, RestoreBackup,
+               ConfigureAutoBackup, RunScheduledBackup
 
 :app
   ui/          Compose screens + ViewModels + UI state
@@ -90,11 +92,14 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
   data/
     local/       Room: entities, FTS table, DAOs, row projections, mappers
     remote/      GoogleBooksApi, OpenLibraryApi (Retrofit + kotlinx.serialization), DTOs, mappers
-    repo/        RoomBookRepository, RemoteMetadataRepository, DriveBackupRepository
-    backup/      GoogleDriveBackupClient, RoomDatabaseSwapper
+    repo/        RoomBookRepository, RemoteMetadataRepository
+    backup/      GoogleDriveBackupClient, BackupZip, ZipBackupArchiver, RoomLibraryRestorer,
+                 GoogleAuthManager
+    prefs/       DataStoreLibraryPreferences, DataStoreBackupPreferences
     cover/       FileCoverStore (files directory, Coil)
     scan/        MlKitBarcodeScanner
-  work/        BackupWorker, LookupRetryWorker (WorkManager entry points)
+  auth/        DriveConsent (what the screen does to give Drive access)
+  work/        BackupWorker, BackupNotifier, LookupRetryWorker (WorkManager entry points)
   di/          Hilt modules (@Binds for every domain interface)
 ```
 
@@ -137,9 +142,23 @@ section 3. Rules that can be tested are enforced by `ArchitectureTest`.
   result into `Result.success/retry/failure`.
 - **Structured concurrency only.** No `GlobalScope`. Dispatchers are injected through
   `DispatcherProvider` so tests can control them.
-- **Backup crosses a Room boundary.** `DriveBackupRepository` uses a `DatabaseSwapper` port
-  (implemented in `:app/data`) to checkpoint the WAL, close Room, replace files and reopen it.
-  `:domain` only sees `RunBackup`, `RestoreBackup` and their `AppError` results.
+- **Backup crosses a Room boundary.** A backup reads the whole library from one consistent view of
+  the live database and writes it into a fresh stand-alone Room file (`ZipBackupArchiver`). It does
+  not copy the database file or use `VACUUM INTO`, which needs SQLite 3.27 and so Android 11, while
+  Otium supports Android 8. A restore never closes or swaps Room: `RoomLibraryRestorer`
+  (implemented in `:app/data`) opens the downloaded database in a temporary Room instance, which
+  runs any migrations, and imports its books into the live database in one transaction. The change
+  is all or nothing, repositories never hold a stale instance, and the screens update on their own
+  because the same database stays open. `:domain` only sees `RunBackup`, `RestoreBackup` and their
+  `AppError` results.
+- **A damaged backup can look empty.** Room's default error handler deletes a database it finds
+  damaged and starts an empty one, so opening a corrupt `library.db` succeeds with no books. The
+  restore therefore compares the book count in the manifest with the books it read, and refuses a
+  backup where they differ.
+- **Asking for Drive access needs the screen.** Google's consent is an Activity result, so
+  `DriveConsent` (in `app.otium.auth`, which extends `DriveAuth`) hands the backup screen a
+  `PendingIntent` to launch and takes the result back. ViewModels never see Android types; the
+  rest of the app only sees `DriveAuth`.
 
 #### Error model
 
@@ -267,10 +286,15 @@ Progress update: tap the progress card, enter a number or use the slider, confir
 Drive backup:
 
 - Auth with Google Identity Services, scope `drive.appdata`.
-- Backup: checkpoint the Room WAL, zip DB + covers, upload as the single latest file and keep one
-  previous copy as `.prev`. Metadata records app version and schema version.
-- Restore: download, verify backup schema version is at most the app's, confirm dialog ("replaces
-  current library"), swap DB and covers, reopen Room.
+- Backup: copy the library into a fresh database file, zip it with the covers and a manifest, upload
+  as the latest file and keep the one it replaces as the previous copy. The file lands under a
+  temporary name and is renamed in only once its checksum matches, so a failed upload never
+  touches an earlier backup. An empty library is never uploaded.
+- Restore: two steps. `PrepareRestore` downloads, verifies the checksum and the manifest, and
+  refuses a schema newer than the app's (before and after the download). The confirm dialog
+  ("replaces current library") shows what will be restored. `RestoreBackup` then imports the
+  books in one transaction, copies the covers and rewrites their paths, since the database holds
+  absolute paths that differ between installs.
 - Auto backup: `PeriodicWorkRequest` using the user's constraints. Failures retry with backoff; a
   notification appears only after repeated failures.
 - Failure cases: expired auth (prompt re-sign-in), no space, network drop (retry next run). Local

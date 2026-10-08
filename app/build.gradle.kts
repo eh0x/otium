@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
+    alias(libs.plugins.kover)
 }
 
 // Secrets come from local.properties (never committed). A missing key means
@@ -16,6 +17,21 @@ val localProperties = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 val booksApiKey: String = localProperties.getProperty("books.api.key", "")
+
+// Open Library asks every client to identify itself with a contact. Without a setting, the
+// project page is used.
+val openLibraryContact: String =
+    localProperties.getProperty("openlibrary.contact", "https://github.com/eh0x/otium")
+
+// The release upload key comes from keystore.properties (never committed; see
+// keystore.properties.example). Without it, release builds are signed with the debug key so CI
+// can build and shrink them with no secret. Such a build is for testing only: Play rejects it.
+val keystoreProperties: Properties? = rootProject.file("keystore.properties")
+    .takeIf { it.exists() }
+    ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
+
+fun Properties.required(key: String): String = getProperty(key)?.takeIf { it.isNotBlank() }
+    ?: throw GradleException("keystore.properties is missing '$key'")
 
 android {
     namespace = "app.otium"
@@ -31,11 +47,27 @@ android {
         versionName = "0.1.0"
 
         buildConfigField("String", "BOOKS_API_KEY", "\"$booksApiKey\"")
+        buildConfigField("String", "OPEN_LIBRARY_CONTACT", "\"$openLibraryContact\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        keystoreProperties?.let { props ->
+            create("release") {
+                storeFile = rootProject.file(props.required("storeFile"))
+                storePassword = props.required("storePassword")
+                keyAlias = props.required("keyAlias")
+                keyPassword = props.required("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
+                ?: signingConfigs.getByName("debug").also {
+                    logger.warn("No keystore.properties: release is signed with the debug key")
+                }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -95,6 +127,13 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+// Feeds the merged coverage report in the root build file: debug unit tests only.
+kover {
+    currentProject {
+        createVariant("coverage") { add("debug") }
+    }
+}
+
 dependencies {
     implementation(project(":domain"))
 
@@ -113,10 +152,26 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    // Bundled model: works without Google Play services and needs no download on first scan.
+    implementation(libs.mlkit.barcode.scanning)
+    // Identity Services authorization for the Drive app data scope (no sign-in screen of ours).
+    implementation(libs.play.services.auth)
+    implementation(libs.okhttp)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
 
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.hilt.work)
+    implementation(libs.androidx.work.runtime.ktx)
     ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.room.runtime)
@@ -131,11 +186,17 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.mockk)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core.ktx)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.navigation.testing)
+    testImplementation(libs.androidx.work.testing)
     testImplementation(libs.konsist)
+    // End-to-end flows run the real activity and graph under Robolectric with fake bindings.
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
 

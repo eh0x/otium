@@ -29,7 +29,7 @@ Each rule is tagged with how it is held:
 | markdownlint on every `.md` file | `./gradlew lintMarkdown`, part of `check`; the `pre-push` hook; CI |
 | Broken relative links, missing Gradle tasks and paths, stale facts | `./gradlew checkDocs` |
 
-Run it yourself with `scripts/lint-markdown.sh` (all files), `scripts/lint-markdown.sh --staged`,
+Run it yourself with `scripts/lint-markdown.sh` (tracked files), `scripts/lint-markdown.sh --staged`,
 or `scripts/lint-markdown.sh docs/STYLE_GUIDE.md`. It needs Node.js; without it the script skips
 locally with a notice, and fails in CI. The VS Code extension `DavidAnson.vscode-markdownlint`
 reads the same `.markdownlint-cli2.jsonc` and shows each finding as you type.

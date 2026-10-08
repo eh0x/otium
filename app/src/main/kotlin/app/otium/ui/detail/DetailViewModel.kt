@@ -8,6 +8,7 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.usecase.MarkFinished
 import app.otium.domain.usecase.SetTotalPages
 import app.otium.domain.usecase.UpdateProgress
 import app.otium.ui.navigation.DetailRoute
@@ -31,6 +32,7 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: BookRepository,
     private val updateProgress: UpdateProgress,
+    private val markFinished: MarkFinished,
     private val setTotalPages: SetTotalPages,
 ) : ViewModel() {
 
@@ -60,11 +62,7 @@ class DetailViewModel @Inject constructor(
 
     fun onProgressConfirmed(page: Int) = perform { updateProgress(bookId, page) }
 
-    /** Goes to the last page. Without a known total there is no last page, so nothing happens. */
-    fun onMarkFinished() {
-        val total = uiState.value.book?.totalPages ?: return
-        if (total > 0) onProgressConfirmed(total)
-    }
+    fun onMarkFinished() = perform { markFinished(bookId) }
 
     fun onTotalPagesConfirmed(totalPages: Int) = perform { setTotalPages(bookId, totalPages) }
 

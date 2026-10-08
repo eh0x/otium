@@ -57,3 +57,17 @@ Out of scope:
 
 API keys belong in `local.properties` or the environment and are never committed. If you find a
 secret in the repository or its history, report it the same way, as a vulnerability.
+
+The Google Books key (`books.api.key`) is compiled into the app, so anyone can extract it from the
+APK. It is treated as public, and it is limited so that misuse costs only quota:
+
+- **API restriction:** the key works for the Books API only.
+- **Quota cap:** a daily request limit on the Books API in the Cloud project, so abuse runs out of
+  quota instead of growing without bound. The lookup falls back to Open Library when Google refuses.
+- **No Android app restriction.** That restriction is checked through the `X-Android-Package` and
+  `X-Android-Cert` request headers, which anyone holding the APK can copy, so it adds little here.
+  It would also need the app to send its signing certificate with every request.
+
+Drive access needs no key in the app. It uses an OAuth client bound to the package name and the
+signing certificate's SHA-1, and only the `drive.appdata` scope. Release signing keys live outside
+the repository and are read from `keystore.properties`, which git ignores.

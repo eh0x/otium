@@ -2,7 +2,7 @@
 # Lints Markdown with markdownlint-cli2 using .markdownlint-cli2.jsonc (rules: docs/MARKDOWN_GUIDE.md).
 #
 # usage: scripts/lint-markdown.sh [--staged] [file ...]
-#   no arguments  lint every Markdown file in the repository
+#   no arguments  lint every Markdown file git tracks
 #   --staged      lint only the Markdown files staged for commit (used by the pre-commit hook)
 #   file ...      lint just these files
 #
@@ -45,6 +45,11 @@ if [ "${1:-}" = "--staged" ]; then
     set -- $staged
 fi
 
-[ "$#" -eq 0 ] && set -- "**/*.md"
+# Tracked files only, the same set CI checks out. A glob would also pick up local, git-ignored
+# Markdown (tool state, notes), which fails here but never in CI.
+if [ "$#" -eq 0 ]; then
+    # shellcheck disable=SC2046
+    set -- $(git ls-files -- '*.md')
+fi
 
 exec npx --yes "markdownlint-cli2@$MARKDOWNLINT_VERSION" "$@"

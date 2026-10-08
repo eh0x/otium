@@ -25,6 +25,8 @@ class ErrorMessagesTest {
         AppError.AuthExpired,
         AppError.InsufficientDriveSpace,
         AppError.IncompatibleBackup(backupSchema = 3, appSchema = 2),
+        AppError.CorruptBackup,
+        AppError.NothingToBackUp,
         AppError.Storage("disk"),
         AppError.Unexpected("boom"),
     )
@@ -59,6 +61,8 @@ class ErrorMessagesTest {
             AppError.AuthExpired,
             AppError.InsufficientDriveSpace,
             AppError.IncompatibleBackup(backupSchema = 3, appSchema = 2),
+            AppError.CorruptBackup,
+            AppError.NothingToBackUp,
         )
 
         val messages = needingDifferentActions.map { context.getString(it.messageRes()) }

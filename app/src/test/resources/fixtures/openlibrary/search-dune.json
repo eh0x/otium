@@ -1,0 +1,125 @@
+{
+  "numFound": 147,
+  "start": 0,
+  "numFoundExact": true,
+  "num_found": 147,
+  "documentation_url": "https://openlibrary.org/dev/docs/api/search",
+  "q": "",
+  "offset": null,
+  "docs": [
+    {
+      "author_name": [
+        "Frank Herbert"
+      ],
+      "cover_i": 11481354,
+      "first_publish_year": 1965,
+      "isbn": [
+        "9780441013593",
+        "9780340839935",
+        "044100590X",
+        "9788576574941",
+        "9029002573"
+      ],
+      "key": "/works/OL893414W",
+      "language": [
+        "fre",
+        "spa",
+        "ukr",
+        "pol",
+        "tur"
+      ],
+      "number_of_pages_median": 608,
+      "publisher": [
+        "Dom Wydawniczy REBIS Sp. z o.o.",
+        "Gollancz",
+        "Presse Poket",
+        "Hodder",
+        "Heyne"
+      ],
+      "title": "Dune",
+      "subject": [
+        "Dune (Imaginary place)",
+        "Fiction",
+        "Fiction, science fiction, general",
+        "Dune (imaginary place), fiction",
+        "New York Times reviewed"
+      ]
+    },
+    {
+      "author_name": [
+        "Frank Herbert"
+      ],
+      "cover_i": 980253,
+      "first_publish_year": 1969,
+      "isbn": [
+        "8418037679",
+        "9788466372015",
+        "8373017259",
+        "2266320491",
+        "9780441172696"
+      ],
+      "key": "/works/OL893461W",
+      "language": [
+        "spa",
+        "pol",
+        "dut",
+        "tur",
+        "und"
+      ],
+      "number_of_pages_median": 279,
+      "publisher": [
+        "Orion Publishing Group, Limited",
+        "Putnam",
+        "Putnam Adult",
+        "AST",
+        "Orion Publishing Co"
+      ],
+      "title": "Dune Messiah",
+      "subject": [
+        "American Science fiction",
+        "Dune (Imaginary place)",
+        "Fiction",
+        "Imaginary places",
+        "Science Fiction"
+      ]
+    },
+    {
+      "author_name": [
+        "Frank Herbert"
+      ],
+      "cover_i": 6976407,
+      "first_publish_year": 1976,
+      "isbn": [
+        "1427202915",
+        "9789759971342",
+        "9780425071793",
+        "0575104406",
+        "9782724212983"
+      ],
+      "key": "/works/OL893516W",
+      "language": [
+        "dut",
+        "chi",
+        "por",
+        "ger",
+        "fre"
+      ],
+      "number_of_pages_median": 504,
+      "publisher": [
+        "Berkley",
+        "Acervo",
+        "Ithaki Yayinlari",
+        "Paw Prints 2008-06-26",
+        "Berkley Publishing Company"
+      ],
+      "title": "Children of Dune",
+      "subject": [
+        "Dune (Imaginary place)",
+        "Fiction",
+        "Fiction in English",
+        "Science Fiction",
+        "Dune (imaginary place), fiction"
+      ]
+    }
+  ]
+}

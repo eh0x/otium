@@ -61,17 +61,17 @@ The work follows [the implementation plan](docs/plans/2026-10-06-otium-implement
 | 0 | Project scaffold, CI | Done |
 | 1 | Theme: palette, fonts, shared components | Done |
 | 2 | Domain rules and the Room library store | Done |
-| 3 | Library and book detail screens | Next |
-| 4 | Metadata lookup (Google Books, Open Library) | Next |
-| 5 | Add flow: scan, ISBN, title search | Planned |
-| 6 | Backup and restore with Google Drive | Planned |
+| 3 | Library and book detail screens | Done (device timings still to take) |
+| 4 | Metadata lookup (Google Books, Open Library) | Done (device check still to do) |
+| 5 | Add flow: scan, ISBN, title search | Done (device scan check still to do) |
+| 6 | Backup and restore with Google Drive | Built (Drive setup and device check still to do) |
 | 7 | Polish, accessibility, Play Store release | Planned |
 
 The plan holds the detail and is kept current; this table is a summary.
 
 ## Screenshots
 
-There are no app screens yet. These are renders of the design system (the theme catalog that debug
+There are no app screenshots yet. These are renders of the design system (the theme catalog that debug
 builds show), in the light and dark themes: parchment, sage, terra and ink, with EB Garamond
 headlines and a quiet sans for interface text.
 
@@ -94,9 +94,10 @@ These are design commitments for version 1:
 - **Language and UI:** Kotlin, Jetpack Compose with Material 3, and a custom theme.
 - **Data:** Room with an FTS4 full-text index; Kotlin coroutines and Flow.
 - **Dependency injection:** Hilt.
-- **Planned:** CameraX and ML Kit for barcode scanning, Retrofit with kotlinx.serialization for the
-  book APIs, Coil for covers, WorkManager for scheduled work, and Google Identity Services for
-  Drive.
+- **Adding books:** CameraX and ML Kit (on-device model) for barcode scanning, Retrofit with
+  kotlinx.serialization for the book APIs, Coil for covers, and WorkManager for lookups that wait
+  for a connection.
+- **Planned:** Google Identity Services for Drive backup.
 - **Quality:** Spotless with ktlint, detekt, Android Lint, markdownlint, and architecture rules
   written as tests (Konsist).
 - **Tests:** JUnit, Turbine, Robolectric.
@@ -128,14 +129,23 @@ Create `local.properties` in the repository root. It is git-ignored and never co
 
 ```properties
 sdk.dir=/path/to/Android/sdk
-# Optional. Used by the book lookup (Phase 4); without it the app uses the keyless quota.
+# Optional. Used by the book lookup (Phase 4). Without it Google rejects most requests, and
+# the lookup relies on Open Library.
 books.api.key=YOUR_GOOGLE_BOOKS_API_KEY
+# Optional. How Open Library can reach you; sent in the User-Agent header. Defaults to the
+# project page. An email or phone number gives a higher request limit.
+openlibrary.contact=you@example.org
 ```
 
 | Key | Required | Meaning |
 |-----|----------|---------|
 | `sdk.dir` | Yes, unless `ANDROID_HOME` is set | Location of the Android SDK |
-| `books.api.key` | No | Google Books API key, restricted by package name and SHA-1 |
+| `books.api.key` | No | Google Books API key, restricted to the Books API (see [SECURITY.md](SECURITY.md)) |
+| `openlibrary.contact` | No | Contact for Open Library's User-Agent; default is the project page |
+
+To sign release builds with your upload key, copy `keystore.properties.example` to
+`keystore.properties` (git-ignored) and fill it in. Without it, `assembleRelease` signs with the
+debug key, which is enough for testing the shrunk build but not for Play.
 
 ### Enable the git hooks
 
@@ -164,7 +174,7 @@ build opens the theme catalog shown above.
 |---------|--------------|
 | `./gradlew assembleDebug` | Build the debug APK |
 | `./gradlew installDebug` | Install the debug build on a device or emulator |
-| `./gradlew assembleRelease` | Build the unsigned, R8-shrunk release APK |
+| `./gradlew assembleRelease` | Build the R8-shrunk release APK (debug-signed without `keystore.properties`) |
 | `./gradlew testDebugUnitTest :domain:test` | Run all unit tests |
 | `./gradlew :benchmark:connectedBenchmarkAndroidTest` | Run the scroll and search benchmarks on a device or emulator (see below) |
 | `./gradlew spotlessApply` | Fix formatting of Kotlin, Gradle, XML and text files |
@@ -175,12 +185,12 @@ build opens the theme catalog shown above.
 CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run locally:
 
 ```bash
-./gradlew spotlessCheck detekt checkDocs lintMarkdown lint testDebugUnitTest :domain:test assembleDebug
+./gradlew spotlessCheck detekt checkDocs lintMarkdown lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
 ```
 
 ## Testing
 
-Everything runs on the JVM, so no device or emulator is needed:
+Almost everything runs on the JVM, so no device or emulator is needed:
 
 - **Domain tests** cover the pure rules: status, page clamping, ISBN validation, metadata merge.
 - **Data tests** run the real Room database under Robolectric: search, every filter and sort,
@@ -189,6 +199,23 @@ Everything runs on the JVM, so no device or emulator is needed:
   semantics and a headless render of the theme catalog, written to `app/build/screenshots`.
 - **Architecture tests** fail the build when a layering rule breaks, for example when the UI layer
   imports the data layer or a ViewModel imports an Android type.
+- **Manifest policy tests** fail when the app gains a permission or an exported component, or
+  turns on Android backup or cleartext traffic.
+
+Coverage is measured with Kover across both modules and checked against a floor in CI:
+
+```bash
+./gradlew koverHtmlReportCoverage   # report at build/reports/kover/htmlCoverage/index.html
+./gradlew koverVerifyCoverage       # fails below the floor set in build.gradle.kts
+```
+
+One check needs a device or emulator: the release smoke test drives the shrunk (R8) build through
+adding a book by hand, tracking progress, deleting it, and an online ISBN lookup. Drive backup and
+restore stay a manual check, as they need a Google account.
+
+```bash
+./gradlew :benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.otium.benchmark.ReleaseSmokeTest
+```
 
 The 5,000-book timings measured on the JVM are a regression guard, not device numbers. Device
 numbers come from the `:benchmark` module, which seeds 5,000 books through the debug seeder and

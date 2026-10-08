@@ -28,7 +28,11 @@ private val FAB_CLEARANCE = 96.dp
 
 /** What fills the screen below the controls: the books, an empty-library prompt, or no results. */
 @Composable
-internal fun LibraryBody(state: LibraryUiState, actions: LibraryActions) {
+internal fun LibraryBody(
+    state: LibraryUiState,
+    actions: LibraryActions,
+    onOpenAddSheet: () -> Unit,
+) {
     when (state.contentKind) {
         LibraryContentKind.LOADING -> Unit
 
@@ -36,7 +40,7 @@ internal fun LibraryBody(state: LibraryUiState, actions: LibraryActions) {
             title = stringResource(R.string.library_empty_title),
             message = stringResource(R.string.library_empty_message),
             actionLabel = stringResource(R.string.library_empty_action),
-            onAction = actions.onAddBook,
+            onAction = onOpenAddSheet,
         )
 
         LibraryContentKind.NO_RESULTS -> EmptyMessage(

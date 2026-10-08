@@ -1,3 +1,6 @@
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
+
+
 // Root build file: declares plugins once so modules can apply them without versions,
 // and hosts the repository-wide style and static analysis checks (see docs/STYLE_GUIDE.md).
 plugins {
@@ -11,6 +14,55 @@ plugins {
     alias(libs.plugins.room) apply false
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kover)
+}
+
+// Coverage: one report over :domain's tests and :app's debug unit tests (Robolectric included).
+// Run ./gradlew koverHtmlReportCoverage or koverVerifyCoverage. Generated code is left out, so the
+// numbers describe code someone wrote. Rules and targets: docs/STYLE_GUIDE.md, Testing.
+dependencies {
+    kover(project(":domain"))
+    kover(project(":app"))
+}
+
+kover {
+    currentProject {
+        createVariant("coverage") {}
+    }
+    reports {
+        filters {
+            excludes {
+                // Dagger and Hilt output.
+                classes("*_Factory", "*_Factory$*", "*_MembersInjector", "*_HiltModules*")
+                classes("Hilt_*", "*_Hilt*", "dagger.hilt.*", "hilt_aggregated_deps.*")
+                // Room, Compose compiler and Android build output.
+                classes(
+                    "*_Impl",
+                    "*_Impl$*",
+                    "*ComposableSingletons*",
+                    "*.BuildConfig",
+                    "*.R",
+                    "*.R$*",
+                )
+                // Previews and debug-only tools are not shipped behaviour.
+                annotatedBy("androidx.compose.ui.tooling.preview.Preview")
+                packages("app.otium.debug", "app.otium.ui.debug", "app.otium.ui.catalog")
+                // Test fixtures (shared fakes) and Hilt wiring: covered by the tests that use
+                // them, not something to measure as production logic.
+                packages("app.otium.domain.fakes", "app.otium.di")
+            }
+        }
+        // A floor, not a target: CI fails when coverage drops below what the suite already
+        // reaches. Raise it as coverage grows; never lower it to make a change pass.
+        verify {
+            rule("Line coverage") {
+                bound {
+                    minValue = 90
+                    coverageUnits = CoverageUnit.LINE
+                }
+            }
+        }
+    }
 }
 
 val generatedAndBuildDirs =

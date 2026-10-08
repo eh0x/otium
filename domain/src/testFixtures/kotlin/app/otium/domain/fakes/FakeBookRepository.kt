@@ -73,6 +73,9 @@ class FakeBookRepository : BookRepository {
     override suspend fun findByIsbn13(isbn13: String): Try<Book?> =
         Try.Success(books.value.values.firstOrNull { it.isbn13 == isbn13 })
 
+    override suspend fun getBooksNeedingLookup(): Try<List<Book>> =
+        Try.Success(books.value.values.filter { it.needsLookup }.sortedBy { it.id })
+
     override suspend fun add(book: Book): Try<Long> {
         failWith?.let { return Try.Failure(it) }
         val existing = book.isbn13?.let { isbn ->

@@ -4,6 +4,14 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     // Shared fakes (FakeBookRepository, FixedClock) for the tests of both modules.
     `java-test-fixtures`
+    alias(libs.plugins.kover)
+}
+
+// Feeds the merged coverage report in the root build file.
+kover {
+    currentProject {
+        createVariant("coverage") { add("jvm") }
+    }
 }
 
 kotlin {

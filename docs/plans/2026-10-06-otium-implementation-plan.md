@@ -3,7 +3,9 @@
 Date: 2026-10-06
 Source design: `docs/design/2026-10-06-otium-library-app-design.md` (commit `c55b61b`)
 Complexity: Large (8 phases, solo project)
-Status: In progress. Phases 0, 1 and 2 complete; next up are Phases 3 and 4.
+Status: In progress. Phases 0 to 5 complete (device checks for 3 to 5 still to take). Phase 6 is
+built and tested without a device; the Cloud project setup and the device checks are still to do
+(see its Status section).
 
 ## 1. Summary
 
@@ -330,10 +332,16 @@ data.
 
 ### Acceptance
 
-- [ ] All screens usable offline with seeded data.
-- [ ] Search feels instant on 5,000 books.
-- [ ] Compose UI tests green.
-- [ ] No business rules in ViewModels (review against design layer rules).
+- [x] All screens usable offline with seeded data. (Library, detail and the add stub work with no
+  network. The library ran on an emulator with 5,000 seeded books under the benchmark; the detail
+  screen is covered by Robolectric UI tests, not yet driven by hand on a device.)
+- [x] Search feels instant on 5,000 books. (Emulator, host GPU: typing P99 8.7 ms and shelf scroll
+  P99 9.3 ms of frame CPU time against a 16.7 ms budget; clearing the search is one frame of about
+  20 ms. Emulator numbers only compare runs: the figure from a real mid-range device is still to
+  be taken, with `./gradlew :benchmark:connectedBenchmarkAndroidTest`.)
+- [x] Compose UI tests green. (Robolectric; CI passes. Instrumented UI tests are not set up.)
+- [x] No business rules in ViewModels. (Reviewed: "mark finished" moved into the `MarkFinished`
+  use case; what remains is state mapping, debounce and toggling UI selections.)
 
 ---
 
@@ -393,10 +401,16 @@ title/author query, with fallbacks and errors handled.
 
 ### Acceptance
 
-- [ ] All MockWebServer scenarios pass.
-- [ ] A real ISBN lookup returns a merged candidate on a device or emulator (manual check).
-- [ ] Missing key still works.
-- [ ] No API key committed.
+- [x] All MockWebServer scenarios pass. (22 repository tests: both services, Google only, Open
+  Library only, 429 then success, persistent 429, 5xx, a slow service, both failing, not found,
+  and the search fallback. Plus API, mapper, error-mapping and cover-store tests.)
+- [ ] A real ISBN lookup returns a merged candidate on a device or emulator (manual check). (Run
+  against the live services from the JVM: three real ISBNs resolved and an unknown one was
+  `NotFound`. Not yet run on a device or emulator.)
+- [x] Missing key still works. (Google rejects keyless requests with 429, so without a key the
+  lookup relies on Open Library; a test covers a persistent Google 429.)
+- [x] No API key committed. (Searched the full git history and every tracked file for the key
+  value: no hits.)
 
 ---
 
@@ -457,11 +471,25 @@ offline queueing.
 
 ### Acceptance
 
-- [ ] All three add paths end on the confirm screen and save correctly.
-- [ ] Duplicate ISBN opens the existing book.
-- [ ] Offline ISBN entry is saved and later enriched.
-- [ ] Scan-to-result under about 3 s on a normal connection (manual measurement).
-- [ ] UI tests green with the fake scanner.
+- [x] All three add paths end on the confirm screen and save correctly. (End-to-end Robolectric
+  tests with Hilt drive the real activity and navigation graph: typed ISBN and scanned barcode to
+  a saved book; the title search path is covered by ViewModel and screen tests. Editing from the
+  detail screen goes through the same confirm screen and returns to the book.)
+- [x] Duplicate ISBN opens the existing book. (Lookup, scan and title search check the library
+  first; saving a confirmed book with an owned ISBN offers to open that book instead.)
+- [x] Offline ISBN entry is saved and later enriched. (`SaveIsbnForLater` keeps the ISBN and plans
+  `LookupRetryWorker`, which waits for a connection, backs off and fills in the details without
+  overwriting a book the user edited. Covered by use case, worker and scheduler tests.)
+- [ ] Scan-to-result under about 3 s on a normal connection (manual measurement). (Needs a device;
+  not yet taken. Neither is the planned scan of real books: matte, glossy, curved spine, low
+  light.)
+- [x] UI tests green with the fake scanner. (`FakeBarcodeScanner` drives `ScanViewModelTest` and
+  the end-to-end scan test; the camera preview itself only runs on a device.)
+
+Notes: picked or photographed covers are stored when the book is saved, so backing out leaves no
+files; title search runs on demand to spare the API quota; an ISBN saved offline uses the ISBN as
+its title until the lookup fills it in. Form edits on the confirm screen are not yet kept across
+process death (the looked-up draft is, through the route).
 
 ---
 
@@ -479,32 +507,40 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
 
 | File | Purpose |
 |------|---------|
-| `repo/BackupRepository.kt` | Backup, restore, status |
-| `port/DriveBackupClient.kt` | Upload, download, list, delete, quota check, auth state |
-| `port/DatabaseSwapper.kt` | Checkpoint, close, replace, reopen |
-| `model/BackupInfo.kt`, `BackupSettings.kt` | Last backup time and size, schedule settings |
-| `usecase/RunBackup.kt`, `RestoreBackup.kt`, `ConfigureAutoBackup.kt` | Orchestration |
+| `port/DriveBackupClient.kt` | Upload (rotating), list, download, free space |
+| `port/DriveAuth.kt` | Sign-in state and sign-out |
+| `port/BackupArchiver.kt` | Snapshot the library to a file; describe a backup file |
+| `port/LibraryRestorer.kt` | Replace the library with a backup, all or nothing |
+| `port/BackupPreferences.kt`, `BackupScheduler.kt` | Settings, last backup, failed-run count; scheduling |
+| `model/BackupInfo.kt`, `BackupSettings.kt`, `RemoteBackup.kt`, `DriveAuthState.kt` | Models |
+| `usecase/RunBackup.kt`, `PrepareRestore.kt`, `RestoreBackup.kt`, `FindBackups.kt` | Orchestration |
+| `usecase/ConfigureAutoBackup.kt`, `RunScheduledBackup.kt`, `BackupLock.kt` | Schedule and policy |
 
 `:app`:
 
 | File | Purpose |
 |------|---------|
-| `data/backup/GoogleDriveBackupClient.kt` | REST via Retrofit/OkHttp (P2), `drive.appdata` scope |
-| `data/backup/GoogleAuthManager.kt` | Google Identity Services authorization, token retrieval, re-sign-in signal |
-| `data/backup/BackupArchiver.kt` | Zip DB plus covers plus metadata JSON; unzip and verify |
-| `data/backup/RoomDatabaseSwapper.kt` | WAL checkpoint, close Room, swap files, rebuild database |
-| `data/repo/DriveBackupRepository.kt` | Ties it together, error mapping |
-| `work/BackupWorker.kt` | Periodic worker with user constraints and backoff |
+| `data/backup/drive/` | `GoogleDriveBackupClient` (REST via Retrofit/OkHttp, P2, `drive.appdata`), API, DTOs, error mapping |
+| `data/backup/archive/` | `BackupZip` and `BackupManifest`: zip, unzip and verify with zip-slip and size limits |
+| `data/backup/ZipBackupArchiver.kt` | Copy the library into a fresh database file, zip with covers |
+| `data/backup/RoomLibraryRestorer.kt` | Import a backup into the live database in one transaction |
+| `data/backup/GoogleAuthManager.kt` | Identity Services authorization, token, re-sign-in signal |
+| `auth/DriveConsent.kt` | What the screen does to give Drive access (launch Google's consent, take the result) |
+| `data/prefs/DataStoreBackupPreferences.kt` | Settings and bookkeeping |
+| `work/BackupWorker.kt`, `WorkManagerBackupScheduler.kt`, `BackupNotifier.kt` | Periodic work with user constraints and backoff; the notice after repeated failures |
 | `ui/backup/BackupScreen.kt`, `BackupViewModel.kt` | Sign-in, Back up now, Restore, auto-backup toggle, frequency, Wi-Fi-only, charging-only, last backup time and size |
-| `di/BackupModule.kt` | Bindings; Room database provided through a swappable holder |
+| `di/BackupModule.kt` | Bindings |
 
 ### Tasks
 
-1. **Prototype the Room swap first (spike).** Prove that closing Room, replacing the DB file and
-   covers, and reopening works with Hilt-provided singletons (use a database holder or provider so
-   repositories do not hold a stale instance). Write the finding into the design doc if it changes
-   the approach.
-   - Validate: instrumented test that restores a known DB and queries it.
+1. **Prove the restore first (spike).** The plan was to close Room, replace the DB file and reopen
+   it behind a database holder. Reading the code showed a simpler and safer way: repositories hold
+   the DAO directly, so a swap would need every query rewired. Instead, import the backup into the
+   live database in one transaction (open the downloaded file in a temporary Room instance, which
+   runs the migrations, then copy its books, labels and progress across and rewrite cover paths).
+   It is atomic, keeps the same Room instance, and the screens update on their own.
+   - Validate: Robolectric test that restores a known DB (also one from an older schema) and
+     queries it, and that a failure part way leaves the library unchanged.
 2. **`BackupArchiver`.** Zip format: `library.db`, `covers/`, `manifest.json` (app version, schema
    version, created at, book count). Unzip to a temp directory and verify before swapping. Zip-slip
    protection when extracting.
@@ -519,9 +555,9 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
      (`InsufficientDriveSpace`), network drop.
 5. **Google authorization.** Identity Services authorization for `drive.appdata`; handle consent
    intent in the UI layer; surface `AuthExpired` as a re-sign-in prompt.
-6. **`RunBackup` and `RestoreBackup` use cases.** Order for backup: checkpoint, archive, upload,
-   rotate; local data untouched on any failure. Restore: download, verify, confirm (UI), swap,
-   reopen. Tests against fakes covering each failure point and that local data survives.
+6. **`RunBackup` and `RestoreBackup` use cases.** Order for backup: snapshot, archive, upload,
+   rotate; local data untouched on any failure. Restore: download, verify, confirm (UI), import.
+   Tests against fakes covering each failure point and that local data survives.
 7. **Backup screen.** Sign-in state, Back up now with progress, Restore with a confirm dialog
    ("replaces current library"), last backup time and size.
 8. **Auto backup.** `PeriodicWorkRequest` (daily or weekly) with network type (unmetered when
@@ -531,6 +567,33 @@ Reliable manual and periodic backup to Drive `appDataFolder`, with a safe restor
    - Validate: `TestListenableWorkerBuilder` and WorkManager test driver.
 9. **Real-device end-to-end:** back up, uninstall, reinstall, sign in, restore; also test restore
    after the `.prev` rotation.
+
+### Status
+
+Built and tested (domain tests; the archive and the Drive client on the JVM; the rest under
+Robolectric):
+
+- [x] Domain ports, models and use cases, with fakes: backup, two-step restore, schema-version
+  refusal, scheduled runs with a failure policy, no overlapping runs, no upload of an empty library.
+- [x] `BackupZip` with a round trip, path-traversal, entry-count and size-limit tests.
+- [x] `GoogleDriveBackupClient` against an in-memory Drive: upload, rotation, healing after a
+  stop part way, checksum checks, 401, 403 (full Drive, rate limit, permission), retries, offline.
+
+- [x] `ZipBackupArchiver` and `RoomLibraryRestorer` with round-trip tests: labels, progress, covers
+  and full-text search come back; a damaged backup, a newer schema and a failure part way leave the
+  library and its covers as they were. The restore approach is in the design doc. The backup copies
+  the library through Room instead of using `VACUUM INTO`, which Android 8 to 10 lack.
+- [x] `GoogleAuthManager` and the consent flow (`DriveConsent`), `DataStoreBackupPreferences`,
+  `BackupWorker`, `WorkManagerBackupScheduler` and the failure notification.
+- [x] `BackupModule`, the Backup screen and its entry in the library menu, with ViewModel and
+  screen tests.
+
+Still to do (needs a device and a Google account):
+
+- [ ] The Cloud project setup from decision P4 (OAuth client for the debug and release SHA-1).
+  Until it exists, asking for access fails with a Google setup error.
+- [ ] Device checks: back up, uninstall, reinstall, sign in, restore; restore the previous backup;
+  an automatic backup run; the consent screen; the failure notice.
 
 ### Acceptance
 
@@ -589,7 +652,7 @@ Complexity: Medium. Last.
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|------------|
-| Restore corrupts or loses data | Medium | High | Spike the Room swap first; verify archive before swapping; keep `.prev`; confirm dialog; round-trip tests; build restore before auto-backup |
+| Restore corrupts or loses data | Medium | High | Spike the restore first; verify the archive before importing; import in one transaction; keep the previous backup; confirm dialog; round-trip tests; build restore before auto-backup |
 | Drive OAuth setup delays (consent screen, SHA-1 per build type, testing-mode user list) | High | Medium | Create the Cloud project in Phase 0; register debug SHA-1 now and release SHA-1 (and Play App Signing SHA-1) before Phase 7 |
 | Stale Room instance after restore | Medium | High | Database holder/provider pattern chosen in the spike; repositories never cache the database |
 | Shelf-styled grid slows scrolling at 5,000 books | Medium | Medium | Style only, no heavy assets; stable keys; measure with seeder in Phase 3 |
@@ -626,5 +689,5 @@ Complexity: Medium. Last.
 - [ ] All phase acceptance checklists complete.
 - [ ] Every non-goal in the design remains out of scope.
 - [ ] The design doc matches what was built (update it where implementation diverged, for example
-  after the Room swap spike).
+  after the restore spike).
 - [ ] README documents setup, keys and build.

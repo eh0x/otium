@@ -139,6 +139,30 @@ class MergeMetadataTest {
     }
 
     @Test
+    fun `the other usable covers are offered as alternates`() {
+        val merged = MergeMetadata(google = google(), openLibrary = openLibrary())!!
+
+        assertEquals("https://google/cover.jpg", merged.coverUrl)
+        assertEquals(listOf("https://ol/cover.jpg"), merged.alternateCoverUrls)
+    }
+
+    @Test
+    fun `rejected and repeated covers are not offered as alternates`() {
+        val same = MergeMetadata(
+            google = google(coverUrl = "https://same.jpg"),
+            openLibrary = openLibrary(coverUrl = "https://same.jpg"),
+        )!!
+        val rejected = MergeMetadata(
+            google = google(),
+            openLibrary = openLibrary(),
+            coverIsUsable = { it == "https://google/cover.jpg" },
+        )!!
+
+        assertEquals(emptyList<String>(), same.alternateCoverUrls)
+        assertEquals(emptyList<String>(), rejected.alternateCoverUrls)
+    }
+
+    @Test
     fun `missing google cover falls back to open library`() {
         val merged = MergeMetadata(google = google(coverUrl = null), openLibrary = openLibrary())!!
         assertEquals("https://ol/cover.jpg", merged.coverUrl)

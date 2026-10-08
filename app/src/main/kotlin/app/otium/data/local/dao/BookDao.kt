@@ -47,6 +47,9 @@ abstract class BookDao {
     @Query("SELECT * FROM book WHERE isbn13 = :isbn13")
     abstract suspend fun findEntityByIsbn13(isbn13: String): BookEntity?
 
+    @Query("SELECT * FROM book WHERE needsLookup = 1 ORDER BY id")
+    abstract suspend fun booksNeedingLookup(): List<BookEntity>
+
     @Query(
         "SELECT a.name FROM author a JOIN book_author ba ON ba.authorId = a.id " +
             "WHERE ba.bookId = :bookId ORDER BY ba.position",

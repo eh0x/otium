@@ -60,14 +60,16 @@ private const val DESCRIPTION_TOGGLE_THRESHOLD = 200
 @Composable
 fun DetailScreen(
     onBack: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: DetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(state.deleted) { if (state.deleted) onBack() }
-    val actions = remember(viewModel, onBack) {
+    val actions = remember(viewModel, onBack, onEdit) {
         DetailActions(
             onBack = onBack,
+            onEdit = onEdit,
             onProgressConfirmed = viewModel::onProgressConfirmed,
             onMarkFinished = viewModel::onMarkFinished,
             onTotalPagesConfirmed = viewModel::onTotalPagesConfirmed,
@@ -97,19 +99,10 @@ fun DetailContent(state: DetailUiState, actions: DetailActions, modifier: Modifi
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbar) },
             topBar = {
-                OtiumTopBar(
-                    title = "",
-                    navigationIcon = {
-                        IconButton(onClick = actions.onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.detail_back),
-                            )
-                        }
-                    },
-                    actions = {
-                        if (book != null) OverflowMenu(onDelete = { confirmDelete = true })
-                    },
+                DetailTopBar(
+                    hasBook = book != null,
+                    actions = actions,
+                    onDelete = { confirmDelete = true },
                 )
             },
         ) { padding ->
@@ -138,8 +131,27 @@ fun DetailContent(state: DetailUiState, actions: DetailActions, modifier: Modifi
     }
 }
 
+/** Back, and for a book that exists, the menu to edit or delete it. */
 @Composable
-private fun OverflowMenu(onDelete: () -> Unit) {
+private fun DetailTopBar(hasBook: Boolean, actions: DetailActions, onDelete: () -> Unit) {
+    OtiumTopBar(
+        title = "",
+        navigationIcon = {
+            IconButton(onClick = actions.onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.detail_back),
+                )
+            }
+        },
+        actions = {
+            if (hasBook) OverflowMenu(onEdit = actions.onEdit, onDelete = onDelete)
+        },
+    )
+}
+
+@Composable
+private fun OverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
         Icon(
@@ -148,6 +160,13 @@ private fun OverflowMenu(onDelete: () -> Unit) {
         )
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.detail_edit)) },
+            onClick = {
+                open = false
+                onEdit()
+            },
+        )
         DropdownMenuItem(
             text = { Text(stringResource(R.string.detail_delete)) },
             onClick = {

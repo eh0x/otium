@@ -123,6 +123,18 @@ class BookRepositoryTest {
     }
 
     @Test
+    fun `getBooksNeedingLookup returns only waiting books, oldest first, with labels`() = runTest {
+        add(testBook(title = "Done", isbn13 = "9780306406157"))
+        val first = add(testBook(title = "First", tags = listOf("t")).copy(needsLookup = true))
+        val second = add(testBook(title = "Second").copy(needsLookup = true))
+
+        val waiting = (repo.getBooksNeedingLookup() as Try.Success).value
+
+        assertEquals(listOf(first, second), waiting.map { it.id })
+        assertEquals(listOf("t"), waiting.first().tags)
+    }
+
+    @Test
     fun `update replaces fields and labels and drops unused labels`() = runTest {
         val id =
             add(
