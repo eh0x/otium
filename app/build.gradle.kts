@@ -46,8 +46,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
-        buildConfigField("String", "BOOKS_API_KEY", "\"$booksApiKey\"")
-        buildConfigField("String", "OPEN_LIBRARY_CONTACT", "\"$openLibraryContact\"")
+        fun String.escape() = replace("\\", "\\\\").replace("\"", "\\\"")
+        buildConfigField("String", "BOOKS_API_KEY", "\"${booksApiKey.escape()}\"")
+        buildConfigField("String", "OPEN_LIBRARY_CONTACT", "\"${openLibraryContact.escape()}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
