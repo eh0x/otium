@@ -38,7 +38,7 @@ jobs:
         run: ./gradlew spotlessCheck detekt checkDocs --build-cache --parallel
 
       - name: Upload Detekt Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: detekt-reports
@@ -73,7 +73,7 @@ jobs:
         run: ./gradlew lint --build-cache --parallel
 
       - name: Upload Lint Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: lint-reports
@@ -100,7 +100,7 @@ jobs:
         run: ./gradlew testDebugUnitTest :domain:test koverVerifyCoverage --build-cache --parallel
 
       - name: Upload Test Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: test-reports
@@ -108,7 +108,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: kover-coverage-reports
