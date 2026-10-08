@@ -16,7 +16,7 @@ import kotlinx.serialization.json.Json
 
 private const val BUFFER_BYTES = 64 * 1024
 private const val DEFAULT_MAX_ENTRIES = 50_000
-private const val DEFAULT_MAX_UNPACKED_BYTES = 2L * 1024 * 1024 * 1024
+private const val DEFAULT_MAX_UNPACKED_BYTES = 512L * 1024 * 1024
 
 /** A name safe to use as a file name inside the backup: no path separators, no leading dot. */
 private val SAFE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
