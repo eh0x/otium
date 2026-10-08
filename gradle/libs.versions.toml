@@ -8,6 +8,8 @@ ksp = "2.3.12"
 spotless = "8.10.3"
 ktlint = "1.8.0"
 detekt = "1.23.8"
+# Code coverage for the JVM and Android unit tests, merged into one report.
+kover = "0.9.11"
 
 # AndroidX
 benchmarkMacro = "1.5.0"
@@ -140,3 +142,4 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 room = { id = "androidx.room", version.ref = "room" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

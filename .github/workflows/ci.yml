@@ -35,7 +35,7 @@ jobs:
       # cannot resolve fails here, not on a user's device. With no keystore.properties in CI it is
       # signed with the debug key.
       - name: Style, static analysis, docs, lint, unit tests, assemble
-        run: ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test assembleDebug assembleRelease
+        run: ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
 
       # Warns (does not fail) when build, setup or tooling files changed without a docs update.
       - name: Documentation impact

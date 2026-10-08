@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.room)
+    alias(libs.plugins.kover)
 }
 
 // Secrets come from local.properties (never committed). A missing key means
@@ -124,6 +125,13 @@ kotlin {
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+// Feeds the merged coverage report in the root build file: debug unit tests only.
+kover {
+    currentProject {
+        createVariant("coverage") { add("debug") }
+    }
 }
 
 dependencies {
