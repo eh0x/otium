@@ -85,17 +85,17 @@ Already right, and to keep as it is:
 | T5 | Testing | Run the release smoke test in CI on demand | S | Open |
 | T6 | Testing | Compose tests for the untested UI branches | M | Open |
 | T7 | Testing | Screenshot tests for both themes and large fonts | M | Open |
-| S10 | Security | Pin `upload-artifact` by commit SHA (Medium) | S | Open |
-| S11 | Security | Accept only https cover URLs from the book services | S | Open |
+| S10 | Security | Pin `upload-artifact` by commit SHA (Medium) | S | Done |
+| S11 | Security | Accept only https cover URLs from the book services | S | Done |
 | S12 | Security | Filter dependency repositories by group | S | Open |
-| S13 | Security | Keep coding agents away from local secrets | S | Open |
+| S13 | Security | Keep coding agents away from local secrets | S | Done |
 | S14 | Security | Check a restored database before reading it | S | Open |
 | S15 | Security | Keep the account email apart from library settings | S | Open |
-| S16 | Security | Make debug-key release builds an explicit choice | S | Open |
-| S17 | Security | Pass workflow values to CI scripts through the environment | S | Open |
-| S18 | Security | Escape `BuildConfig` string values | S | Open |
-| S19 | Security | Lower the backup unpack limit | S | Open |
-| S20 | Security | Use a portable path in `.claude/settings.json` | S | Open |
+| S16 | Security | Make debug-key release builds an explicit choice | S | Done |
+| S17 | Security | Pass workflow values to CI scripts through the environment | S | Done |
+| S18 | Security | Escape `BuildConfig` string values | S | Done |
+| S19 | Security | Lower the backup unpack limit | S | Done |
+| S20 | Security | Use a portable path in `.claude/settings.json` | S | Done |
 | S21 | Security | Register the theme catalog route only in debug builds | S | Open |
 | S22 | Security | Scan dependencies for known vulnerabilities | S | Done |
 
