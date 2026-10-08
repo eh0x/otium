@@ -1,7 +1,7 @@
 # Architecture, security and UX review: findings to apply
 
-Date: 2026-10-07
-Status: Findings recorded, nothing applied yet
+Date: 2026-10-07, second pass 2026-10-08
+Status: In progress; see the Status column in section 2
 Related documents: [app design](../design/2026-10-06-otium-library-app-design.md),
 [implementation plan](2026-10-06-otium-implementation-plan.md), [roadmap](../ROADMAP.md),
 [style guide](../STYLE_GUIDE.md)
@@ -13,6 +13,9 @@ done. Findings are grouped by area and ranked within each.
 
 The review read code and documents only. The release variant was not built and the app was not
 run, so findings marked _unverified_ need a check before work starts.
+
+A second pass on 2026-10-08 (commit `024487e`) added the findings in section 6. That pass also
+read the merged release manifest and the release APK, which by then CI built (S1).
 
 ## 1. Verdict
 
@@ -54,10 +57,24 @@ Already right, and to keep as it is:
 | U4 | UX | Adaptive layout | M | Open |
 | U5 | UX | Copy and accessibility fixes | S | Open |
 | U6 | UX | Play listing privacy material | S | Open |
+| U7 | UX | Keep the library when moving to a new phone | M | Open |
+| S7 | Security | Recover from a revoked Drive token without a stale screen | S | Open |
+| S8 | Security | Delete cover photos left in the camera cache | S | Open |
+| B1 | Build | Build an app bundle in CI and keep it with the R8 mapping | S | Open |
+| S9 | Security | Pin the Gradle distribution checksum | S | Open |
+| B2 | Build | Build the release variant in a parallel CI job | S | Open |
+| U8 | Feature | Launcher shortcuts for adding books | S | Open |
+| U9 | Feature | Add a book shared from another app | M | Open |
+| P1 | Platform | Set the keyboard resize mode on the activity | S | Open |
+| P2 | Platform | Give the themed icon its own monochrome drawable | S | Open |
+| B3 | Build | StrictMode in debug builds; try the configuration cache | S | Open |
 
 Sizes: S is under a day, M is one to three days, L is a phase of its own.
 
 Suggested first batch: S1, S2, S3, U1 and U2. They are small and worth doing before first release.
+
+Suggested second batch: U7, S7, S8, B1 and S9. U7 closes a data loss path; the rest are small.
+Do U8 and U9 together with the Settings screen (U2).
 
 ## 3. Security
 
@@ -255,7 +272,131 @@ Before publishing, prepare a privacy policy URL and the Data safety form. The fa
 no analytics and no accounts, ISBN and title queries go to Google Books and Open Library, and
 backups go to the user's own Drive. Link the policy from the Settings screen (U2).
 
-## 6. Applying these changes
+## 6. Second pass: data safety, release build and small features
+
+Checked in this pass and found sound, so not findings: every exported component in the merged
+manifest comes from a library and is guarded by a permission (`BIND_JOB_SERVICE`, `DUMP`, Google's
+revocation permission); there is no `AD_ID` permission; the backup notification uses an immutable
+`PendingIntent` on a low-importance channel; covers are picked with the Photo Picker, so no storage
+permission is needed; the camera permission is asked in context with a rationale; the app logs
+nothing; every native library in the release APK passes `zipalign -c -P 16` (16 KB pages).
+
+### U7. Keep the library when moving to a new phone
+
+`res/xml/data_extraction_rules.xml` excludes every domain from `<device-transfer>` as well as
+from `<cloud-backup>`. A user who moves to a new phone with Android's transfer tool, and has not
+connected Drive, arrives with an empty library. This is the most likely way a user loses data.
+
+Device transfer is started by the user, goes directly between the two phones and is encrypted on
+Android 12 and later, so allowing it does not conflict with the privacy promise. Android's cloud
+backup stays excluded: the app's own Drive backup is the only cloud copy.
+
+Change:
+
+- In `<device-transfer>`, include the database (`otium.db` and its `-wal` and `-shm` files), the
+  covers directory under `files/`, and the library preferences.
+- Keep the Drive and backup state out of the transfer: the connected flag, the account email, the
+  expired flag, the last backup and the failure count. The grant does not move with the phone, so
+  the new phone should start disconnected. If these share a DataStore file with the library
+  preferences (`di/PreferencesModule.kt`), give the backup state its own file first so it can be
+  excluded on its own.
+- After a transfer, scheduled backups are not planned on the new phone. Nothing needs to change
+  for that: the user connects Drive again, which plans them.
+- Update `backup_rules.xml` only if Android 11 and lower should behave the same. Its
+  `<full-backup-content>` cannot tell transfer from cloud backup, so keep it excluding everything.
+
+Done when: a Robolectric test reads `data_extraction_rules.xml` and checks what is included and
+excluded, and a manual transfer between two devices with Android's setup transfer brings the
+books and covers across and shows Drive as disconnected.
+
+### S7. Recover from a revoked Drive token without a stale screen
+
+`DriveErrorMapping.kt` maps a 401 to `AuthExpired`, but only `GoogleAuthManager.accessToken()`
+calls `markExpired()`, and only when Google asks for the consent screen. If Google Identity
+Services hands back a cached token that was revoked in the meantime, the upload fails with
+"sign in again" while the Backup screen still shows the account as connected, and the same stale
+token can come back on the next attempt.
+
+Change:
+
+- On a 401, clear the cached token (`AuthorizationClient.clearToken`; confirm it is available in
+  play-services-auth 22.0.0) and retry the call once with a fresh token.
+- If the retry also gets a 401, mark the grant expired so the screen offers "Reconnect" (U5).
+- Test both paths with the fake Drive in `GoogleDriveBackupClientTest`.
+
+### S8. Delete cover photos left in the camera cache
+
+`ui/add/confirm/CoverSection.kt` has the camera write `cache/camera/cover-<nanos>.jpg`. When the
+book is saved the cover store copies the photo, and when the user backs out it is not used, but
+no code was found that deletes the file in `cache/camera/`, so it stays until Android trims the
+cache. These are the user's own photos.
+
+Change: delete the camera file once the cover store has copied it or the user has cancelled, and
+empty `cache/camera/` when the app starts, for files left by a process that died.
+
+### B1. Build an app bundle in CI and keep it with the R8 mapping
+
+CI runs `assembleRelease`, which makes a universal APK of about 25 MB, most of it ML Kit's
+`libbarhopper_v3.so` for four ABIs. Play needs an app bundle, and from a bundle it delivers only
+the ABI a phone uses, around 7 MB.
+
+Change: run `bundleRelease` in CI next to `assembleRelease` (the APK stays for installing on a
+device), and keep the bundle and `app/build/outputs/mapping/release/mapping.txt` as workflow
+artifacts for a few days. The mapping is what makes Android vitals stack traces readable. Record
+the bundle size per build so a jump is noticed.
+
+### S9. Pin the Gradle distribution checksum
+
+`gradle/wrapper/gradle-wrapper.properties` has no `distributionSha256Sum`. `setup-gradle`
+validates the wrapper JAR, but not the distribution zip that the wrapper downloads.
+
+Change: add `distributionSha256Sum` for the Gradle 9.8.0 binary distribution (from
+services.gradle.org), for example with
+`./gradlew wrapper --gradle-version 9.8.0 --gradle-distribution-sha256-sum <sum>`. Dependabot
+updates the sum together with the version. This complements dependency verification (S5).
+
+### B2. Build the release variant in a parallel CI job
+
+Adding `assembleRelease` (S1) took CI from about 12 to about 18 minutes, because it also runs R8
+and `lintVitalRelease`. Move the release build (and B1's bundle) into a second job that runs
+next to the existing one, with the same pinned actions and read-only permissions.
+
+### U8. Launcher shortcuts for adding books
+
+Adding a book is the most frequent action. Add static shortcuts (`res/xml/shortcuts.xml`,
+referenced from `MainActivity`): "Scan a book" and "Add by ISBN", each opening its add screen
+through the navigation graph. Not in the roadmap; cheap.
+
+### U9. Add a book shared from another app
+
+Let `MainActivity` receive `ACTION_SEND` with `text/plain`, find an ISBN in the text (a bare
+ISBN, or one inside a bookshop or Open Library link) with the existing ISBN check, and open the
+confirm flow for it. Text without an ISBN opens the title search with the text filled in. This
+lets people add a book from a browser or a friend's message. Treat the shared text as untrusted
+input: cap its length and never open the links in it. Not in the roadmap.
+
+### P1. Set the keyboard resize mode on the activity
+
+Set `android:windowSoftInputMode="adjustResize"` on `MainActivity`. With `enableEdgeToEdge()` the
+confirm screen's `imePadding()` already works, but at target SDK 37 the explicit mode is the
+recommended baseline and keeps new text fields from being covered by the keyboard.
+
+### P2. Give the themed icon its own monochrome drawable
+
+`res/mipmap-anydpi/ic_launcher.xml` uses the full-colour foreground as the `<monochrome>` layer.
+Android tints that layer as a single colour, so a design with fills of different colours turns
+into a flat shape. Draw a single-colour silhouette for it and check it with themed icons on.
+Fits implementation plan Phase 7, task 3.
+
+### B3. StrictMode in debug builds; try the configuration cache
+
+- Turn on `StrictMode` thread and VM policies (disk and network on the main thread, unclosed
+  resources) in debug builds only, logging the violations. The backup and restore code does a lot
+  of file work and this catches a regression early.
+- Try `org.gradle.configuration-cache=true` in `gradle.properties`. Keep it only if Spotless,
+  detekt and the docs check all support it.
+
+## 7. Applying these changes
 
 - Follow the [style guide](../STYLE_GUIDE.md): run `./gradlew spotlessApply detekt` before each
   commit, and `./gradlew lint` when touching resources or the manifest.
