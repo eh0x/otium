@@ -1,10 +1,10 @@
 # Architecture, security and UX review: findings to apply
 
-Date: 2026-10-07, second pass 2026-10-08
+Date: 2026-10-07, second pass 2026-10-08, security pass 2026-10-08
 Status: In progress; see the Status column in section 2
 Related documents: [app design](../design/2026-10-06-otium-library-app-design.md),
 [implementation plan](2026-10-06-otium-implementation-plan.md), [roadmap](../ROADMAP.md),
-[style guide](../STYLE_GUIDE.md)
+[style guide](../STYLE_GUIDE.md), [security policy](../../SECURITY.md)
 
 This is the backlog from a review of the codebase on `develop` (commit `e6e65ed`) against Android
 Clean Architecture practice, security guidance and UI/UX guidance. It is for whoever applies the
@@ -20,6 +20,11 @@ read the merged release manifest and the release APK, which by then CI built (S1
 A testing review the same day measured coverage and added a coverage gate, a manifest policy
 test and a release smoke test. What it left open is in section 7 (T1 to T7).
 
+A security pass the same day (commit `57bef05`) went over the whole repository: app code, build,
+CI, git hooks, the Claude Code configuration and the git history, against the OWASP Mobile Top 10
+(2024), the OWASP MASVS and Android's app security guidance. It rechecked S3 to S9 and added S10
+to S22 in section 8. It found no critical or high problem and no committed secret.
+
 ## 1. Verdict
 
 The architecture is sound and needs no restructuring. Most findings are small. A few should be
@@ -34,9 +39,11 @@ Already right, and to keep as it is:
   renamed. Zip extraction accepts only known entry names, checks canonical paths and caps entry
   count and unpacked bytes. A restore is all or nothing and compares the book count.
 - **Privacy:** `allowBackup="false"` with every domain excluded in both backup XML files, the
-  `drive.appdata` scope only, and cover URLs forced to https in `GoogleBooksMapper.kt`.
+  `drive.appdata` scope only, and Google's `http://` cover URLs upgraded to https in
+  `GoogleBooksMapper.kt` (other schemes still pass through; see S11).
 - **Supply chain:** CI actions are pinned by commit SHA with read-only permissions, and Dependabot
-  is on.
+  is on. The CI refactor in `57bef05` added four steps pinned only by tag (S10).
+- **Secrets:** nothing committed, now or in the history (section 8).
 - **Accessibility:** Palette contrast is unit-tested, reduced motion is respected and screens use
   semantics widely.
 
@@ -78,6 +85,19 @@ Already right, and to keep as it is:
 | T5 | Testing | Run the release smoke test in CI on demand | S | Open |
 | T6 | Testing | Compose tests for the untested UI branches | M | Open |
 | T7 | Testing | Screenshot tests for both themes and large fonts | M | Open |
+| S10 | Security | Pin `upload-artifact` by commit SHA (Medium) | S | Open |
+| S11 | Security | Accept only https cover URLs from the book services | S | Open |
+| S12 | Security | Filter dependency repositories by group | S | Open |
+| S13 | Security | Keep coding agents away from local secrets | S | Open |
+| S14 | Security | Check a restored database before reading it | S | Open |
+| S15 | Security | Keep the account email apart from library settings | S | Open |
+| S16 | Security | Make debug-key release builds an explicit choice | S | Open |
+| S17 | Security | Pass workflow values to CI scripts through the environment | S | Open |
+| S18 | Security | Escape `BuildConfig` string values | S | Open |
+| S19 | Security | Lower the backup unpack limit | S | Open |
+| S20 | Security | Use a portable path in `.claude/settings.json` | S | Open |
+| S21 | Security | Register the theme catalog route only in debug builds | S | Open |
+| S22 | Security | Scan dependencies for known vulnerabilities | S | Open |
 
 Sizes: S is under a day, M is one to three days, L is a phase of its own.
 
@@ -88,6 +108,10 @@ Do U8 and U9 together with the Settings screen (U2).
 
 Testing: do T1 with S7, which changes the same class, and T3's migration test with A3. T4 makes T5
 and T6 cheaper, so it comes first of those.
+
+Security pass: S10, S11 and S13 first (small, and S10 is the only Medium besides S4), then S9
+with S5's dependency verification, then S12 and S16. The rest ride along with related work: S14
+and S5's manifest cap with S4, S15 with U7, S8 with S6.
 
 ## 3. Security
 
@@ -168,10 +192,13 @@ roadmap Phase 3.
   manifest. The default already blocks cleartext at the current target SDK; this makes the intent
   explicit and lintable. Do not pin certificates, because Google rotates them.
 - In `data/backup/archive/BackupZip.kt`, `text()` reads an entry with `readBytes()` and no limit.
-  Cap the manifest and reject anything larger than a few kilobytes as `CorruptBackup`.
+  Cap the manifest and reject anything larger than a few kilobytes as `CorruptBackup`. The
+  security pass confirmed this is still open: the read happens in both `readManifest` and
+  `unpack`, and the manifest is not counted against the unpack budget.
 - Add Gradle dependency verification (`gradle/verification-metadata.xml`, generated with
-  `./gradlew --write-verification-metadata sha256`) and keep it current when Dependabot bumps.
-- Optional: run `PRAGMA integrity_check` on the extracted `library.db` before importing it.
+  `./gradlew --write-verification-metadata sha256 help`) and keep it current when Dependabot
+  bumps. Do it together with S9.
+- The integrity check on the extracted `library.db` is now part of S14.
 
 ### S6. Store cover file names, not absolute paths
 
@@ -486,7 +513,239 @@ The palette contrast is unit-tested, but nothing catches a layout that breaks vi
 screenshot tests (Roborazzi runs them on the JVM) for the main screens in light and dark themes
 and at 200% font scale, and record the reference images in the repository.
 
-## 8. Applying these changes
+## 8. Security pass
+
+A full security pass on 2026-10-08 (commit `57bef05`). It read code and configuration and ran
+AgentShield; it did not build or run the app, run a dependency vulnerability scan, or check the
+Google Cloud console. Severity is for this app's threat model: one user's reading library, on
+their own phone, backed up to their own Drive.
+
+Verdict: no critical or high finding. The attack surface is small: one exported activity, no
+exported provider, service or receiver of its own, no WebView, no dynamic code loading, no
+logging, no SQL built from user text, and one OAuth scope. What is left is hardening. The only
+Medium findings are S4 (backups are plain zips in Drive) and S10.
+
+### What was checked
+
+| Area | How |
+|------|-----|
+| Secrets in files | `.gitignore`, `keystore.properties.example`, `local.properties` (values hidden), build scripts |
+| Secrets in history | `git log --all -p` (100 commits) searched for key, token and password patterns, Google API keys (`AIza...`), private key headers and GitHub tokens; file names searched for keystores, `google-services.json`, `.env` and `.pem` |
+| Manifest and resources | `AndroidManifest.xml`, `backup_rules.xml`, `data_extraction_rules.xml`, `file_paths.xml` |
+| Network | OkHttp and Retrofit setup, API key handling, URL handling, redirects, timeouts, size limits |
+| Auth | `GoogleAuthManager`, the Drive client, token handling, the upload address check |
+| Storage | Room setup, SQL building, DataStore, cover files, the camera cache, backup and restore |
+| Build and supply chain | Gradle files, version catalog, repositories, wrapper, signing, R8, Dependabot, CI |
+| Developer tooling | Git hooks, scripts, `.claude/settings.json` and its hooks; AgentShield |
+
+### Secrets
+
+Clean. No API key, token, password or private key in any tracked file or in any commit on any
+ref, and no keystore, `google-services.json`, `.env` or `.pem` file was ever committed.
+`keystore.properties.example` holds only `change-me` placeholders. `local.properties` (Books API
+key) and `keystore.properties` (signing passwords) exist locally and are ignored by git; the
+upload key lives in `~/.keys`, outside the repository. The Books API key is compiled into
+`BuildConfig` and readable from any APK, as [SECURITY.md](../../SECURITY.md) documents; its safety
+rests on S3.
+
+To keep it this way, consider a secret scanner on pull requests (gitleaks, or GitHub's push
+protection, which is free for public repositories).
+
+### Earlier items rechecked
+
+- **S3:** the API restriction and quota cap live in the Cloud console and cannot be checked from
+  the repository. Confirm once, and again whenever the key is rotated.
+- **S4:** still open and the main privacy gap. The `appDataFolder` is hidden from the Drive UI
+  and other apps, but anyone with the Google account, and Google itself, can read the zip.
+- **S5:** all parts still open. At target SDK 37 cleartext is already off and
+  `ManifestPolicyTest` checks it, so the network security config is documentation of intent.
+- **S6, S7, S8, S9:** still open as described. S8 confirmed: nothing deletes `cache/camera/`.
+
+### S10. Pin `upload-artifact` by commit SHA (Medium)
+
+`.github/workflows/ci.yml`, lines 41, 76, 103 and 111, use `actions/upload-artifact@v4`. Every
+other action is pinned by full commit SHA (section 1). A tag can be moved: if the action's
+repository were compromised, a moved `v4` tag would run new code in every job, next to the
+checked-out code and the Gradle cache. The jobs have read-only permissions and no secrets, which
+limits the damage, but the cache and the uploaded reports could still be poisoned.
+
+Change: pin all four to the SHA of the current v4 release, with the version in a trailing comment
+like the other steps. Dependabot keeps SHA pins current.
+
+Done when: every `uses:` line in `.github/workflows/ci.yml` carries a 40-character SHA.
+
+### S11. Accept only https cover URLs from the book services
+
+`GoogleBooksMapper.kt` (`secureCover`, line 58) turns a leading `http://` into `https://` and
+passes every other value through. The confirm screen hands remote cover URLs straight to Coil
+(`CoverSection.kt`, `RemoteCoverOptions` and `previewModel`), and Coil also loads `file:`,
+`content:` and `android.resource:` URIs. A response carrying such a value would make the app read
+and show a local file or another app's content as a cover. It needs a compromised or impersonated
+service, and display is all it does: `FileCoverStore.saveFromUrl` goes through OkHttp, which
+refuses any scheme but http and https.
+
+Change: in both mappers, parse the URL with `toHttpUrlOrNull()`, upgrade http to https, and drop
+anything that does not end up as https. Add mapper tests with `file:///`, `content://` and
+`javascript:` values.
+
+### S12. Filter dependency repositories by group
+
+`settings.gradle.kts` filters `google()` by group for plugins (lines 3 to 10) but not for
+dependencies (lines 18 and 19), where `google()` and `mavenCentral()` are both searched for every
+artifact. A package published to Maven Central under a Google group name would be a candidate
+wherever Google's repository does not answer first. Dependency verification (S5) closes most of
+this; filtering keeps resolution honest on its own.
+
+Change: give `google()` in `dependencyResolutionManagement` the same `content { }` block as in
+`pluginManagement`, and use `exclusiveContent` where a group must come from one place only.
+
+### S13. Keep coding agents away from local secrets
+
+AgentShield reported that `.claude/settings.json` has no `permissions` block. Most of its advice
+is generic, but one part matters: `local.properties` holds the Books API key and
+`keystore.properties` the signing passwords, and nothing stops a coding agent from reading them
+and sending them to its provider.
+
+Change: add deny rules, for example:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Read(./local.properties)",
+      "Read(./keystore.properties)",
+      "Read(**/*.jks)",
+      "Read(**/*.keystore)",
+      "Read(~/.keys/**)"
+    ]
+  }
+}
+```
+
+`Read` rules do not cover shell commands such as `cat`, so add matching `Bash` deny rules, or
+accept that limit and say so in the file.
+
+### S14. Check a restored database before reading it
+
+`RoomLibraryRestorer.readRows` (line 128) opens the backup's `library.db` with Room and reads
+every row. Room checks the identity hash, but the file is otherwise trusted: it could hold extra
+triggers or views, or be damaged in ways that make SQLite misbehave. The book count check catches
+a file Room silently replaced with an empty one, not a file with odd schema objects. A backup only
+arrives from the user's own `appDataFolder`, which only this OAuth client can write, so this is
+defence in depth.
+
+Change, before `readAll()`:
+
+- Run `PRAGMA integrity_check` (or `quick_check`) and treat anything but `ok` as `CorruptBackup`.
+- Compare `sqlite_master` with the schema Room exports (`app/schemas/`), and reject a file with
+  any table, view, index or trigger the schema does not have.
+- Do it in the same change as S4, which touches this class.
+
+### S15. Keep the account email apart from library settings
+
+`GoogleAuthManager` stores the Drive account email (`drive_account`, line 149) in the same
+DataStore file (`library`, `di/PreferencesModule.kt`) as the view mode and other library
+settings. It is sandboxed and excluded from Android backup, so it is not exposed today, but U7
+opens device transfer for library settings, and with one shared file the email and Drive state
+would travel too.
+
+Change: give the Drive and backup state its own DataStore file before U7, and exclude it from
+device transfer. Consider dropping the email: the screen already falls back to "Connected".
+
+### S16. Make debug-key release builds an explicit choice
+
+`app/build.gradle.kts` (line 69) signs release builds with the debug key when
+`keystore.properties` is missing and only logs a warning. Play rejects such a build, so the risk
+is an APK shared another way (a sideload, a GitHub release) that anyone could replace with their
+own build signed by the well-known debug key.
+
+Change: require an opt-in for the fallback, such as `-Potium.allowDebugSigning=true` passed by
+CI, and fail the build without it.
+
+### S17. Pass workflow values to CI scripts through the environment
+
+The "Documentation impact" step (`.github/workflows/ci.yml`, lines 51 and 53) puts
+`${{ github.base_ref }}` and `${{ github.event.before }}` straight into the shell script. Neither
+can be set by an outside contributor today (the base branch must exist in this repository, and
+`before` is a commit SHA), so it is not exploitable. It is the pattern GitHub warns against, and
+the next value added the same way may not be safe.
+
+Change: set them as `env:` on the step and use `"$BASE_REF"` and `"$BEFORE"` in the script.
+
+### S18. Escape `BuildConfig` string values
+
+`app/build.gradle.kts` (lines 49 and 50) writes `books.api.key` and `openlibrary.contact` into
+Java source as `"\"$value\""`. A value containing `"` or `\` breaks the build or adds code to
+`BuildConfig`. The values come from the developer's own `local.properties`, so this is a
+robustness fix: escape `\` and `"`, or reject values outside an expected character set.
+
+### S19. Lower the backup unpack limit
+
+`BackupZip` stops unpacking at 2 GB and 50,000 entries (line 19). That stops a zip bomb, but 2 GB
+in the cache can still push a phone into low storage, and a 5,000-book library with covers is far
+below 1 GB. Lower the default (for example to 512 MB) or derive it from the manifest's book count.
+
+### S20. Use a portable path in `.claude/settings.json`
+
+The two `PreToolUse` hooks call `/Users/ehoxhaj/.local/bin/graphify`. That puts the maintainer's
+macOS user name in a public repository, and on any other machine the hooks point at nothing. Use
+`graphify` from `PATH`, as `graphify-refresh.sh` already does, or move these hooks to
+`.claude/settings.local.json`, which git ignores.
+
+### S21. Register the theme catalog route only in debug builds
+
+`ui/navigation/OtiumNavHost.kt` (line 64) registers `CatalogRoute` in every build. The menu entry
+is hidden in release (`DebugTools.isAvailable`) and the activity has no deep links, so the screen
+cannot be reached today. Registering the route only when debug tools are available keeps it that
+way once deep links or shortcuts arrive (U8, U9).
+
+### S22. Scan dependencies for known vulnerabilities
+
+CI runs no vulnerability scan, and Dependabot security updates depend on repository settings this
+review cannot see. Turn on Dependabot alerts and security updates (see the
+[open source guidelines](../OPEN_SOURCE_GUIDELINES.md)), and consider the OSV scanner or GitHub's
+dependency review action on pull requests.
+
+### AgentShield results
+
+`npx ecc-agentshield scan --path .` graded the agent configuration B (76 of 100): 2 critical,
+4 high, 7 medium and 1 low. Thirteen are "missing prompt defense" checks on `CLAUDE.md`
+(instruction override, data leakage, role escape and so on). Those are meant for a system prompt
+facing untrusted users; `CLAUDE.md` is developer guidance for an agent the maintainer runs, so
+they do not apply and need no change. The redirect to `/dev/null` it flagged in
+`.claude/hooks/graphify-refresh.sh` (line 22) is deliberate and documented in the script. The
+missing permissions block is valid and is S13.
+
+### Checked and found sound
+
+So the next review does not repeat the work:
+
+- **Components:** only `MainActivity` is exported. Both providers are not exported, and the
+  FileProvider shares only `cache/camera/`. The notification's `PendingIntent` is immutable.
+- **Backup at rest:** `allowBackup="false"`, every domain excluded from cloud backup and device
+  transfer.
+- **SQL:** the library query binds all user text, and FTS input is reduced to letters and digits.
+  Every other query is a Room `@Query`.
+- **Network:** every base URL is https. The API key goes only to Google Books, on its own client;
+  Drive and cover downloads use the client without it. OkHttp drops `Authorization` on redirects
+  to another host. Timeouts everywhere; cover downloads capped at 5 MB.
+- **Drive:** upload address checked on the parsed host (https on `googleapis.com`), uploads and
+  downloads checked by MD5, `drive.appdata` scope only, revoked on sign-out.
+- **Backup zip:** entry names allowlisted, paths checked against the target folder, entry count,
+  unpacked bytes and duplicate names limited; a failed restore leaves the library as it was.
+- **Covers:** deletion limited to direct children of the covers directory; photos come through
+  the Photo Picker and a FileProvider, so no storage permission; device pictures decoded with a
+  sample size, so a huge image cannot exhaust memory.
+- **Errors and logs:** user-facing text comes from string resources only; exception messages
+  never reach the screen or a notification. No `Log` calls.
+- **Release build:** R8 with resource shrinking; debug seeding lives only in the debug source
+  set, and release binds a no-op.
+- **CI:** read-only `contents`, `persist-credentials: false`, no secrets, no
+  `pull_request_target`.
+- **Kotlin:** no `!!` in production code, coroutine cancellation re-thrown in the Drive client,
+  remote JSON decoded field by field so one malformed field costs only that field.
+
+## 9. Applying these changes
 
 - Follow the [style guide](../STYLE_GUIDE.md): run `./gradlew spotlessApply detekt` before each
   commit, and `./gradlew lint` when touching resources or the manifest.
