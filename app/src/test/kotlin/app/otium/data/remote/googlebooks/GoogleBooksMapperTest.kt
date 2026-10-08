@@ -89,7 +89,12 @@ class GoogleBooksMapperTest {
     @Test
     fun `a non-https cover url is rejected`() {
         val response = RemoteJson.decodeFromString<VolumesResponse>(
-            """{"items":[{"volumeInfo":{"title":"A","imageLinks":{"thumbnail":"file:///etc/passwd"}}}]}""",
+            """
+            {"items": [{"volumeInfo": {
+                "title": "A",
+                "imageLinks": {"thumbnail": "file:///etc/passwd"}
+            }}]}
+            """.trimIndent(),
         )
         assertNull(response.toCandidates().first().coverUrl)
     }
