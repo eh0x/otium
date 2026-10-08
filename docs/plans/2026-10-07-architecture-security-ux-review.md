@@ -17,6 +17,9 @@ run, so findings marked _unverified_ need a check before work starts.
 A second pass on 2026-10-08 (commit `024487e`) added the findings in section 6. That pass also
 read the merged release manifest and the release APK, which by then CI built (S1).
 
+A testing review the same day measured coverage and added a coverage gate, a manifest policy
+test and a release smoke test. What it left open is in section 7 (T1 to T7).
+
 ## 1. Verdict
 
 The architecture is sound and needs no restructuring. Most findings are small. A few should be
@@ -41,7 +44,7 @@ Already right, and to keep as it is:
 
 | ID | Area | Change | Size | Status |
 |----|------|--------|------|--------|
-| S1 | Security | Build and test the release variant in CI | M | CI part done; device check open |
+| S1 | Security | Build and test the release variant in CI | M | CI and smoke test done; scan, backup, restore by hand open |
 | S2 | Security | Validate the Drive upload session URL | S | Done |
 | S3 | Security | Restrict the Google Books API key | S | Documented; Cloud console steps open |
 | S4 | Security | Encrypted backups, then app lock; defer SQLCipher | L | Open |
@@ -68,6 +71,13 @@ Already right, and to keep as it is:
 | P1 | Platform | Set the keyboard resize mode on the activity | S | Open |
 | P2 | Platform | Give the themed icon its own monochrome drawable | S | Open |
 | B3 | Build | StrictMode in debug builds; try the configuration cache | S | Open |
+| T1 | Testing | Test `GoogleAuthManager` through a seam over the authorization client | S | Open |
+| T2 | Testing | Move Robolectric closer to the target SDK | S | Open |
+| T3 | Testing | Run search, filters and migrations on a device's SQLite | M | Open |
+| T4 | Testing | Stable selectors for UI tests; move the benchmark to the new API | M | Open |
+| T5 | Testing | Run the release smoke test in CI on demand | S | Open |
+| T6 | Testing | Compose tests for the untested UI branches | M | Open |
+| T7 | Testing | Screenshot tests for both themes and large fonts | M | Open |
 
 Sizes: S is under a day, M is one to three days, L is a phase of its own.
 
@@ -75,6 +85,9 @@ Suggested first batch: S1, S2, S3, U1 and U2. They are small and worth doing bef
 
 Suggested second batch: U7, S7, S8, B1 and S9. U7 closes a data loss path; the rest are small.
 Do U8 and U9 together with the Settings screen (U2).
+
+Testing: do T1 with S7, which changes the same class, and T3's migration test with A3. T4 makes T5
+and T6 cheaper, so it comes first of those.
 
 ## 3. Security
 
@@ -396,7 +409,84 @@ Fits implementation plan Phase 7, task 3.
 - Try `org.gradle.configuration-cache=true` in `gradle.properties`. Keep it only if Spotless,
   detekt and the docs check all support it.
 
-## 7. Applying these changes
+## 7. Testing
+
+The suite is in good shape: 68 test files on JUnit 4, Robolectric, MockK, Turbine and Konsist,
+with shared fakes in `:domain` test fixtures. It stays on JUnit 4; moving to another framework
+would touch every file and catch nothing new.
+
+Applied on 2026-10-08:
+
+- **Coverage gate.** Kover measures `:domain` and the `:app` debug unit tests in one report,
+  leaving out generated code, previews, debug tools, test fixtures and Hilt modules. Line coverage
+  was 93.3%, and CI now fails below 90% (`koverVerifyCoverage`). Branch coverage (about 61%) is
+  reported but not gated, because kotlinx.serialization generates branches in DTOs and routes
+  that no test reaches. Rules are in the [style guide](../STYLE_GUIDE.md), section Tests.
+- **Manifest policy.** `ManifestPolicyTest` checks the merged manifest: an allowlist of
+  permissions, only `MainActivity` of ours exported, every exported library component guarded by
+  a permission, no exported provider, Android backup and cleartext traffic off.
+- **Release smoke test.** `ReleaseSmokeTest` in `:benchmark` drives the shrunk build with
+  UiAutomator 2.4: add a book by hand, set pages, update progress, delete it, and look up a real
+  ISBN online. It passed three runs in a row on a clean install on an API 37 emulator. This covers
+  the automated part of S1; Drive backup and restore stay a manual check.
+
+### T1. Test `GoogleAuthManager` through a seam over the authorization client
+
+`data/backup/GoogleAuthManager.kt` has no coverage (42 lines, 18 branches), although it holds the
+connected, expired and signed-out state the Backup screen shows. `Identity.getAuthorizationClient`
+cannot run under Robolectric.
+
+Change: put the few calls it makes (authorize, read the result from the consent intent, revoke)
+behind a small internal interface with a Play services implementation, and test the manager
+against a fake: consent granted, consent cancelled, silent token, grant gone (marked expired),
+sign-out while offline. Do it with S7, which changes the same class.
+
+### T2. Move Robolectric closer to the target SDK
+
+`app/src/test/resources/robolectric.properties` runs the JVM tests as API 35, while the app
+targets 37. Behaviour that changed in 36 and 37 is not exercised. Robolectric 4.16 and later can
+simulate 36 but need JDK 21 for it, so the tests' toolchain would move to 21 while the app keeps
+compiling for Java 17. Move to 37 when a Robolectric release supports it.
+
+### T3. Run search, filters and migrations on a device's SQLite
+
+Under Robolectric, Room runs on the computer's SQLite, which is newer than the SQLite on the
+oldest supported phones (Android 8). The FTS4 search and the filter SQL are the queries most likely
+to differ. Add a small instrumented test in `app/src/androidTest` for search and the filters, run
+on an API 26 emulator. When the schema reaches version 2 (A3), add `MigrationTestHelper` tests for
+every migration in the same place.
+
+### T4. Stable selectors for UI tests; move the benchmark to the new API
+
+`ReleaseSmokeTest` and `LibraryBenchmark` find elements by English text and content descriptions,
+so a copy change or a translation breaks them. `LibraryBenchmark` also uses the older UiAutomator
+API (`UiDevice`, `By`, `Until`) and `Thread.sleep`.
+
+Change: turn on `testTagsAsResourceId` at the root of the Compose tree, give the elements the
+tests use a `testTag`, and match on `viewIdResourceName`. Move `LibraryBenchmark` to
+`uiAutomator { }` with `onElement` and `waitForStableInActiveWindow()`.
+
+### T5. Run the release smoke test in CI on demand
+
+The smoke test needs an emulator. Add a workflow that runs on `workflow_dispatch` and before a
+release (or nightly), using a pinned emulator action, and uploads the test report on failure. Keep
+it out of the pull request gate: the online lookup depends on Google Books and Open Library.
+
+### T6. Compose tests for the untested UI branches
+
+The largest uncovered UI code is in `BackupScreen.kt` (32 lines), `TitleSearchScreen.kt`,
+`CoverSection.kt` (camera permission denied, no camera) and `ScanScreen.kt`. Add Compose UI tests
+for those branches, and run the library, detail and backup screens at 200% font scale (U5).
+`CameraPreview.kt` and `MlKitBarcodeScanner` need a camera and stay covered by the fake scanner
+and the manual scan check.
+
+### T7. Screenshot tests for both themes and large fonts
+
+The palette contrast is unit-tested, but nothing catches a layout that breaks visually. Add
+screenshot tests (Roborazzi runs them on the JVM) for the main screens in light and dark themes
+and at 200% font scale, and record the reference images in the repository.
+
+## 8. Applying these changes
 
 - Follow the [style guide](../STYLE_GUIDE.md): run `./gradlew spotlessApply detekt` before each
   commit, and `./gradlew lint` when touching resources or the manifest.
