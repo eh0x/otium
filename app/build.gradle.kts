@@ -22,6 +22,16 @@ val booksApiKey: String = localProperties.getProperty("books.api.key", "")
 val openLibraryContact: String =
     localProperties.getProperty("openlibrary.contact", "https://github.com/eh0x/otium")
 
+// The release upload key comes from keystore.properties (never committed; see
+// keystore.properties.example). Without it, release builds are signed with the debug key so CI
+// can build and shrink them with no secret. Such a build is for testing only: Play rejects it.
+val keystoreProperties: Properties? = rootProject.file("keystore.properties")
+    .takeIf { it.exists() }
+    ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
+
+fun Properties.required(key: String): String = getProperty(key)?.takeIf { it.isNotBlank() }
+    ?: throw GradleException("keystore.properties is missing '$key'")
+
 android {
     namespace = "app.otium"
     // Latest AndroidX releases require compiling against API 37. Greenfield app, so it
@@ -40,8 +50,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        keystoreProperties?.let { props ->
+            create("release") {
+                storeFile = rootProject.file(props.required("storeFile"))
+                storePassword = props.required("storePassword")
+                keyAlias = props.required("keyAlias")
+                keyPassword = props.required("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
+                ?: signingConfigs.getByName("debug").also {
+                    logger.warn("No keystore.properties: release is signed with the debug key")
+                }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

@@ -31,8 +31,11 @@ jobs:
       - name: Markdown lint
         run: scripts/lint-markdown.sh
 
+      # assembleRelease runs R8 over the real release build, so a missing keep rule or a class R8
+      # cannot resolve fails here, not on a user's device. With no keystore.properties in CI it is
+      # signed with the debug key.
       - name: Style, static analysis, docs, lint, unit tests, assemble
-        run: ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test assembleDebug
+        run: ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test assembleDebug assembleRelease
 
       # Warns (does not fail) when build, setup or tooling files changed without a docs update.
       - name: Documentation impact

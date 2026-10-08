@@ -140,8 +140,12 @@ openlibrary.contact=you@example.org
 | Key | Required | Meaning |
 |-----|----------|---------|
 | `sdk.dir` | Yes, unless `ANDROID_HOME` is set | Location of the Android SDK |
-| `books.api.key` | No | Google Books API key, restricted by package name and SHA-1 |
+| `books.api.key` | No | Google Books API key, restricted to the Books API (see [SECURITY.md](SECURITY.md)) |
 | `openlibrary.contact` | No | Contact for Open Library's User-Agent; default is the project page |
+
+To sign release builds with your upload key, copy `keystore.properties.example` to
+`keystore.properties` (git-ignored) and fill it in. Without it, `assembleRelease` signs with the
+debug key, which is enough for testing the shrunk build but not for Play.
 
 ### Enable the git hooks
 
@@ -170,7 +174,7 @@ build opens the theme catalog shown above.
 |---------|--------------|
 | `./gradlew assembleDebug` | Build the debug APK |
 | `./gradlew installDebug` | Install the debug build on a device or emulator |
-| `./gradlew assembleRelease` | Build the unsigned, R8-shrunk release APK |
+| `./gradlew assembleRelease` | Build the R8-shrunk release APK (debug-signed without `keystore.properties`) |
 | `./gradlew testDebugUnitTest :domain:test` | Run all unit tests |
 | `./gradlew :benchmark:connectedBenchmarkAndroidTest` | Run the scroll and search benchmarks on a device or emulator (see below) |
 | `./gradlew spotlessApply` | Fix formatting of Kotlin, Gradle, XML and text files |
@@ -181,7 +185,7 @@ build opens the theme catalog shown above.
 CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run locally:
 
 ```bash
-./gradlew spotlessCheck detekt checkDocs lintMarkdown lint testDebugUnitTest :domain:test assembleDebug
+./gradlew spotlessCheck detekt checkDocs lintMarkdown lint testDebugUnitTest :domain:test assembleDebug assembleRelease
 ```
 
 ## Testing
