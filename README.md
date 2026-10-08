@@ -185,12 +185,12 @@ build opens the theme catalog shown above.
 CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run locally:
 
 ```bash
-./gradlew spotlessCheck detekt checkDocs lintMarkdown lint testDebugUnitTest :domain:test assembleDebug assembleRelease
+./gradlew spotlessCheck detekt checkDocs lintMarkdown lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
 ```
 
 ## Testing
 
-Everything runs on the JVM, so no device or emulator is needed:
+Almost everything runs on the JVM, so no device or emulator is needed:
 
 - **Domain tests** cover the pure rules: status, page clamping, ISBN validation, metadata merge.
 - **Data tests** run the real Room database under Robolectric: search, every filter and sort,
@@ -199,6 +199,23 @@ Everything runs on the JVM, so no device or emulator is needed:
   semantics and a headless render of the theme catalog, written to `app/build/screenshots`.
 - **Architecture tests** fail the build when a layering rule breaks, for example when the UI layer
   imports the data layer or a ViewModel imports an Android type.
+- **Manifest policy tests** fail when the app gains a permission or an exported component, or
+  turns on Android backup or cleartext traffic.
+
+Coverage is measured with Kover across both modules and checked against a floor in CI:
+
+```bash
+./gradlew koverHtmlReportCoverage   # report at build/reports/kover/htmlCoverage/index.html
+./gradlew koverVerifyCoverage       # fails below the floor set in build.gradle.kts
+```
+
+One check needs a device or emulator: the release smoke test drives the shrunk (R8) build through
+adding a book by hand, tracking progress, deleting it, and an online ISBN lookup. Drive backup and
+restore stay a manual check, as they need a Google account.
+
+```bash
+./gradlew :benchmark:connectedBenchmarkAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.otium.benchmark.ReleaseSmokeTest
+```
 
 The 5,000-book timings measured on the JVM are a regression guard, not device numbers. Device
 numbers come from the `:benchmark` module, which seeds 5,000 books through the debug seeder and

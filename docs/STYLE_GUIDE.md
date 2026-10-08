@@ -290,6 +290,17 @@ Re-run this audit when Google updates the page, and at the end of Phases 3, 5 an
   deterministic: no sleeps, no wall clock, no network (MockWebServer for HTTP).
 - One behavior per test. Arrange, act, assert, with a blank line between the phases.
 - Test-only code lives in test source sets. Debug-only code lives in `src/debug`.
+- Coverage is measured with Kover over `:domain` and the `:app` debug unit tests, with generated
+  code, previews, debug tools, test fixtures and Hilt modules left out. CI fails below the floor
+  in the root build file (`koverVerifyCoverage`). Raise the floor as coverage grows; never lower
+  it to let a change pass, and never add a test without assertions to lift the number. Branch
+  coverage is reported but not gated, because kotlinx.serialization generates branches no test
+  can reach.
+- A change to the manifest's permissions, exported components, backup or cleartext settings
+  updates `ManifestPolicyTest`, the privacy policy and the Play data safety form together.
+- Release-only failures (R8) are caught by `ReleaseSmokeTest` in `:benchmark`, which drives the
+  shrunk build on a device or emulator. Run it before a release and after changing keep rules,
+  Room entities, navigation routes or serialized DTOs.
 
 ## 6. Other file types
 
