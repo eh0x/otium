@@ -112,6 +112,8 @@ Library versions are pinned in [`gradle/libs.versions.toml`](gradle/libs.version
 - Android SDK with platform 37 and build-tools 37 (Android Studio installs these; the command-line
   tools work too)
 - Git
+- gitleaks (`brew install gitleaks`), for the secret scan in the git hooks; skipped with a notice
+  when missing, CI runs it either way
 - Node.js, optional: only the Markdown lint needs it, and it is skipped when Node.js is missing
 
 The minimum supported Android version is 8.0 (minSdk 26). The application id is `app.otium`.
@@ -153,8 +155,9 @@ debug key, which is enough for testing the shrunk build but not for Play.
 ./gradlew installGitHooks
 ```
 
-This points git at the hooks in `.githooks`: formatting and Markdown checks on commit, a
-Conventional Commits check on the message, and the test suite on push. The hooks look for a JDK in
+This points git at the hooks in `.githooks`: a gitleaks secret scan, formatting and Markdown checks
+on commit, a Conventional Commits check on the message, and a history secret scan and the test
+suite on push. The hooks look for a JDK in
 the usual places and skip the local run when none is found; CI runs the same checks either way.
 
 ### Build and run
@@ -262,7 +265,7 @@ otium/
 ├── docs/            Design, plan, style and Markdown guides
 ├── config/detekt/   Static analysis rules
 ├── gradle/          Version catalog and build scripts
-├── scripts/         Documentation and Markdown checks
+├── scripts/         Documentation, Markdown and secret checks
 ├── third_party/     Font licenses
 └── .githooks/       Git hooks (enabled by installGitHooks)
 ```
@@ -303,7 +306,9 @@ sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
 
 **A commit or push is blocked.** Read the message: formatting is fixed with
 `./gradlew spotlessApply`, Markdown findings are listed by file and line, and commit subjects must
-follow Conventional Commits (`type(scope): subject`). The hooks are a convenience; CI is the gate.
+follow Conventional Commits (`type(scope): subject`). A gitleaks finding means a possible secret:
+remove it, and rotate it if it ever left your machine; false positives are handled as described in
+`scripts/scan-secrets.sh`. The hooks are a convenience; CI is the gate.
 
 **`checkDocs` fails.** A doc disagrees with the repository, for example a command that no longer
 exists or a stale fact. Update the doc in the same change.

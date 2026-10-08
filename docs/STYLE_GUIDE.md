@@ -27,6 +27,7 @@ rules the tools cannot see.
 | Documentation drift (links, commands, paths, facts) | `checkDocs` | `gradle/docs-check.gradle.kts` | `check`, `pre-push` hook, CI |
 | Docs missing after build, tooling or CI changes | `scripts/docs-impact.sh` (warning) | `scripts/docs-impact.sh` | `pre-push` hook, CI |
 | Markdown style (100 columns, lists, fences, links, headings) | markdownlint | `.markdownlint-cli2.jsonc`, [Markdown guidelines](MARKDOWN_GUIDE.md) | `pre-commit` (staged files), `check` via `lintMarkdown`, `pre-push`, CI |
+| Secrets in commits (API keys, tokens, private keys) | gitleaks via `scripts/scan-secrets.sh` | `.gitleaks.toml` | `pre-commit` (staged changes), `pre-push` and `check` via `scanSecrets` (history), CI |
 | Everything else in this guide | Code review | this file | pull requests |
 
 ### Daily commands
@@ -45,8 +46,9 @@ rules the tools cannot see.
 ./gradlew installGitHooks    # points git at .githooks (pre-commit, commit-msg, pre-push)
 ```
 
-The hooks look for a JDK in the usual places. If none is found they skip the local run and CI
-becomes the gate. Bypassing a hook with `--no-verify` is for emergencies only; CI will still fail.
+The hooks look for a JDK, and for gitleaks (`brew install gitleaks`), in the usual places. If one
+is missing they skip that local check and CI becomes the gate. Bypassing a hook with `--no-verify`
+is for emergencies only; CI will still fail.
 
 ### Suppression policy
 

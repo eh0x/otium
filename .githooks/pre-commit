@@ -1,7 +1,15 @@
 #!/bin/sh
-# Blocks commits that break formatting. Fix with: ./gradlew spotlessApply
-# Emergency bypass: git commit --no-verify
+# Blocks commits that leak a secret or break formatting. Fix formatting with: ./gradlew spotlessApply
+# Emergency bypass: git commit --no-verify (the pre-push hook and CI still scan for secrets)
 . "$(dirname "$0")/lib.sh"
+
+# Secret scan of the staged changes (scripts/scan-secrets.sh). Skips without gitleaks.
+if ! "$(dirname "$0")/../scripts/scan-secrets.sh" --staged; then
+    echo >&2
+    echo "pre-commit: possible secret staged. Unstage and remove it; if it was ever pushed, rotate it." >&2
+    echo "pre-commit: false positive? See scripts/scan-secrets.sh for gitleaks:allow and .gitleaksignore." >&2
+    exit 1
+fi
 
 if ! run_gradle spotlessCheck; then
     echo >&2

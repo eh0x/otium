@@ -122,6 +122,14 @@ tasks.register<Exec>("lintMarkdown") {
 }
 tasks.matching { it.name == "check" }.configureEach { dependsOn("lintMarkdown") }
 
+// Secret scan of the git history with gitleaks (scripts/scan-secrets.sh). Part of `check`.
+tasks.register<Exec>("scanSecrets") {
+    group = "verification"
+    description = "Scans the git history for secrets with gitleaks."
+    commandLine("sh", "scripts/scan-secrets.sh")
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn("scanSecrets") }
+
 // Points git at the tracked hooks in .githooks (formatting, commit message and push checks).
 tasks.register<Exec>("installGitHooks") {
     group = "verification"

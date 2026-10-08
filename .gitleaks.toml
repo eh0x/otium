@@ -1,0 +1,13 @@
+# gitleaks configuration, used by scripts/scan-secrets.sh (git hooks, `scanSecrets`, CI).
+# Reference: https://github.com/gitleaks/gitleaks#configuration
+#
+# The scan reads git history and staged changes only, so git-ignored files such as
+# local.properties and keystore.properties are never scanned.
+#
+# Do not add broad path allowlists. A single false positive gets a `gitleaks:allow` comment on the
+# line, or its fingerprint in .gitleaksignore with a comment giving the reason.
+
+title = "otium"
+
+[extend]
+useDefault = true

@@ -3,6 +3,13 @@
 # Emergency bypass: git push --no-verify
 . "$(dirname "$0")/lib.sh"
 
+# Secret scan of the whole history, which also catches commits made with --no-verify.
+if ! "$(dirname "$0")/../scripts/scan-secrets.sh"; then
+    echo >&2
+    echo "pre-push: possible secret in history. Remove it from the unpushed commits and rotate it." >&2
+    exit 1
+fi
+
 if ! run_gradle spotlessCheck detekt checkDocs testDebugUnitTest :domain:test; then
     echo >&2
     echo "pre-push: checks failed. Fix them or bypass with --no-verify." >&2

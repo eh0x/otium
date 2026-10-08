@@ -55,8 +55,9 @@ Out of scope:
 
 ## Keys and secrets
 
-API keys belong in `local.properties` or the environment and are never committed. If you find a
-secret in the repository or its history, report it the same way, as a vulnerability.
+API keys belong in `local.properties` or the environment and are never committed. gitleaks scans
+staged changes on commit and the full history on push and in CI (`scripts/scan-secrets.sh`). If
+you find a secret in the repository or its history, report it the same way, as a vulnerability.
 
 The Google Books key (`books.api.key`) is compiled into the app, so anyone can extract it from the
 APK. It is treated as public, and it is limited so that misuse costs only quota:
