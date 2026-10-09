@@ -83,6 +83,8 @@ class DetailContentTest {
         rule.onNodeWithText("Pages").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("400").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("9780441172719").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Tags").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("favourite").performScrollTo().assertIsDisplayed()
     }
 
     @Test

@@ -190,6 +190,7 @@ private fun Facts(book: Book) {
         book.publisher?.let { R.string.detail_publisher to it },
         book.totalPages.takeIf { it > 0 }?.let { R.string.detail_pages to it.toString() },
         book.language?.let { R.string.detail_language to it },
+        book.tags.takeIf { it.isNotEmpty() }?.let { R.string.detail_tags to it.joinToString(", ") },
         book.isbn13?.let { R.string.detail_isbn to it },
     )
     val divider = MaterialTheme.otiumColors.divider

@@ -98,6 +98,7 @@
     <string name="detail_published">Published</string>
     <string name="detail_pages">Pages</string>
     <string name="detail_language">Language</string>
+    <string name="detail_tags">Tags</string>
     <string name="detail_isbn">ISBN-13</string>
 
     <!-- Add book -->
