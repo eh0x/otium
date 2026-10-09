@@ -106,7 +106,7 @@ class AddByScanFlowTest {
     @Test
     fun `a scanned barcode is looked up, confirmed and saved`() {
         rule.onNodeWithContentDescription("Add a book").performClick()
-        rule.onNodeWithText("Scan barcode").performClick()
+        rule.onNodeWithText("Scan the barcode").performClick()
         waitFor("Enter the ISBN instead")
 
         camera.read(DUNE)
@@ -120,7 +120,7 @@ class AddByScanFlowTest {
     @Test
     fun `the isbn can be typed instead of scanned`() {
         rule.onNodeWithContentDescription("Add a book").performClick()
-        rule.onNodeWithText("Scan barcode").performClick()
+        rule.onNodeWithText("Scan the barcode").performClick()
         waitFor("Enter the ISBN instead")
 
         rule.onNodeWithText("Enter the ISBN instead").performClick()

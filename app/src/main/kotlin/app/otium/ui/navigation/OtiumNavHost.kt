@@ -114,7 +114,9 @@ private fun NavGraphBuilder.tabs(navController: NavHostController, onOpenAddShee
             onOpenCatalog = { navController.navigate(CatalogRoute) },
         )
     }
-    composable<ReadingRoute> { ReadingScreen() }
+    composable<ReadingRoute> {
+        ReadingScreen(onOpenBook = { navController.navigate(DetailRoute(it)) })
+    }
     composable<SettingsRoute> { BackupScreen() }
 }
 

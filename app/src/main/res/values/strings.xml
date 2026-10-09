@@ -102,9 +102,10 @@
 
     <!-- Add book -->
     <string name="add_book_title">Add a book</string>
-    <string name="add_method_scan">Scan barcode</string>
-    <string name="add_method_scan_hint">Point the camera at the barcode on the back cover</string>
-    <string name="add_method_isbn">Enter ISBN</string>
+    <string name="add_kicker">Acquisition</string>
+    <string name="add_method_scan">Scan the barcode</string>
+    <string name="add_method_scan_hint">Point the camera at the back cover</string>
+    <string name="add_method_isbn">Enter an ISBN</string>
     <string name="add_method_isbn_hint">Type the 10 or 13 digit number</string>
     <string name="add_method_search">Search by title</string>
     <string name="add_method_search_hint">Find the edition by title or author</string>
@@ -274,4 +275,9 @@
     <string name="reading_title">Reading</string>
     <string name="reading_kicker">On the desk</string>
     <string name="reading_empty">Nothing open at the moment. Begin a book from your library.</string>
+    <string name="reading_finished">Recently finished</string>
+    <string name="reading_add_pages">+10 pages</string>
+    <string name="reading_add_pages_description">Add 10 pages to %1$s</string>
+    <string name="reading_open">Open</string>
+    <string name="reading_open_description">Open %1$s</string>
 </resources>

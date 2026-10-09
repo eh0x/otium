@@ -103,7 +103,7 @@ class AddByIsbnFlowTest {
 
     private fun openIsbnEntry() {
         rule.onNodeWithContentDescription("Add a book").performClick()
-        rule.onNodeWithText("Enter ISBN").performClick()
+        rule.onNodeWithText("Enter an ISBN").performClick()
         waitFor("Look up")
     }
 
