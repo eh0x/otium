@@ -1,31 +1,26 @@
 package app.otium.ui.detail
 
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,26 +30,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
 import app.otium.domain.model.Book
 import app.otium.ui.common.messageRes
-import app.otium.ui.common.rememberCoverPainter
-import app.otium.ui.components.BookCover
-import app.otium.ui.components.OtiumTopBar
-import app.otium.ui.components.StatusGlyph
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumDialog
+import app.otium.ui.components.hairlineTop
 import app.otium.ui.theme.PaperBackground
-
-private val COVER_WIDTH = 160.dp
-private const val DESCRIPTION_COLLAPSED_LINES = 4
-private const val DESCRIPTION_TOGGLE_THRESHOLD = 200
+import app.otium.ui.theme.otiumColors
 
 /** Connects the detail screen to its ViewModel and leaves the screen once the book is deleted. */
 @Composable
@@ -95,29 +84,24 @@ fun DetailContent(state: DetailUiState, actions: DetailActions, modifier: Modifi
     val book = state.book
 
     PaperBackground(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            snackbarHost = { SnackbarHost(snackbar) },
-            topBar = {
-                DetailTopBar(
-                    hasBook = book != null,
-                    actions = actions,
-                    onDelete = { confirmDelete = true },
-                )
-            },
-        ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            TopRow(hasBook = book != null, actions = actions, onDelete = { confirmDelete = true })
             when {
-                book != null -> BookDetails(book, actions, Modifier.padding(padding))
+                book != null -> BookDetails(book, actions)
 
                 !state.isLoading -> Text(
                     text = stringResource(R.string.detail_not_found),
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier
-                        .padding(padding)
-                        .padding(32.dp),
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 32.dp),
                 )
             }
         }
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding(),
+        )
         if (confirmDelete && book != null) {
             DeleteDialog(
                 title = book.title,
@@ -133,174 +117,96 @@ fun DetailContent(state: DetailUiState, actions: DetailActions, modifier: Modifi
 
 /** Back, and for a book that exists, the menu to edit or delete it. */
 @Composable
-private fun DetailTopBar(hasBook: Boolean, actions: DetailActions, onDelete: () -> Unit) {
-    OtiumTopBar(
-        title = "",
-        navigationIcon = {
-            IconButton(onClick = actions.onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.detail_back),
-                )
-            }
-        },
-        actions = {
-            if (hasBook) OverflowMenu(onEdit = actions.onEdit, onDelete = onDelete)
-        },
-    )
+private fun TopRow(hasBook: Boolean, actions: DetailActions, onDelete: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = actions.onBack) {
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_arrow_left),
+                contentDescription = stringResource(R.string.detail_back),
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        if (hasBook) OverflowMenu(onEdit = actions.onEdit, onDelete = onDelete)
+    }
 }
 
 @Composable
 private fun OverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
     var open by remember { mutableStateOf(false) }
-    IconButton(onClick = { open = true }) {
-        Icon(
-            imageVector = Icons.Filled.MoreVert,
-            contentDescription = stringResource(R.string.detail_more_options),
-        )
-    }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.detail_edit)) },
-            onClick = {
-                open = false
-                onEdit()
-            },
-        )
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.detail_delete)) },
-            onClick = {
-                open = false
-                onDelete()
-            },
-        )
+    val colors = MaterialTheme.otiumColors
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_ellipsis_vertical),
+                contentDescription = stringResource(R.string.detail_more_options),
+            )
+        }
+        DropdownMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+            shape = MaterialTheme.shapes.small,
+            containerColor = colors.sheet,
+            border = BorderStroke(1.dp, colors.divider),
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.detail_edit)) },
+                onClick = {
+                    open = false
+                    onEdit()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.detail_delete)) },
+                onClick = {
+                    open = false
+                    onDelete()
+                },
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BookDetails(book: Book, actions: DetailActions, modifier: Modifier = Modifier) {
+private fun BookDetails(book: Book, actions: DetailActions) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .navigationBarsPadding()
+            .padding(start = 22.dp, end = 22.dp, top = 8.dp, bottom = 24.dp),
     ) {
-        BookCover(
-            title = book.title,
-            painter = rememberCoverPainter(book.coverPath),
-            modifier = Modifier.width(COVER_WIDTH),
+        DetailHeader(book)
+        ProgressSection(
+            book = book,
+            actions = actions,
+            modifier = Modifier
+                .padding(top = 26.dp)
+                .hairlineTop(MaterialTheme.otiumColors.divider)
+                .padding(top = 16.dp),
         )
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.semantics { heading() },
-            )
-            book.subtitle?.let { Text(text = it, style = MaterialTheme.typography.titleMedium) }
-            Text(
-                text = book.authors.joinToString(", "),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        StatusGlyph(status = book.status)
-        ProgressCard(book = book, actions = actions)
-        val labels = book.categories + book.tags
-        if (labels.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                labels.forEach { label ->
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-            }
-        }
-        book.description?.takeIf { it.isNotBlank() }?.let { Description(it) }
-        Facts(book)
+        AboutTab(book = book, modifier = Modifier.padding(top = 26.dp))
     }
 }
 
 @Composable
 private fun DeleteDialog(title: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    OtiumDialog(
+        title = stringResource(R.string.detail_delete_title),
+        body = stringResource(R.string.detail_delete_message, title),
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.detail_delete_title)) },
-        text = { Text(stringResource(R.string.detail_delete_message, title)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text(stringResource(R.string.action_delete)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        actions = {
+            OtiumButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+                style = OtiumButtonStyle.Secondary,
+            )
+            OtiumButton(text = stringResource(R.string.action_delete), onClick = onConfirm)
         },
     )
-}
-
-@Composable
-private fun Description(text: String) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
-    val collapsible = text.length > DESCRIPTION_TOGGLE_THRESHOLD
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(R.string.detail_description),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.semantics { heading() },
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = if (expanded || !collapsible) Int.MAX_VALUE else DESCRIPTION_COLLAPSED_LINES,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (collapsible) {
-            TextButton(onClick = { expanded = !expanded }) {
-                Text(
-                    stringResource(
-                        if (expanded) R.string.detail_show_less else R.string.detail_show_more,
-                    ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun Facts(book: Book) {
-    val facts = listOfNotNull(
-        book.publisher?.let { R.string.detail_publisher to it },
-        book.publishedYear?.let { R.string.detail_published to it.toString() },
-        book.totalPages.takeIf { it > 0 }?.let { R.string.detail_pages to it.toString() },
-        book.language?.let { R.string.detail_language to it },
-        book.isbn13?.let { R.string.detail_isbn to it },
-    )
-    if (facts.isEmpty()) return
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HorizontalDivider()
-        facts.forEach { (label, value) ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(label),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(text = value, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
 }

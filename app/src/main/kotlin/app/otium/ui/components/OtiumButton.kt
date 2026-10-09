@@ -29,6 +29,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -44,7 +49,8 @@ private const val ACCENT_PRESSED = 0.18f
 private val CORNER = 4.dp
 
 /**
- * An outlined Otium button. [compact] lowers the minimum height from 46 dp to 40 dp, for actions
+ * An outlined Otium button. [contentDescription] replaces the label for screen readers, for
+ * labels such as "+10" that read poorly. [compact] lowers the minimum height from 46 dp to 40 dp, for actions
  * inside a row. The label wraps rather than clips at large font scales.
  */
 @Composable
@@ -56,6 +62,7 @@ fun OtiumButton(
     enabled: Boolean = true,
     compact: Boolean = false,
     icon: ImageVector? = null,
+    contentDescription: String? = null,
 ) {
     val colors = MaterialTheme.otiumColors
     val interaction = remember { MutableInteractionSource() }
@@ -80,6 +87,21 @@ fun OtiumButton(
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onClick,
+            )
+            .then(
+                if (contentDescription != null) {
+                    Modifier.clearAndSetSemantics {
+                        this.contentDescription = contentDescription
+                        role = Role.Button
+                        if (!enabled) disabled()
+                        onClick {
+                            onClick()
+                            true
+                        }
+                    }
+                } else {
+                    Modifier
+                },
             )
             .padding(horizontal = 18.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),

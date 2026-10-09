@@ -1,15 +1,21 @@
 package app.otium.ui.detail
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.book
@@ -61,16 +67,18 @@ class DetailContentTest {
 
         rule.onNodeWithText("Dune").assertIsDisplayed()
         rule.onNodeWithText("Frank Herbert").assertIsDisplayed()
-        rule.onNodeWithText("Reading").assertIsDisplayed()
-        rule.onNodeWithText("Page 100 of 400").assertIsDisplayed()
-        rule.onNodeWithText("Science fiction").assertIsDisplayed()
-        rule.onNodeWithText("favourite").assertIsDisplayed()
+        rule.onNodeWithText("READING").assertIsDisplayed()
+        rule.onNodeWithText("Science fiction · 1965").assertIsDisplayed()
+        rule.onNodeWithText("100").assertIsDisplayed()
+        rule.onNodeWithText("of 400 pages").assertIsDisplayed()
+        rule.onNodeWithText("25%").assertIsDisplayed()
     }
 
     @Test
     fun `shows publication details`() {
         show(loaded())
 
+        rule.onNodeWithText("Collection").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("Chilton Books").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("1965").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("Pages").performScrollTo().assertIsDisplayed()
@@ -117,57 +125,67 @@ class DetailContentTest {
         val long = "A very long description. ".repeat(40)
         show(loaded(dune.copy(description = long)))
 
-        rule.onNodeWithText("Show more").performScrollTo().performClick()
+        rule.onNodeWithText("Read more").performScrollTo().performClick()
         rule.onNodeWithText("Show less").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("Show less").performClick()
 
-        rule.onNodeWithText("Show more").assertIsDisplayed()
+        rule.onNodeWithText("Read more").performScrollTo().assertIsDisplayed()
     }
 
     @Test
     fun `a short description has no toggle`() {
         show(loaded())
 
-        rule.onAllNodesWithText("Show more").assertCountEquals(0)
+        rule.onAllNodesWithText("Read more").assertCountEquals(0)
     }
 
     // --- Progress ---
 
     @Test
-    fun `updating progress sends the typed page`() {
+    fun `the slider saves the page it is set to`() {
         var page = -1
         show(loaded(), DetailActions(onProgressConfirmed = { page = it }))
 
-        rule.onNodeWithText("Update progress").performScrollTo().performClick()
-        typeInDialog("250")
-        rule.onNodeWithText("Save").performClick()
-        rule.mainClock.advanceTimeByFrame()
+        rule.onNodeWithContentDescription("Current page")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(250f) }
 
         assertEquals(250, page)
     }
 
     @Test
-    fun `cancelling the progress dialog changes nothing`() {
-        var page = -1
-        show(loaded(), DetailActions(onProgressConfirmed = { page = it }))
+    fun `the slider reads out the page`() {
+        show(loaded())
 
-        rule.onNodeWithText("Update progress").performScrollTo().performClick()
-        typeInDialog("250")
-        rule.onNodeWithText("Cancel").performClick()
-        rule.mainClock.advanceTimeByFrame()
-
-        assertEquals(-1, page)
-        rule.onAllNodesWithText("Current page").assertCountEquals(0)
+        rule.onNodeWithContentDescription("Current page").assert(
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Page 100 of 400"),
+        )
     }
 
     @Test
-    fun `an empty page cannot be saved`() {
-        show(loaded())
+    fun `steppers move by pages and save at once`() {
+        val pages = mutableListOf<Int>()
+        show(loaded(), DetailActions(onProgressConfirmed = { pages += it }))
 
-        rule.onNodeWithText("Update progress").performScrollTo().performClick()
-        typeInDialog("")
+        rule.onNodeWithContentDescription("Forward 10 pages").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Back 1 page").performClick()
 
-        rule.onNodeWithText("Save").assertIsNotEnabled()
+        assertEquals(listOf(110, 109), pages)
+    }
+
+    @Test
+    fun `steppers stop at the last page`() {
+        var page = -1
+        show(
+            loaded(dune.copy(currentPage = 395)),
+            DetailActions(onProgressConfirmed = {
+                page = it
+            }),
+        )
+
+        rule.onNodeWithContentDescription("Forward 10 pages").performScrollTo().performClick()
+
+        assertEquals(400, page)
     }
 
     @Test
@@ -194,7 +212,7 @@ class DetailContentTest {
             loaded(dune.copy(totalPages = 0, currentPage = 0)),
             DetailActions(onTotalPagesConfirmed = { total = it }),
         )
-        rule.onAllNodesWithText("Update progress").assertCountEquals(0)
+        rule.onAllNodesWithContentDescription("Current page").assertCountEquals(0)
         rule.onAllNodesWithText("Mark as finished").assertCountEquals(0)
         rule.onNodeWithText("Total pages not set").assertIsDisplayed()
 
@@ -214,7 +232,7 @@ class DetailContentTest {
         show(loaded(), DetailActions(onEdit = { edits++ }))
 
         rule.onNodeWithContentDescription("More options").performClick()
-        rule.onNodeWithText("Edit book").performClick()
+        rule.onNodeWithText("Edit details").performClick()
 
         assertEquals(1, edits)
     }

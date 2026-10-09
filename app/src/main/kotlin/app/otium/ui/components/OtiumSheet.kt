@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import app.otium.ui.theme.OtiumTheme
 import app.otium.ui.theme.SheetShape
 import app.otium.ui.theme.otiumColors
@@ -88,8 +89,26 @@ fun OtiumDialog(
     body: String? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
-    Dialog(onDismissRequest = onDismissRequest) {
-        OtiumDialogCard(title = title, actions = actions, modifier = modifier, body = body, content)
+    // Sized by its content rather than the platform default width, with the page gutter at the
+    // sides. Robolectric also never finishes laying out a platform-width dialog holding a field.
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            OtiumDialogCard(
+                title = title,
+                actions = actions,
+                modifier = modifier,
+                body = body,
+                content,
+            )
+        }
     }
 }
 

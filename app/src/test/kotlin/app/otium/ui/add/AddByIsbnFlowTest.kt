@@ -169,7 +169,7 @@ class AddByIsbnFlowTest {
         }
         rule.onNodeWithContentDescription("Dune by Some Author").performClick()
         rule.onNodeWithContentDescription("More options").performClick()
-        rule.onNodeWithText("Edit book").performClick()
+        rule.onNodeWithText("Edit details").performClick()
 
         waitFor("Save")
         rule.onNodeWithText("Dune").performTextReplacement("Dune Messiah")
