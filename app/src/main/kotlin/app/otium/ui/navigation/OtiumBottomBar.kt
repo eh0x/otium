@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -41,9 +42,9 @@ private val ADD_SIZE = 54.dp
 private val ADD_LIFT = 18.dp
 
 /**
- * The bottom bar: Library, Reading, a raised Add action, then Settings. The selected tab shows an
- * accent icon and a gold label; tabs are exposed as selectable tabs, so the choice is not
- * conveyed by color alone.
+ * The bottom bar: Library, Reading, a raised Add action in the centre, then Settings and an
+ * empty slot. The selected tab shows an accent icon and a gold label; tabs are exposed as
+ * selectable tabs, so the choice is not conveyed by color alone.
  */
 @Composable
 fun OtiumBottomBar(
@@ -67,6 +68,8 @@ fun OtiumBottomBar(
             AddAction(onAdd)
         }
         Tab(TopLevelDestination.SETTINGS, selected, onSelect)
+        // An empty fifth slot keeps Add at the centre; it is held for a later tab.
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
