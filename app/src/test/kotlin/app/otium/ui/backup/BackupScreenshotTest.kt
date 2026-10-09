@@ -24,7 +24,7 @@ class BackupScreenshotTest {
 
     private val state = BackupUiState(
         auth = DriveAuthState.SignedIn("reader@example.org"),
-        lastBackup = backupInfo(keyId = "abc"),
+        lastBackup = backupInfo(keyId = "abc").copy(createdAt = OCTOBER_9_2026),
         settings = BackupSettings(autoBackup = true),
     )
 
@@ -46,4 +46,9 @@ class BackupScreenshotTest {
 
     @Test
     fun `settings in the dark theme`() = render("settings-dark", dark = true)
+
+    private companion object {
+        /** 9 October 2026, 09:12 UTC. */
+        const val OCTOBER_9_2026 = 1_791_537_120_000L
+    }
 }

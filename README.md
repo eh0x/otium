@@ -71,13 +71,13 @@ The plan holds the detail and is kept current; this table is a summary.
 
 ## Screenshots
 
-There are no app screenshots yet. These are renders of the design system (the theme catalog that debug
-builds show), in the light and dark themes. They predate the Classical palette and will be
-refreshed after the redesign.
+Renders of the library, a book and Settings in the light and dark themes. They come from the
+headless screenshot tests (`app/build/screenshots`), with sample books.
 
-| Light | Dark |
-|-------|------|
-| ![Theme catalog in the light theme](docs/media/readme/theme-light.jpg) | ![Theme catalog in the dark theme](docs/media/readme/theme-dark.jpg) |
+| | Library | Book | Settings |
+|-|---------|------|----------|
+| Light | ![The library in the light theme](docs/media/readme/library-light.jpg) | ![A book in the light theme](docs/media/readme/detail-light.jpg) | ![Settings in the light theme](docs/media/readme/settings-light.jpg) |
+| Dark | ![The library in the dark theme](docs/media/readme/library-dark.jpg) | ![A book in the dark theme](docs/media/readme/detail-dark.jpg) | ![Settings in the dark theme](docs/media/readme/settings-dark.jpg) |
 
 ## Privacy
 
@@ -208,7 +208,8 @@ Almost everything runs on the JVM, so no device or emulator is needed:
 - **Data tests** run the real Room database under Robolectric: search, every filter and sort,
   constraints, change notification, and a 5,000-book latency guard.
 - **UI tests** check the theme, the contrast of the palette in both themes (WCAG), component
-  semantics and a headless render of the theme catalog, written to `app/build/screenshots`.
+  semantics and touch targets, and render the main screens headlessly, in both themes and at 200%
+  text, to `app/build/screenshots`.
 - **Architecture tests** fail the build when a layering rule breaks, for example when the UI layer
   imports the data layer or a ViewModel imports an Android type.
 - **Manifest policy tests** fail when the app gains a permission or an exported component, or
