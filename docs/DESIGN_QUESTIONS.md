@@ -7,32 +7,9 @@ Items the owner already settled during implementation are listed at the end for 
 
 ## Needs a decision
 
-1. **Add is not centred in the bar.** With Library, Reading, Add and Settings in four equal slots,
-   Add sits in the third slot, right of centre. Centring it needs an even number of tabs on each
-   side, for example a fourth tab once Almanac exists.
-2. **Shelf chips on the Edit screen were not built.** The handoff shows "SHELF" chips. A book's
-   shelf is its first category, and offering chips needs the list of known categories in the
-   confirm ViewModel, which is a logic change. Today the shelf is set through the Categories field
-   (the first entry wins).
-3. **The Edit form keeps the fields the handoff leaves out:** subtitle, ISBN, language,
-   categories, tags and description. Drop them, or move them under "More details"?
-4. **Passphrase validation is still checked on submit.** The handoff enables "Turn on" only once
-   the passphrase is long enough, both entries match and the box is ticked, with a live "Good."
-   Today the existing state machine reports "too short" and "do not match" after submitting.
-   Moving the checks into the UI is a logic change in the encryption flow.
-5. **Scan, ISBN entry and title search were not restyled.** They are outside the step list, so
-   they keep Material top bars and outlined fields; only their toasts changed. The handoff's
-   "Consulting the catalogue…" modal would map to their existing loading states.
-6. **Surnames with particles.** The generated cover and the author sort use the last word of the
-   first author, so "Ursula K. Le Guin" files under GUIN and "Vincent van Gogh" under GOGH. A
-   particle list (le, de, van, von, da) would fix the common cases.
-7. **Uncategorised books** sit on a final shelf named "Unshelved", which the handoff does not
+1. **Uncategorised books** sit on a final shelf named "Unshelved", which the handoff does not
    name.
-8. **How many "Recently finished" books** the Reading tab shows. It shows five.
-9. **Tags are no longer visible** outside the Edit screen: the detail facts table and the filters
-   no longer list them. Keep them only as search terms, or show them in the facts table?
-10. **Launcher background** is still Parchment `#F4EBD9`, from the old palette.
-11. **README screenshots** in `docs/media/readme` show the old theme and need new renders.
+2. **How many "Recently finished" books** the Reading tab shows. It shows five.
 
 ## Deviations from the handoff, already in the app
 
@@ -52,6 +29,8 @@ Items the owner already settled during implementation are listed at the end for 
 - **Bottom sheets** use Material's enter animation, not the 280 ms settle; dialogs dim with the
   system scrim; toasts sit just above the bar rather than 96 dp from the bottom.
 - **Search** shows a clear button while there is text.
+- **Particles** are matched only before the last word, so a single-word first name such as "La"
+  in "La Fontaine" is never taken for one.
 - **Large text.** At 150% text and above, the detail header puts the words below the cover and the
   Drive card puts its button below the status.
 - **Progress** saves when the slider is released and at each stepper tap; the handoff assumed a
@@ -65,3 +44,13 @@ Items the owner already settled during implementation are listed at the end for 
 - The handoff's copy replaces the old strings where they differ (volumes; Unread, Reading, Read).
 - The detail facts table adds ISBN-13 after the handoff's rows; books without a page count keep
   "Set total pages"; there is no way to type an exact page.
+- Add sits at the centre of a five-slot bar; the fifth slot is empty, held for a later tab.
+- On the Edit screen, a Shelf row of chips sets the first category, and subtitle, ISBN, language,
+  categories, tags and description sit under "More details".
+- A new passphrase is checked as it is typed ("Good.", a live mismatch, "Turn on" enabled only
+  when valid); the ViewModel still checks on submit.
+- Scan, ISBN entry and title search share the redesign, and lookups read "Consulting the
+  catalogue…".
+- Surnames keep their particles ("Le Guin", "van Gogh"), for the author sort and the covers.
+- Tags are listed in the detail facts table.
+- The launcher icon and the README screenshots use the Classical palette.
