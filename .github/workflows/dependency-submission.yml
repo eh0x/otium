@@ -4,9 +4,19 @@ name: Dependency Graph
 # GitHub's dependency graph. GitHub cannot read version catalogs or transitive dependencies from
 # the build files alone, so without this Dependabot alerts and security updates see no Gradle
 # library at all. Alerts follow the default branch; develop is submitted too, where work happens.
+#
+# Runs only when a push changes what Gradle resolves: the version catalog, a build script, the
+# settings, Gradle properties or the wrapper. GitHub keeps the last submitted tree, so other
+# pushes need no new submission. Run it by hand (workflow_dispatch) if the graph looks stale.
 on:
   push:
     branches: [main, develop]
+    paths:
+      - 'gradle/libs.versions.toml'
+      - 'gradle/wrapper/gradle-wrapper.properties'
+      - '**/*.gradle.kts'
+      - 'gradle.properties'
+      - '.github/workflows/dependency-submission.yml'
   workflow_dispatch:
 
 permissions:

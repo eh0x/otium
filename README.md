@@ -196,7 +196,9 @@ CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run 
 ```
 
 `.github/workflows/dependency-submission.yml` also sends the resolved Gradle dependency tree to
-GitHub on every push to `main` and `develop`, so Dependabot alerts cover transitive dependencies.
+GitHub on pushes to `main` and `develop` that change the build files (version catalog, build
+scripts, settings, Gradle properties or wrapper), so Dependabot alerts cover transitive
+dependencies.
 
 ## Testing
 
