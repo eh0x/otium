@@ -22,7 +22,6 @@ import app.otium.ui.catalog.ThemeCatalogScreen
 import app.otium.ui.detail.DetailScreen
 import app.otium.ui.library.LibraryScreen
 import app.otium.ui.theme.otiumFade
-import app.otium.ui.theme.rememberReducedMotion
 
 /**
  * The app's navigation graph. Screens fade into each other gently, and not at all when the
@@ -31,15 +30,14 @@ import app.otium.ui.theme.rememberReducedMotion
 @Composable
 fun OtiumNavHost(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
-    val reducedMotion = rememberReducedMotion()
     NavHost(
         navController = navController,
         startDestination = LibraryRoute,
         modifier = modifier,
-        enterTransition = { fadeIn(otiumFade(reducedMotion)) },
-        exitTransition = { fadeOut(otiumFade(reducedMotion)) },
-        popEnterTransition = { fadeIn(otiumFade(reducedMotion)) },
-        popExitTransition = { fadeOut(otiumFade(reducedMotion)) },
+        enterTransition = { fadeIn(otiumFade()) },
+        exitTransition = { fadeOut(otiumFade()) },
+        popEnterTransition = { fadeIn(otiumFade()) },
+        popExitTransition = { fadeOut(otiumFade()) },
     ) {
         composable<LibraryRoute> {
             LibraryScreen(

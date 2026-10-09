@@ -6,7 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 
 /**
- * The Otium visual identity: parchment, sage, terra and ink in light and a warm dark.
+ * The Otium visual identity: the Classical palette (paper, ink and one gold accent) in light
+ * and a warm "lamplight" dark.
  * Dynamic color is deliberately off, because it would override the palette.
  * Screens read tokens only (`MaterialTheme.colorScheme`, `.typography`, `.shapes`,
  * `.otiumColors`) and never raw colors.

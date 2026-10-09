@@ -72,8 +72,8 @@ The plan holds the detail and is kept current; this table is a summary.
 ## Screenshots
 
 There are no app screenshots yet. These are renders of the design system (the theme catalog that debug
-builds show), in the light and dark themes: parchment, sage, terra and ink, with EB Garamond
-headlines and a quiet sans for interface text.
+builds show), in the light and dark themes. They predate the Classical palette and will be
+refreshed after the redesign.
 
 | Light | Dark |
 |-------|------|
@@ -345,8 +345,8 @@ To work on a change:
 - Book data and covers are planned to come from the [Google Books API](https://developers.google.com/books)
   and [Open Library](https://openlibrary.org), used within their terms and with the required
   attribution.
-- Fonts: [EB Garamond](https://github.com/octaviopardo/EBGaramond12),
-  [Source Sans 3](https://github.com/adobe-fonts/source-sans) and
+- Fonts: [Cormorant Garamond](https://github.com/CatharsisFonts/Cormorant),
+  [Lora](https://github.com/cyrealtype/Lora-Cyrillic) and
   [Cinzel](https://github.com/NDISCOVER/Cinzel), all under the SIL Open Font License. The license
   texts are in `third_party/fonts`.
 

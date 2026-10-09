@@ -20,16 +20,17 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import app.otium.R
+import app.otium.ui.theme.Motion
 import app.otium.ui.theme.otiumColors
-import app.otium.ui.theme.otiumFade
+import app.otium.ui.theme.otiumMovement
 import app.otium.ui.theme.rememberReducedMotion
 import kotlin.math.roundToInt
 
 private const val PERCENT = 100
 
 /**
- * One thin Terra bar for reading progress. Quiet by design: no animation beyond a gentle fade
- * of the fill (skipped when animations are removed), no streaks or badges.
+ * One thin accent rule for reading progress. Quiet by design: the fill grows gently (instantly
+ * when animations are removed), no streaks or badges.
  * [progress] is a fraction; values outside 0..1 are clamped.
  */
 @Composable
@@ -37,12 +38,12 @@ fun OtiumProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.otiumColors.statusInProgress,
-    trackColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    trackColor: Color = MaterialTheme.otiumColors.divider,
 ) {
     val clamped = progress.coerceIn(0f, 1f)
     val shown by animateFloatAsState(
         targetValue = clamped,
-        animationSpec = otiumFade(rememberReducedMotion()),
+        animationSpec = otiumMovement(rememberReducedMotion(), Motion.PROGRESS_MILLIS),
         label = "progress",
     )
     val description = stringResource(R.string.progress_percent, (clamped * PERCENT).roundToInt())

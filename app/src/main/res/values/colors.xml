@@ -3,6 +3,6 @@
     <!-- Placeholder launcher background (Parchment). Final icon assets come in Phase 7. -->
     <color name="ic_launcher_background">#F4EBD9</color>
 
-    <!-- Parchment. Must match LightPalette.background (checked by OtiumThemeTest). -->
-    <color name="window_background">#F4EBD9</color>
+    <!-- Paper. Must match LightPalette.background (checked by OtiumThemeTest). -->
+    <color name="window_background">#F3F2F2</color>
 </resources>

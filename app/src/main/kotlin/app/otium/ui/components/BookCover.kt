@@ -31,7 +31,7 @@ private val LEADING_ARTICLES = setOf("the", "a", "an")
 @Composable
 fun BookCover(title: String, modifier: Modifier = Modifier, painter: Painter? = null) {
     val shape = MaterialTheme.shapes.small
-    val shadow = MaterialTheme.otiumColors.shelfShadow
+    val shadow = MaterialTheme.otiumColors.cover.shadow
     val description = stringResource(R.string.book_cover_description, title)
 
     Box(

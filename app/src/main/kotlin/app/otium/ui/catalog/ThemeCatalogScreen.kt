@@ -83,16 +83,16 @@ private fun ColorSwatches() {
     val swatches = listOf(
         "background" to scheme.background,
         "surface" to scheme.surface,
-        "primary (Sage)" to scheme.primary,
-        "secondary (Terra)" to scheme.secondary,
-        "onBackground (Ink)" to scheme.onBackground,
-        "muted ink" to otium.statusNotStarted,
+        "sheet" to otium.sheet,
+        "ink" to scheme.onBackground,
+        "muted" to otium.muted,
+        "divider" to otium.divider,
+        "accent" to otium.accent,
+        "primary (gold)" to scheme.primary,
         "primaryContainer" to scheme.primaryContainer,
-        "secondaryContainer" to scheme.secondaryContainer,
-        "surfaceVariant" to scheme.surfaceVariant,
-        "outline" to scheme.outline,
-        "shelf line" to otium.shelfLine,
         "error" to scheme.error,
+        "cover text" to otium.cover.text,
+        "cover board" to otium.cover.boards.first(),
     )
     swatches.chunked(SWATCHES_PER_ROW).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

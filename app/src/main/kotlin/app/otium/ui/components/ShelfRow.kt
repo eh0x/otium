@@ -13,13 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.otium.ui.theme.otiumColors
 
 /**
- * Books standing on a shelf: a row of content, a wooden shelf line and a soft shadow beneath.
+ * Books standing on a shelf: a row of content above a hairline shelf edge.
  * Pure styling over whatever [content] is given, so it stays cheap inside a lazy grid.
  */
 @Composable
@@ -37,22 +35,13 @@ fun ShelfRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> 
     }
 }
 
-/** The wooden shelf line with the soft shadow under it. Full width of whatever holds it. */
+/** The shelf edge: a hairline the full width of whatever holds it. */
 @Composable
 fun ShelfBoard(modifier: Modifier = Modifier) {
-    val colors = MaterialTheme.otiumColors
-    Column(modifier = modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .background(colors.shelfLine),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .background(Brush.verticalGradient(listOf(colors.shelfShadow, Color.Transparent))),
-        )
-    }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(MaterialTheme.otiumColors.divider),
+    )
 }

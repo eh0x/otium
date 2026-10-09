@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.text.font.FontWeight
 import androidx.test.core.app.ApplicationProvider
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -55,8 +56,11 @@ class OtiumThemeTest {
         assertEquals(Color(LightPalette.background), theme.colors.background)
         assertEquals(Color(LightPalette.onBackground), theme.colors.onBackground)
         assertEquals(Color(LightPalette.primary), theme.colors.primary)
-        assertEquals(Color(LightPalette.secondary), theme.colors.secondary)
         assertEquals(Color(LightPalette.surface), theme.colors.surface)
+        assertEquals(Color(LightPalette.sheet), theme.colors.surfaceContainerLow)
+        assertEquals(Color(LightPalette.sheet), theme.colors.surfaceContainerHigh)
+        assertEquals(Color(LightPalette.muted), theme.colors.outline)
+        assertEquals(Color(LightPalette.divider), theme.colors.outlineVariant)
     }
 
     @Test
@@ -69,23 +73,49 @@ class OtiumThemeTest {
     }
 
     @Test
-    fun `status colors are Terra in progress and Sage when read`() {
+    fun `there is one accent hue and no second one`() {
         val theme = capture(dark = false)
 
-        assertEquals(theme.colors.secondary, theme.otium.statusInProgress)
-        assertEquals(theme.colors.primary, theme.otium.statusRead)
-        assertNotEquals(theme.otium.statusNotStarted, theme.otium.statusInProgress)
-        assertNotEquals(theme.otium.statusNotStarted, theme.otium.statusRead)
+        assertEquals(Color(LightPalette.onBackground), theme.colors.secondary)
+        assertEquals(Color(LightPalette.muted), theme.colors.tertiary)
+        assertEquals(Color(LightPalette.accent), theme.otium.accent)
     }
 
     @Test
-    fun `headlines use the serif family and interface text the sans family`() {
+    fun `status colors are muted when not started and accent once begun`() {
+        val theme = capture(dark = false)
+
+        assertEquals(theme.otium.muted, theme.otium.statusNotStarted)
+        assertEquals(theme.otium.accent, theme.otium.statusInProgress)
+        assertEquals(theme.otium.accent, theme.otium.statusRead)
+        assertNotEquals(theme.otium.statusNotStarted, theme.otium.statusInProgress)
+    }
+
+    @Test
+    fun `display and controls use Cormorant and reading text uses Lora`() {
         val typography = capture(dark = false).typography
 
-        assertEquals(OtiumFonts.Serif, typography.headlineMedium.fontFamily)
-        assertEquals(OtiumFonts.Serif, typography.displaySmall.fontFamily)
-        assertEquals(OtiumFonts.Sans, typography.bodyLarge.fontFamily)
-        assertEquals(OtiumFonts.Sans, typography.labelMedium.fontFamily)
+        assertEquals(OtiumFonts.Display, typography.displayLarge.fontFamily)
+        assertEquals(OtiumFonts.Display, typography.headlineMedium.fontFamily)
+        assertEquals(OtiumFonts.Display, typography.titleSmall.fontFamily)
+        assertEquals(OtiumFonts.Display, typography.labelLarge.fontFamily)
+        assertEquals(OtiumFonts.Text, typography.bodyLarge.fontFamily)
+        assertEquals(OtiumFonts.Text, typography.labelSmall.fontFamily)
+    }
+
+    @Test
+    fun `Cormorant is never regular weight below 28 sp`() {
+        val typography = capture(dark = false).typography
+        val styles = with(typography) {
+            listOf(
+                displayLarge, displayMedium, displaySmall, headlineLarge, headlineMedium,
+                headlineSmall, titleLarge, titleMedium, titleSmall, labelLarge, labelMedium,
+            )
+        }
+
+        styles.filter { it.fontSize.value < MIN_REGULAR_CORMORANT_SP }.forEach {
+            assertEquals(FontWeight.SemiBold, it.fontWeight)
+        }
     }
 
     private fun contentColorOnPaper(dark: Boolean): Pair<Color, Color> {
@@ -160,5 +190,9 @@ class OtiumThemeTest {
         assertTrue(isMotionReduced(animatorDurationScale = 0f))
         assertFalse(isMotionReduced(animatorDurationScale = 1f))
         assertFalse(isMotionReduced(animatorDurationScale = 0.5f))
+    }
+
+    private companion object {
+        const val MIN_REGULAR_CORMORANT_SP = 28f
     }
 }
