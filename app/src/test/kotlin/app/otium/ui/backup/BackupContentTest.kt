@@ -63,7 +63,7 @@ class BackupContentTest {
         rule.onNodeWithText("Connect Google Drive to back up automatically.")
             .performScrollTo()
             .assertIsDisplayed()
-        rule.onNodeWithText("Connect Google Drive").performScrollTo().performClick()
+        rule.onNodeWithText("Connect").performScrollTo().performClick()
 
         assertEquals(1, connected)
     }
@@ -130,8 +130,8 @@ class BackupContentTest {
     fun `while backing up the buttons wait`() {
         show(signedIn.copy(busy = BackupBusy.BACKING_UP))
 
-        rule.onNodeWithText("Backing up…").assertIsDisplayed()
-        rule.onNodeWithText("Back up now").assertIsNotEnabled()
+        // The button names the work while it runs.
+        rule.onNodeWithText("Backing up…").assertIsDisplayed().assertIsNotEnabled()
         rule.onNodeWithText("Restore from Drive").assertIsNotEnabled()
     }
 
@@ -185,7 +185,7 @@ class BackupContentTest {
         val changes = mutableListOf<BackupSettings>()
         show(signedIn, BackupActions(onSettingsChanged = { changes += it }))
 
-        rule.onNodeWithText("Back up automatically").performScrollTo().performClick()
+        rule.onNodeWithText("Automatic backup").performScrollTo().performClick()
 
         assertEquals(listOf(BackupSettings(autoBackup = true)), changes)
     }
@@ -221,7 +221,7 @@ class BackupContentTest {
     fun `automatic backup cannot be changed while signed out`() {
         show(BackupUiState())
 
-        rule.onNodeWithText("Back up automatically").performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithText("Automatic backup").performScrollTo().assertIsNotEnabled()
     }
 
     // --- Encryption ---
@@ -231,11 +231,14 @@ class BackupContentTest {
         var asked = 0
         show(signedIn, encryptionActions = EncryptionActions(onSetPassphrase = { asked++ }))
 
-        rule.onNodeWithText("Off. Backups are kept in your Drive without a passphrase.")
+        rule.onNodeWithText(
+            "Off. With a passphrase only you can read your backups, even if someone enters " +
+                "your Google account.",
+        )
             .performScrollTo()
             .assertIsDisplayed()
         rule.onNodeWithText("Turn off").assertDoesNotExist()
-        rule.onNodeWithText("Set a passphrase").performScrollTo().performClick()
+        rule.onNodeWithText("Encrypt backups").performScrollTo().performClick()
 
         assertEquals(1, asked)
     }
@@ -253,7 +256,7 @@ class BackupContentTest {
             .performScrollTo()
             .assertIsDisplayed()
         rule.onNodeWithText("Change passphrase").performScrollTo().assertIsEnabled()
-        rule.onNodeWithText("Turn off").performScrollTo().performClick()
+        rule.onNodeWithText("Encrypt backups").performScrollTo().performClick()
 
         assertEquals(1, turnedOff)
     }
@@ -266,7 +269,7 @@ class BackupContentTest {
         )
 
         rule.onNodeWithText("Change passphrase").performScrollTo().assertIsNotEnabled()
-        rule.onNodeWithText("Turn off").performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithText("Encrypt backups").performScrollTo().assertIsNotEnabled()
     }
 
     @Test
@@ -274,7 +277,7 @@ class BackupContentTest {
         show(signedIn, encryption = EncryptionUiState(isWorking = true))
 
         rule.onNodeWithText("Protecting your key…").performScrollTo().assertIsDisplayed()
-        rule.onNodeWithText("Set a passphrase").performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithText("Encrypt backups").performScrollTo().assertIsNotEnabled()
     }
 
     @Test
@@ -300,6 +303,6 @@ class BackupContentTest {
     fun `the last backup says when it is encrypted`() {
         show(signedIn.copy(lastBackup = backupInfo(keyId = "abc")))
 
-        rule.onNodeWithText("Encrypted with your passphrase.").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Encrypted", substring = true).performScrollTo().assertIsDisplayed()
     }
 }

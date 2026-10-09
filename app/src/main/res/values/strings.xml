@@ -192,33 +192,30 @@
     <string name="error_unexpected">Something went wrong. Please try again.</string>
 
     <!-- Backup and restore -->
-    <string name="backup_title">Backup</string>
+    <string name="backup_title">Backup &amp; restore</string>
     <string name="backup_drive_heading">Google Drive</string>
     <string name="backup_drive_signed_out">Not connected. Your library is only on this phone.</string>
     <string name="backup_drive_signed_in">Connected as %1$s</string>
     <string name="backup_drive_signed_in_unknown">Connected</string>
     <string name="backup_drive_expired">Your Google sign-in expired.</string>
-    <string name="backup_connect">Connect Google Drive</string>
+    <string name="backup_connect">Connect</string>
     <string name="backup_reconnect">Sign in again</string>
     <string name="backup_disconnect">Disconnect</string>
-    <string name="backup_drive_note">Backups go to a private folder in your Drive that only Otium can see.</string>
+    <string name="backup_drive_note">Your library lives on this phone. Copies go to a private folder in your Drive that only Otium can read.</string>
     <string name="backup_now">Back up now</string>
     <string name="backup_in_progress">Backing up…</string>
     <string name="backup_done">Backup saved to Google Drive.</string>
     <string name="backup_never">No backup yet</string>
-    <string name="backup_last">Last backup %1$s · %2$s · %3$s</string>
+    <string name="backup_last_label">Last backup</string>
     <plurals name="backup_book_count">
         <item quantity="one">%1$d book</item>
         <item quantity="other">%1$d books</item>
     </plurals>
-    <string name="backup_last_encrypted">Encrypted with your passphrase.</string>
+    <string name="backup_encrypted">Encrypted</string>
     <string name="encryption_heading">Encrypt backups</string>
-    <string name="encryption_off">Off. Backups are kept in your Drive without a passphrase.</string>
+    <string name="encryption_off">Off. With a passphrase only you can read your backups, even if someone enters your Google account.</string>
     <string name="encryption_on">On. New backups are encrypted with your passphrase.</string>
-    <string name="encryption_note">Recommended. With a passphrase, only you can read your backups, even if someone gets into your Google account.</string>
-    <string name="encryption_turn_on">Set a passphrase</string>
     <string name="encryption_change">Change passphrase</string>
-    <string name="encryption_turn_off">Turn off</string>
     <string name="encryption_working">Protecting your key…</string>
     <string name="encryption_on_done">New backups will be encrypted.</string>
     <string name="encryption_off_done">New backups will no longer be encrypted.</string>
@@ -251,6 +248,7 @@
     <string name="passphrase_restore_message">This backup is encrypted. Enter the passphrase it was made with.</string>
     <string name="passphrase_restore_action">Unlock</string>
     <string name="restore_heading">Restore</string>
+    <string name="restore_note">Replaces your current library with the latest copy in Drive.</string>
     <string name="restore_action">Restore from Drive</string>
     <string name="restore_previous_action">Restore the previous backup</string>
     <string name="restore_in_progress">Restoring…</string>
@@ -260,7 +258,6 @@
     <string name="restore_confirm_action">Replace library</string>
     <string name="restore_cancel">Cancel</string>
     <string name="auto_backup_heading">Automatic backup</string>
-    <string name="auto_backup_toggle">Back up automatically</string>
     <string name="auto_backup_daily">Daily</string>
     <string name="auto_backup_weekly">Weekly</string>
     <string name="auto_backup_wifi_only">Only on Wi-Fi</string>

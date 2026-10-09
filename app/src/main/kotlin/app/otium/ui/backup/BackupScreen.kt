@@ -7,12 +7,16 @@ import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +24,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,12 +42,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,8 +62,17 @@ import app.otium.domain.model.BackupSlot
 import app.otium.domain.model.DriveAuthState
 import app.otium.domain.model.RestorePreview
 import app.otium.ui.common.messageRes
+import app.otium.ui.components.Hairline
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumChip
+import app.otium.ui.components.OtiumDialog
+import app.otium.ui.components.OtiumIndeterminateRule
 import app.otium.ui.components.OtiumTopBar
+import app.otium.ui.components.hairlineTop
 import app.otium.ui.theme.PaperBackground
+import app.otium.ui.theme.TABULAR_FIGURES
+import app.otium.ui.theme.otiumColors
 import java.text.DateFormat
 import java.util.Date
 
@@ -156,34 +172,20 @@ fun BackupContent(
     )
 
     PaperBackground(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            snackbarHost = { SnackbarHost(snackbar) },
-            topBar = {
-                OtiumTopBar(title = stringResource(R.string.backup_title))
-            },
-        ) { padding ->
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                DriveSection(state, actions)
-                HorizontalDivider()
-                BackupSection(state, actions)
-                HorizontalDivider()
-                SectionHeading(stringResource(R.string.encryption_heading))
-                EncryptionSection(encryption, state.isBusy, encryptionActions)
-                HorizontalDivider()
-                RestoreSection(state, actions)
-                HorizontalDivider()
-                AutoBackupSection(state, actions)
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 24.dp),
+        ) {
+            Heading()
+            DriveCard(state, actions)
+            Section { EncryptionSection(encryption, state.isBusy, encryptionActions) }
+            Section { RestoreSection(state, actions) }
+            Section { AutoBackupSection(state, actions) }
         }
+        SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
         state.restorePreview?.let { RestoreDialog(it, actions) }
         EncryptionDialogs(state, encryption, actions, encryptionActions)
     }
@@ -214,98 +216,64 @@ private fun Notices(
     }
 }
 
+/** "Settings" over "Backup & restore", and what backups are. */
 @Composable
-private fun SectionHeading(text: String) {
+private fun Heading() {
     Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
+        text = stringResource(R.string.settings_title).uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary,
+    )
+    Text(
+        text = stringResource(R.string.backup_title),
+        style = MaterialTheme.typography.displaySmall.copy(lineHeight = 38.sp),
         modifier = Modifier.semantics { heading() },
     )
-}
-
-@Composable
-private fun DriveSection(state: BackupUiState, actions: BackupActions) {
-    SectionHeading(stringResource(R.string.backup_drive_heading))
-    val status = when (val auth = state.auth) {
-        DriveAuthState.SignedOut -> stringResource(R.string.backup_drive_signed_out)
-
-        DriveAuthState.Expired -> stringResource(R.string.backup_drive_expired)
-
-        is DriveAuthState.SignedIn ->
-            auth.account
-                ?.let { stringResource(R.string.backup_drive_signed_in, it) }
-                ?: stringResource(R.string.backup_drive_signed_in_unknown)
-    }
-    Text(text = status, style = MaterialTheme.typography.bodyLarge)
     Text(
         text = stringResource(R.string.backup_drive_note),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+        color = MaterialTheme.otiumColors.muted,
+        modifier = Modifier.padding(top = 8.dp, bottom = 18.dp),
     )
-    if (state.busy == BackupBusy.CONNECTING) LinearProgressIndicator(Modifier.fillMaxWidth())
-    when (state.auth) {
-        DriveAuthState.SignedOut -> Button(onClick = actions.onConnect, enabled = !state.isBusy) {
-            Text(stringResource(R.string.backup_connect))
-        }
-
-        DriveAuthState.Expired -> Button(onClick = actions.onConnect, enabled = !state.isBusy) {
-            Text(stringResource(R.string.backup_reconnect))
-        }
-
-        is DriveAuthState.SignedIn -> TextButton(
-            onClick = actions.onDisconnect,
-            enabled = !state.isBusy,
-        ) {
-            Text(stringResource(R.string.backup_disconnect))
-        }
-    }
 }
 
+/** A section under a hairline, spaced like the rest of the page. */
 @Composable
-private fun BackupSection(state: BackupUiState, actions: BackupActions) {
-    Button(
-        onClick = actions.onBackUpNow,
-        enabled = state.isConnected && !state.isBusy,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(stringResource(R.string.backup_now))
-    }
-    if (state.busy == BackupBusy.BACKING_UP) {
-        BusyIndicator(stringResource(R.string.backup_in_progress))
-    }
-    val last = state.lastBackup
-    Text(
-        text = if (last == null) {
-            stringResource(R.string.backup_never)
-        } else {
-            lastBackupText(last)
-        },
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun Section(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .padding(top = 18.dp)
+            .fillMaxWidth()
+            .hairlineTop(MaterialTheme.otiumColors.divider)
+            .padding(vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        content = content,
     )
-    if (last?.isEncrypted == true) {
-        Text(
-            text = stringResource(R.string.backup_last_encrypted),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
 }
 
 @Composable
 private fun RestoreSection(state: BackupUiState, actions: BackupActions) {
-    SectionHeading(stringResource(R.string.restore_heading))
+    SectionTitle(stringResource(R.string.restore_heading))
+    Text(
+        text = stringResource(R.string.restore_note),
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+        color = MaterialTheme.otiumColors.muted,
+    )
     val canRestore = state.isConnected && !state.isBusy
-    OutlinedButton(
+    OtiumButton(
+        text = stringResource(R.string.restore_action),
         onClick = { actions.onRestore(BackupSlot.LATEST) },
+        style = OtiumButtonStyle.Secondary,
         enabled = canRestore,
         modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(stringResource(R.string.restore_action))
-    }
-    TextButton(onClick = { actions.onRestore(BackupSlot.PREVIOUS) }, enabled = canRestore) {
-        Text(stringResource(R.string.restore_previous_action))
-    }
+    )
+    OtiumButton(
+        text = stringResource(R.string.restore_previous_action),
+        onClick = { actions.onRestore(BackupSlot.PREVIOUS) },
+        style = OtiumButtonStyle.Ghost,
+        compact = true,
+        enabled = canRestore,
+    )
     when (state.busy) {
         BackupBusy.PREPARING_RESTORE, BackupBusy.RESTORING ->
             BusyIndicator(stringResource(R.string.restore_in_progress))
@@ -316,40 +284,42 @@ private fun RestoreSection(state: BackupUiState, actions: BackupActions) {
 
 @Composable
 private fun AutoBackupSection(state: BackupUiState, actions: BackupActions) {
-    SectionHeading(stringResource(R.string.auto_backup_heading))
     val settings = state.settings
     val enabled = state.isConnected && !state.isBusy
     SwitchRow(
-        label = stringResource(R.string.auto_backup_toggle),
+        label = stringResource(R.string.auto_backup_heading),
         checked = settings.autoBackup,
         enabled = enabled,
         onCheckedChange = { actions.onSettingsChanged(settings.copy(autoBackup = it)) },
+        title = true,
     )
     if (!state.isConnected) {
         Text(
             text = stringResource(R.string.auto_backup_needs_drive),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+            color = MaterialTheme.otiumColors.muted,
         )
     }
     if (settings.autoBackup) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (frequency in BackupFrequency.entries) {
-                FilterChip(
+                OtiumChip(
+                    label = stringResource(frequency.labelRes()),
                     selected = settings.frequency == frequency,
-                    onClick = { actions.onSettingsChanged(settings.copy(frequency = frequency)) },
-                    label = { Text(stringResource(frequency.labelRes())) },
-                    enabled = enabled,
+                    onClick = {
+                        if (enabled) actions.onSettingsChanged(settings.copy(frequency = frequency))
+                    },
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
-        SwitchRow(
+        CheckboxRow(
             label = stringResource(R.string.auto_backup_wifi_only),
             checked = settings.wifiOnly,
             enabled = enabled,
             onCheckedChange = { actions.onSettingsChanged(settings.copy(wifiOnly = it)) },
         )
-        SwitchRow(
+        CheckboxRow(
             label = stringResource(R.string.auto_backup_charging_only),
             checked = settings.chargingOnly,
             enabled = enabled,
@@ -362,31 +332,24 @@ private fun AutoBackupSection(state: BackupUiState, actions: BackupActions) {
 @Composable
 private fun RestoreDialog(preview: RestorePreview, actions: BackupActions) {
     val info = preview.info
-    AlertDialog(
+    OtiumDialog(
+        title = stringResource(R.string.restore_confirm_title),
+        body = stringResource(
+            R.string.restore_confirm_message,
+            pluralStringResource(R.plurals.backup_book_count, info.bookCount, info.bookCount),
+            formatDate(info.createdAt),
+        ),
         onDismissRequest = actions.onRestoreDismissed,
-        title = { Text(stringResource(R.string.restore_confirm_title)) },
-        text = {
-            Text(
-                stringResource(
-                    R.string.restore_confirm_message,
-                    pluralStringResource(
-                        R.plurals.backup_book_count,
-                        info.bookCount,
-                        info.bookCount,
-                    ),
-                    formatDate(info.createdAt),
-                ),
+        actions = {
+            OtiumButton(
+                text = stringResource(R.string.restore_cancel),
+                onClick = actions.onRestoreDismissed,
+                style = OtiumButtonStyle.Secondary,
             )
-        },
-        confirmButton = {
-            TextButton(onClick = actions.onRestoreConfirmed) {
-                Text(stringResource(R.string.restore_confirm_action))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = actions.onRestoreDismissed) {
-                Text(stringResource(R.string.restore_cancel))
-            }
+            OtiumButton(
+                text = stringResource(R.string.restore_confirm_action),
+                onClick = actions.onRestoreConfirmed,
+            )
         },
     )
 }

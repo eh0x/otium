@@ -1,7 +1,9 @@
 package app.otium.ui.backup
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -10,11 +12,22 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import app.otium.R
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumDialog
+import app.otium.ui.theme.otiumColors
 
-/** Whether backups are encrypted, and the buttons to set, change or drop the passphrase. */
+/**
+ * Whether backups are encrypted, as a switch: turning it on asks for a passphrase, turning it off
+ * asks for confirmation. While on, the passphrase can be changed.
+ */
 @Composable
 internal fun EncryptionSection(
     encryption: EncryptionUiState,
@@ -23,29 +36,28 @@ internal fun EncryptionSection(
 ) {
     val enabled = !otherWorkRunning && !encryption.isWorking
     val on = encryption.isOn
+    SwitchRow(
+        label = stringResource(R.string.encryption_heading),
+        checked = on,
+        enabled = enabled,
+        onCheckedChange = { if (it) actions.onSetPassphrase() else actions.onTurnOff() },
+        title = true,
+        icon = R.drawable.ic_lucide_lock,
+    )
     Text(
         text = stringResource(if (on) R.string.encryption_on else R.string.encryption_off),
-        style = MaterialTheme.typography.bodyLarge,
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+        color = MaterialTheme.otiumColors.muted,
     )
-    if (!encryption.isOn) {
-        Text(
-            text = stringResource(R.string.encryption_note),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
     if (encryption.isWorking) BusyIndicator(stringResource(R.string.encryption_working))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = actions.onSetPassphrase, enabled = enabled) {
-            Text(
-                stringResource(if (on) R.string.encryption_change else R.string.encryption_turn_on),
-            )
-        }
-        if (encryption.isOn) {
-            TextButton(onClick = actions.onTurnOff, enabled = enabled) {
-                Text(stringResource(R.string.encryption_turn_off))
-            }
-        }
+    if (on) {
+        OtiumButton(
+            text = stringResource(R.string.encryption_change),
+            onClick = actions.onSetPassphrase,
+            style = OtiumButtonStyle.Ghost,
+            compact = true,
+            enabled = enabled,
+        )
     }
 }
 
@@ -81,8 +93,7 @@ internal fun EncryptionDialogs(
     }
 }
 
-/** [PassphrasePanel] in a dialog window. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** [PassphrasePanel] in a dialog window, sized by its content with the page gutter at the sides. */
 @Composable
 private fun PassphraseDialog(
     prompt: PassphrasePrompt,
@@ -90,27 +101,33 @@ private fun PassphraseDialog(
     onSubmit: (passphrase: CharArray, confirmation: CharArray) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    BasicAlertDialog(onDismissRequest = { if (!busy) onDismiss() }) {
-        PassphrasePanel(prompt, busy, onSubmit, onDismiss)
+    Dialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 22.dp)) {
+            PassphrasePanel(prompt, busy, onSubmit, onDismiss)
+        }
     }
 }
 
 /** Confirms turning encryption off, saying what happens to the backups already made. */
 @Composable
 private fun TurnOffEncryptionDialog(actions: EncryptionActions) {
-    AlertDialog(
+    OtiumDialog(
+        title = stringResource(R.string.encryption_off_title),
+        body = stringResource(R.string.encryption_off_message),
         onDismissRequest = actions.onTurnOffDismissed,
-        title = { Text(stringResource(R.string.encryption_off_title)) },
-        text = { Text(stringResource(R.string.encryption_off_message)) },
-        confirmButton = {
-            TextButton(onClick = actions.onTurnOffConfirmed) {
-                Text(stringResource(R.string.encryption_off_action))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = actions.onTurnOffDismissed) {
-                Text(stringResource(R.string.restore_cancel))
-            }
+        actions = {
+            OtiumButton(
+                text = stringResource(R.string.restore_cancel),
+                onClick = actions.onTurnOffDismissed,
+                style = OtiumButtonStyle.Secondary,
+            )
+            OtiumButton(
+                text = stringResource(R.string.encryption_off_action),
+                onClick = actions.onTurnOffConfirmed,
+            )
         },
     )
 }

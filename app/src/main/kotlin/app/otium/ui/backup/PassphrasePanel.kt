@@ -1,10 +1,13 @@
 package app.otium.ui.backup
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
@@ -18,6 +21,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -28,19 +33,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.otium.R
 import app.otium.domain.usecase.SetBackupPassphrase
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumIndeterminateRule
+import app.otium.ui.theme.otiumColors
+
+private val PANEL_MAX_WIDTH = 400.dp
 
 /** What is typed into a passphrase prompt. It lives only in the prompt. */
 @Stable
@@ -77,16 +91,23 @@ internal fun PassphrasePanel(
         if (ready) onSubmit(input.passphrase.toCharArray(), input.confirmation.toCharArray())
     }
 
-    Surface(
-        shape = AlertDialogDefaults.shape,
-        color = AlertDialogDefaults.containerColor,
-        tonalElevation = AlertDialogDefaults.TonalElevation,
+    val colors = MaterialTheme.otiumColors
+    val shape = MaterialTheme.shapes.medium
+    Column(
+        modifier = Modifier
+            .widthIn(max = PANEL_MAX_WIDTH)
+            .background(colors.sheet, shape)
+            .border(1.dp, colors.divider, shape)
+            .padding(22.dp),
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column {
             Text(
                 text = stringResource(prompt.titleRes()),
-                style = MaterialTheme.typography.headlineSmall,
-                color = AlertDialogDefaults.titleContentColor,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 26.sp,
+                    lineHeight = 30.sp,
+                ),
+                modifier = Modifier.semantics { heading() },
             )
             Column(
                 modifier = Modifier
@@ -99,18 +120,23 @@ internal fun PassphrasePanel(
                     is PassphrasePrompt.Set -> NewPassphraseFields(prompt, input, submit)
                     is PassphrasePrompt.Unlock -> UnlockField(prompt, input, submit)
                 }
-                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (busy) OtiumIndeterminateRule()
             }
             Row(
                 modifier = Modifier.align(Alignment.End),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                TextButton(onClick = onDismiss, enabled = !busy) {
-                    Text(stringResource(R.string.restore_cancel))
-                }
-                TextButton(onClick = submit, enabled = ready) {
-                    Text(stringResource(prompt.actionRes()))
-                }
+                OtiumButton(
+                    text = stringResource(R.string.restore_cancel),
+                    onClick = onDismiss,
+                    style = OtiumButtonStyle.Secondary,
+                    enabled = !busy,
+                )
+                OtiumButton(
+                    text = stringResource(prompt.actionRes()),
+                    onClick = submit,
+                    enabled = ready,
+                )
             }
         }
     }
@@ -124,9 +150,10 @@ private fun NewPassphraseFields(
 ) {
     Text(
         text = stringResource(R.string.passphrase_warning),
+        style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.error,
     )
-    if (prompt.changing) Text(stringResource(R.string.passphrase_change_note))
+    if (prompt.changing) Text(stringResource(R.string.passphrase_change_note), style = bodyStyle())
     PassphraseField(
         value = input.passphrase,
         onValueChange = { input.passphrase = it },
@@ -155,9 +182,10 @@ private fun NewPassphraseFields(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = input.acknowledged, onCheckedChange = null)
+        OtiumCheckbox(checked = input.acknowledged)
         Text(
             text = stringResource(R.string.passphrase_acknowledge),
+            style = bodyStyle(),
             modifier = Modifier.padding(start = 8.dp),
         )
     }
@@ -169,7 +197,7 @@ private fun UnlockField(
     input: PassphraseInput,
     onDone: () -> Unit,
 ) {
-    Text(stringResource(R.string.passphrase_restore_message))
+    Text(stringResource(R.string.passphrase_restore_message), style = bodyStyle())
     PassphraseField(
         value = input.passphrase,
         onValueChange = { input.passphrase = it },
@@ -194,7 +222,9 @@ private fun PassphraseField(
     val toggleDescription = stringResource(
         if (visible) R.string.passphrase_hide_description else R.string.passphrase_show_description,
     )
-    OutlinedTextField(
+    val colors = MaterialTheme.otiumColors
+    // Underlined, like every Otium field: no box, a hairline that turns accent with focus.
+    TextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
@@ -213,22 +243,37 @@ private fun PassphraseField(
         ),
         keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
         trailingIcon = {
-            TextButton(
+            OtiumButton(
+                text = stringResource(
+                    if (visible) R.string.passphrase_hide else R.string.passphrase_show,
+                ),
                 onClick = { visible = !visible },
-                modifier = Modifier.semantics { contentDescription = toggleDescription },
-            ) {
-                Text(
-                    stringResource(
-                        if (visible) R.string.passphrase_hide else R.string.passphrase_show,
-                    ),
-                )
-            }
+                style = OtiumButtonStyle.Ghost,
+                compact = true,
+                contentDescription = toggleDescription,
+            )
         },
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            disabledContainerColor = Color.Transparent,
+            errorContainerColor = Color.Transparent,
+            focusedIndicatorColor = colors.accent,
+            unfocusedIndicatorColor = colors.divider,
+            focusedLabelColor = colors.muted,
+            unfocusedLabelColor = colors.muted,
+            cursorColor = colors.accent,
+            focusedSupportingTextColor = colors.muted,
+            unfocusedSupportingTextColor = colors.muted,
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .semantics { this.contentType = contentType },
     )
 }
+
+@Composable
+private fun bodyStyle() = MaterialTheme.typography.bodyMedium
 
 @Composable
 private fun minLengthText(id: Int): String =
