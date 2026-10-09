@@ -29,11 +29,17 @@ val openLibraryContact: String =
     localProperties.getProperty("openlibrary.contact", "https://github.com/eh0x/otium")
 
 // The release upload key comes from keystore.properties (never committed; see
-// keystore.properties.example). Without it, release builds are signed with the debug key so CI
-// can build and shrink them with no secret. Such a build is for testing only: Play rejects it.
+// keystore.properties.example). Without it, a release build is signed with the debug key only when
+// asked for with -Potium.allowDebugSigning=true, as CI does to build and shrink it with no secret.
+// Anyone can sign with the well-known debug key, so such an APK could be swapped for someone
+// else's build; it is for testing only, and without the flag release packaging fails.
 val keystoreProperties: Properties? = rootProject.file("keystore.properties")
     .takeIf { it.exists() }
     ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
+
+val allowDebugSigning: Boolean = providers.gradleProperty("otium.allowDebugSigning")
+    .map { it.toBoolean() }
+    .getOrElse(false)
 
 fun Properties.required(key: String): String = getProperty(key)?.takeIf { it.isNotBlank() }
     ?: throw GradleException("keystore.properties is missing '$key'")
@@ -71,7 +77,7 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.findByName("release")
-                ?: signingConfigs.getByName("debug").also {
+                ?: signingConfigs.getByName("debug").takeIf { allowDebugSigning }?.also {
                     logger.warn("No keystore.properties: release is signed with the debug key")
                 }
             isMinifyEnabled = true
@@ -118,6 +124,22 @@ android {
         getByName("debug").assets.directories.add("$projectDir/schemas")
         // The benchmark build reuses the debug seeder to fill the library with 5,000 books.
         getByName("benchmark").kotlin.directories.add("src/debug/kotlin")
+    }
+}
+
+// Without a key and without the opt-in, release has no signing config. Packaging fails here
+// instead of leaving an unsigned APK or bundle that looks like a finished build. Lint, tests and
+// the debug and benchmark builds are not affected.
+if (keystoreProperties == null && !allowDebugSigning) {
+    tasks.configureEach {
+        if (name == "packageRelease" || name == "bundleRelease") {
+            doFirst {
+                throw GradleException(
+                    "Release needs keystore.properties (see keystore.properties.example), or " +
+                        "-Potium.allowDebugSigning=true for a test build signed with the debug key",
+                )
+            }
+        }
     }
 }
 

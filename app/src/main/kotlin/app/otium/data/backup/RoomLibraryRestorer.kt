@@ -1,7 +1,9 @@
 package app.otium.data.backup
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
+import androidx.room.Room
 import app.otium.data.backup.archive.BackupZip
 import app.otium.data.backup.archive.Extracted
 import app.otium.data.local.OtiumDatabase
@@ -122,18 +124,34 @@ class RoomLibraryRestorer internal constructor(
         }
     }
 
-    /** The rows of the backup's database, or null when it cannot be opened as this app's library. */
+    /**
+     * The rows of the backup's database, or null when it cannot be opened as this app's library.
+     * SQLite checks the file is sound before Room opens it, and once Room has brought it up to
+     * date its schema must be exactly the one this version creates: a backup is read as data, so
+     * an extra trigger, view, table or index is refused rather than trusted.
+     */
     @Suppress("SwallowedException") // The user is told the backup is damaged, not why.
     private suspend fun readRows(databaseFile: File): LibraryRows? {
+        if (!isIntact(databaseFile)) return null
         val backupDatabase = openStandalone(context, databaseFile)
         return try {
-            backupDatabase.readAll()
+            if (schemaOf(backupDatabase) == expectedSchema()) backupDatabase.readAll() else null
         } catch (error: SQLiteException) {
             null
         } catch (error: IllegalStateException) {
             null
         } finally {
             backupDatabase.close()
+        }
+    }
+
+    /** The schema this version of the app creates, read from a fresh empty library. */
+    private fun expectedSchema(): Set<List<String?>> {
+        val fresh = Room.inMemoryDatabaseBuilder(context, OtiumDatabase::class.java).build()
+        return try {
+            schemaOf(fresh)
+        } finally {
+            fresh.close()
         }
     }
 
@@ -151,6 +169,36 @@ class RoomLibraryRestorer internal constructor(
         return target
     }
 }
+
+/**
+ * Whether SQLite finds [file] sound, search index included. Checking an FTS4 index needs write
+ * access, so the file (the restore's own unpacked copy) is opened read-write, with an error
+ * handler that leaves a damaged file in place for the caller to clear up.
+ */
+@Suppress("SwallowedException") // A file SQLite cannot read is simply not sound.
+private fun isIntact(file: File): Boolean = try {
+    SQLiteDatabase.openDatabase(
+        file.path,
+        null,
+        SQLiteDatabase.OPEN_READWRITE or SQLiteDatabase.NO_LOCALIZED_COLLATORS,
+    ) { /* Keep the file; the restore reports it as damaged. */ }.use { database ->
+        database.rawQuery("PRAGMA integrity_check", null).use { result ->
+            result.count == 1 && result.moveToFirst() && result.getString(0) == "ok"
+        }
+    }
+} catch (error: SQLiteException) {
+    false
+}
+
+/** Every object in [database]'s schema: its type, name, table and the SQL that made it. */
+private fun schemaOf(database: OtiumDatabase): Set<List<String?>> = database.openHelper
+    .readableDatabase
+    .query("SELECT type, name, tbl_name, sql FROM sqlite_master")
+    .use { rows ->
+        buildSet {
+            while (rows.moveToNext()) add(List(rows.columnCount) { rows.getString(it) })
+        }
+    }
 
 /**
  * These rows with each cover named by its file name alone, which the covers directory resolves.

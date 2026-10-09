@@ -222,6 +222,29 @@ class LibraryBackupRoundTripTest {
     }
 
     @Test
+    fun `a backup with schema objects the app never creates is refused`() = runBlocking {
+        addKeeper()
+        val extras = listOf(
+            "CREATE TRIGGER wipe AFTER INSERT ON book BEGIN DELETE FROM tag; END",
+            "CREATE VIEW everything AS SELECT * FROM book",
+            "CREATE TABLE stowaway (payload TEXT)",
+            "CREATE INDEX extra ON book (title)",
+        )
+        // One real two-book library, so the book count always matches and only the schema differs.
+        val original = realDatabaseFile()
+        for (statement in extras) {
+            val databaseFile = original.copyTo(File(temp.newFolder(), "library.db"))
+            SQLiteDatabase.openDatabase(databaseFile.path, null, SQLiteDatabase.OPEN_READWRITE)
+                .use { it.execSQL(statement) }
+
+            val result = restorer().restore(craftedBackup(databaseFile))
+
+            assertEquals(statement, Try.Failure(AppError.CorruptBackup), result)
+            assertEquals(listOf("Keep Me"), titles(targetBooks))
+        }
+    }
+
+    @Test
     fun `a backup from a newer schema is refused and nothing changes`() = runBlocking {
         addKeeper()
         val newer = craftedBackup(realDatabaseFile(), schemaVersion = OtiumDatabase.VERSION + 1)

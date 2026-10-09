@@ -11,6 +11,7 @@ import app.otium.auth.ConsentResult
 import app.otium.auth.ConsentStep
 import app.otium.auth.DriveConsent
 import app.otium.data.backup.drive.AccessTokenProvider
+import app.otium.data.prefs.BackupStateStore
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.error.flatMap
@@ -48,7 +49,7 @@ private const val GOOGLE_ACCOUNT_TYPE = "com.google"
 @Singleton
 internal class GoogleAuthManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val dataStore: DataStore<Preferences>,
+    @BackupStateStore private val dataStore: DataStore<Preferences>,
 ) : AccessTokenProvider,
     DriveAuth,
     DriveConsent {

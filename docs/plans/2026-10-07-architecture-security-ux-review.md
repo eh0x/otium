@@ -87,16 +87,16 @@ Already right, and to keep as it is:
 | T7 | Testing | Screenshot tests for both themes and large fonts | M | Open |
 | S10 | Security | Pin `upload-artifact` by commit SHA (Medium) | S | Done |
 | S11 | Security | Accept only https cover URLs from the book services | S | Done |
-| S12 | Security | Filter dependency repositories by group | S | Open |
+| S12 | Security | Filter dependency repositories by group | S | Done |
 | S13 | Security | Keep coding agents away from local secrets | S | Done |
-| S14 | Security | Check a restored database before reading it | S | Open |
-| S15 | Security | Keep the account email apart from library settings | S | Open |
+| S14 | Security | Check a restored database before reading it | S | Done |
+| S15 | Security | Keep the account email apart from library settings | S | Done |
 | S16 | Security | Make debug-key release builds an explicit choice | S | Done |
 | S17 | Security | Pass workflow values to CI scripts through the environment | S | Done |
 | S18 | Security | Escape `BuildConfig` string values | S | Done |
 | S19 | Security | Lower the backup unpack limit | S | Done |
 | S20 | Security | Use a portable path in `.claude/settings.json` | S | Done |
-| S21 | Security | Register the theme catalog route only in debug builds | S | Open |
+| S21 | Security | Register the theme catalog route only in debug builds | S | Done |
 | S22 | Security | Scan dependencies for known vulnerabilities | S | Done |
 
 Sizes: S is under a day, M is one to three days, L is a phase of its own.
@@ -218,9 +218,9 @@ only, no pins) and `ManifestPolicyTest` reads it. `BackupZip` reads the manifest
 Dependency verification is deferred. Dependabot does not update `verification-metadata.xml`, so
 every Gradle bump it opens would fail CI until someone regenerates the file on that branch, and
 the file has to carry the Linux and Windows `aapt2` checksums by hand when it is generated on
-macOS. Until then the wrapper checksum (S9) and the OSV-Scanner gate (S22) carry the load, and
-S12's group filtering, still open, would narrow it further. Revisit when Dependabot supports the
-file, or with a workflow that regenerates it on Dependabot branches.
+macOS. Until then the wrapper checksum (S9), group filtering (S12) and the OSV-Scanner gate (S22)
+carry the load. Revisit when Dependabot supports the file, or with a workflow that regenerates it
+on Dependabot branches.
 
 ### S6. Store cover file names, not absolute paths
 
@@ -647,6 +647,11 @@ this; filtering keeps resolution honest on its own.
 Change: give `google()` in `dependencyResolutionManagement` the same `content { }` block as in
 `pluginManagement`, and use `exclusiveContent` where a group must come from one place only.
 
+Status (2026-10-09): done. AndroidX, `com.android.*`, `com.google.android.*`, ML Kit and Firebase
+come only from Google's repository (`exclusiveContent`); Google's repository is asked for no
+group outside `com.google.*`, and everything else comes from Maven Central. Every configuration
+of the three modules resolved with `--refresh-dependencies`.
+
 ### S13. Keep coding agents away from local secrets
 
 AgentShield reported that `.claude/settings.json` has no `permissions` block. Most of its advice
@@ -689,6 +694,14 @@ Change, before `readAll()`:
   any table, view, index or trigger the schema does not have.
 - Do it in the same change as S4, which touches this class.
 
+Status (2026-10-09): done. Before Room opens the unpacked file, `PRAGMA integrity_check` must
+answer `ok`. It runs read-write, because SQLite can only check an FTS4 index with write access,
+and the file is the restore's own copy. After Room has opened (and, later, migrated) it, the
+`sqlite_master` rows (type, name, table and SQL) must equal those of a fresh in-memory database
+of the current schema. That compares against what Room creates rather than the exported JSON,
+which is not in the APK. Any other result is `CorruptBackup`; a test adds a trigger, a view, a
+table and an index in turn.
+
 ### S15. Keep the account email apart from library settings
 
 `GoogleAuthManager` stores the Drive account email (`drive_account`, line 149) in the same
@@ -700,6 +713,13 @@ would travel too.
 Change: give the Drive and backup state its own DataStore file before U7, and exclude it from
 device transfer. Consider dropping the email: the screen already falls back to "Connected".
 
+Status (2026-10-09): done. `GoogleAuthManager` and `DataStoreBackupPreferences` use the
+`backup_state` DataStore file (qualifier `BackupStateStore`); the `library` file keeps only
+library settings. A DataStore migration moves the `drive_*` and `backup_*` keys out of `library`
+on first read, keeping any value already in the new file. The email stays, for display. Android
+backup and device transfer still exclude every file; U7 can now open transfer for `library`
+alone.
+
 ### S16. Make debug-key release builds an explicit choice
 
 `app/build.gradle.kts` (line 69) signs release builds with the debug key when
@@ -709,6 +729,12 @@ own build signed by the well-known debug key.
 
 Change: require an opt-in for the fallback, such as `-Potium.allowDebugSigning=true` passed by
 CI, and fail the build without it.
+
+Status (2026-10-09): done. It had been marked done in the table while the build still fell back
+with only a warning. Now, without `keystore.properties` and without the flag, release has no
+signing config and `packageRelease` and `bundleRelease` fail with a message naming both options.
+Lint, tests and the debug and benchmark builds are unaffected. CI and the README pass the flag.
+Checked in a copy of the repository without the key file.
 
 ### S17. Pass workflow values to CI scripts through the environment
 
@@ -746,6 +772,10 @@ macOS user name in a public repository, and on any other machine the hooks point
 is hidden in release (`DebugTools.isAvailable`) and the activity has no deep links, so the screen
 cannot be reached today. Registering the route only when debug tools are available keeps it that
 way once deep links or shortcuts arrive (U8, U9).
+
+Status (2026-10-09): already done in the code, but the table still said Open. `OtiumNavHost`
+registers `CatalogRoute` only when `BuildConfig.DEBUG` is true, so release and benchmark builds
+have no such destination.
 
 ### S22. Scan dependencies for known vulnerabilities
 

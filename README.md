@@ -147,8 +147,9 @@ openlibrary.contact=you@example.org
 | `openlibrary.contact` | No | Contact for Open Library's User-Agent; default is the project page |
 
 To sign release builds with your upload key, copy `keystore.properties.example` to
-`keystore.properties` (git-ignored) and fill it in. Without it, `assembleRelease` signs with the
-debug key, which is enough for testing the shrunk build but not for Play.
+`keystore.properties` (git-ignored) and fill it in. Without it, `assembleRelease` fails unless you
+pass `-Potium.allowDebugSigning=true`, which signs with the debug key. That is enough for testing
+the shrunk build, but not for Play or for sharing: anyone can sign an APK with the debug key.
 
 ### Enable the git hooks
 
@@ -178,7 +179,7 @@ build opens the theme catalog shown above.
 |---------|--------------|
 | `./gradlew assembleDebug` | Build the debug APK |
 | `./gradlew installDebug` | Install the debug build on a device or emulator |
-| `./gradlew assembleRelease` | Build the R8-shrunk release APK (debug-signed without `keystore.properties`) |
+| `./gradlew assembleRelease` | Build the R8-shrunk release APK (needs `keystore.properties`, or `-Potium.allowDebugSigning=true`) |
 | `./gradlew testDebugUnitTest :domain:test` | Run all unit tests |
 | `./gradlew :benchmark:connectedBenchmarkAndroidTest` | Run the scroll and search benchmarks on a device or emulator (see below) |
 | `./gradlew spotlessApply` | Fix formatting of Kotlin, Gradle, XML and text files |
@@ -191,7 +192,7 @@ build opens the theme catalog shown above.
 CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run locally:
 
 ```bash
-./gradlew spotlessCheck detekt checkDocs lintMarkdown scanSecrets scanDependencies lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
+./gradlew spotlessCheck detekt checkDocs lintMarkdown scanSecrets scanDependencies lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease -Potium.allowDebugSigning=true
 ```
 
 `.github/workflows/dependency-submission.yml` also sends the resolved Gradle dependency tree to

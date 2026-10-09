@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.map
  * are not part of a backup: restoring on a new phone starts with the defaults.
  */
 class DataStoreBackupPreferences @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
+    @BackupStateStore private val dataStore: DataStore<Preferences>,
 ) : BackupPreferences {
 
     override val settings: Flow<BackupSettings> = dataStore.data.map { preferences ->
