@@ -48,8 +48,8 @@ class ComponentsTest {
     @Test
     fun `status glyph shows a text label for every status`() {
         val labels = mapOf(
-            BookStatus.NOT_STARTED to "Not started",
-            BookStatus.IN_PROGRESS to "In progress",
+            BookStatus.NOT_STARTED to "Unread",
+            BookStatus.IN_PROGRESS to "Reading",
             BookStatus.READ to "Read",
         )
 

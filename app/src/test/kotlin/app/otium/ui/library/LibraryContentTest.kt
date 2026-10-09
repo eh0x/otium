@@ -6,13 +6,18 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.BookSummary
@@ -42,6 +47,7 @@ class LibraryContentTest {
         authors: String = "Some Author",
         current: Int = 0,
         total: Int = 300,
+        shelf: String? = null,
     ) = BookSummary(
         id = id,
         title = title,
@@ -51,9 +57,10 @@ class LibraryContentTest {
         currentPage = current,
         totalPages = total,
         status = DeriveStatus(current, total),
+        shelf = shelf,
     )
 
-    private val dune = summary(1, "Dune", "Frank Herbert", current = 120)
+    private val dune = summary(1, "Dune", "Frank Herbert", current = 120, shelf = "Fiction")
     private val emma = summary(2, "Emma", "Jane Austen", current = 300)
 
     private fun stateOf(
@@ -93,61 +100,115 @@ class LibraryContentTest {
             LibraryActions(onClearFilters = { cleared++ }),
         )
 
-        rule.onNodeWithText("No books match").assertIsDisplayed()
+        rule.onNodeWithText("No volumes match").assertIsDisplayed()
         rule.onNodeWithText("Clear filters").performClick()
 
         assertEquals(1, cleared)
     }
 
+    // --- Shelves ---
+
     @Test
-    fun `shelf view shows each book and opens it on tap`() {
+    fun `books in progress sit on the desk, then each book on its category shelf`() {
         var opened = -1L
         show(stateOf(), LibraryActions(onOpenBook = { opened = it }))
 
-        // Each book is one grouped item for screen readers; its parts live in the unmerged tree.
-        // Without a cover image the title shows twice: on the generated cover and as the caption.
-        rule.onAllNodesWithText("Dune", useUnmergedTree = true).assertCountEquals(2)
-        rule.onAllNodesWithText("Emma", useUnmergedTree = true).assertCountEquals(2)
-        rule.onNodeWithContentDescription("Dune by Frank Herbert").performClick()
+        rule.onNodeWithText("On the desk").assertIsDisplayed()
+        rule.onNodeWithText("1 open").assertIsDisplayed()
+        rule.onNodeWithText("Fiction").assertIsDisplayed()
+        // The shelves scroll vertically; each shelf's row scrolls sideways.
+        rule.onAllNodes(hasScrollToNodeAction()).onFirst().performScrollToNode(hasText("Unshelved"))
+        rule.onNodeWithText("Unshelved").assertIsDisplayed()
+        // Dune is on the desk and on its shelf.
+        rule.onAllNodesWithContentDescription("Dune by Frank Herbert").assertCountEquals(2)
+        rule.onAllNodesWithContentDescription("Dune by Frank Herbert").onFirst().performClick()
 
         assertEquals(1L, opened)
     }
 
     @Test
-    fun `list view shows author and status and opens the book on tap`() {
+    fun `the desk is hidden while searching`() {
+        show(stateOf { copy(query = "d") })
+
+        rule.onNodeWithText("On the desk").assertDoesNotExist()
+        rule.onNodeWithText("Fiction").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the desk is hidden while a status is filtered`() {
+        show(stateOf(books = listOf(dune)) { copy(status = BookStatus.IN_PROGRESS) })
+
+        rule.onNodeWithText("On the desk").assertDoesNotExist()
+    }
+
+    // --- Index ---
+
+    @Test
+    fun `the index files books under letters and shows status, page and place`() {
         var opened = -1L
         show(stateOf(mode = LibraryViewMode.LIST), LibraryActions(onOpenBook = { opened = it }))
 
+        rule.onNodeWithText("D").assertIsDisplayed()
+        rule.onNodeWithText("E").assertIsDisplayed()
         rule.onNodeWithText("Frank Herbert", useUnmergedTree = true).assertIsDisplayed()
-        // Each status shows twice: on the filter chip and on the book's row.
-        rule.onAllNodesWithText("In progress", useUnmergedTree = true).assertCountEquals(2)
-        rule.onAllNodesWithText("Read", useUnmergedTree = true).assertCountEquals(2)
+        rule.onNodeWithText("Reading · p. 120/300", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText("001", useUnmergedTree = true).assertIsDisplayed()
+        rule.onNodeWithText("002", useUnmergedTree = true).assertIsDisplayed()
         rule.onNodeWithContentDescription("Emma by Jane Austen").performClick()
 
         assertEquals(2L, opened)
     }
 
     @Test
-    fun `a book is announced with its status and page, not by color or bar alone`() {
+    fun `the index has no letters when sorted by anything but title`() {
+        show(stateOf(mode = LibraryViewMode.LIST) { copy(sort = SortOrder.AUTHOR) })
+
+        rule.onNodeWithText("D").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a book is announced with its status and page, not by color or rule alone`() {
         val unknownTotal = summary(3, "Ulysses", "James Joyce", current = 0, total = 0)
-        show(stateOf(books = listOf(dune, unknownTotal)))
+        show(stateOf(books = listOf(dune, unknownTotal), mode = LibraryViewMode.LIST))
 
         rule.onNodeWithContentDescription("Dune by Frank Herbert").assert(
             SemanticsMatcher.expectValue(
                 SemanticsProperties.StateDescription,
-                "In progress, page 120 of 300",
+                "Reading, page 120 of 300",
             ),
         )
         rule.onNodeWithContentDescription("Ulysses by James Joyce").assert(
-            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Not started"),
+            SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Unread"),
         )
     }
 
-    @Test
-    fun `the book count follows the visible books`() {
-        show(stateOf(books = listOf(dune)))
+    // --- Meta line ---
 
-        rule.onNodeWithText("1 book").assertIsDisplayed()
+    @Test
+    fun `the count follows the visible books`() {
+        show(stateOf(books = listOf(dune), mode = LibraryViewMode.LIST))
+
+        rule.onNodeWithText("1 volume").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the count names the status being shown`() {
+        show(
+            stateOf(books = listOf(dune), mode = LibraryViewMode.LIST) {
+                copy(status = BookStatus.IN_PROGRESS)
+            },
+        )
+
+        rule.onNodeWithText("1 volume · Reading").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the sort label opens the arrange sheet`() {
+        show(stateOf())
+
+        rule.onNodeWithText("By title").performClick()
+
+        rule.onNodeWithText("Arrange").assertIsDisplayed()
     }
 
     // --- Search ---
@@ -172,97 +233,71 @@ class LibraryContentTest {
         assertEquals("", typed)
     }
 
-    // --- Filters and sorting ---
+    // --- Status tabs, arrange and layout ---
 
     @Test
-    fun `status chips select a status and all clears it`() {
+    fun `status tabs select a status and all clears it`() {
         val picked = mutableListOf<BookStatus?>()
         show(stateOf(), LibraryActions(onStatusSelected = { picked += it }))
 
-        rule.onNodeWithText("In progress").performClick()
+        rule.onNodeWithText("Reading").performClick()
         rule.onNodeWithText("All").performClick()
 
         assertEquals(listOf(BookStatus.IN_PROGRESS, null), picked)
     }
 
     @Test
-    fun `the selected status chip is marked selected`() {
+    fun `the selected status tab is marked selected`() {
         show(stateOf { copy(status = BookStatus.READ) })
 
-        rule.onNodeWithText("Read").assertIsSelected()
+        rule.onNode(hasText("Read") and isSelectable()).assertIsSelected()
     }
 
     @Test
-    fun `the sort menu offers every order and reports the choice`() {
+    fun `the arrange sheet offers four orders and reports the choice`() {
         var sort: SortOrder? = null
         show(stateOf(), LibraryActions(onSortSelected = { sort = it }))
 
-        rule.onNodeWithText("Sort").performClick()
-        for (label in listOf("Title", "Author", "Recently added", "Recently updated", "Progress")) {
+        rule.onNodeWithContentDescription("Filter and sort").performClick()
+        for (label in listOf("Title", "Author", "Recently updated", "Progress")) {
             rule.onNodeWithText(label).assertIsDisplayed()
         }
+        rule.onNodeWithText("Recently added").assertDoesNotExist()
         rule.onNodeWithText("Author").performClick()
 
         assertEquals(SortOrder.AUTHOR, sort)
     }
 
     @Test
-    fun `the view button offers the list layout from the shelf`() {
+    fun `the arrange sheet marks the current sort`() {
+        show(stateOf { copy(sort = SortOrder.PROGRESS) })
+
+        rule.onNodeWithContentDescription("Filter and sort").performClick()
+
+        rule.onNodeWithText("Progress").assertIsSelected()
+    }
+
+    @Test
+    fun `the layout button switches from shelves to the index`() {
         var mode: LibraryViewMode? = null
         show(stateOf(), LibraryActions(onViewModeSelected = { mode = it }))
 
-        rule.onNodeWithText("List").performClick()
+        rule.onNodeWithContentDescription("Change layout").performClick()
 
         assertEquals(LibraryViewMode.LIST, mode)
     }
 
     @Test
-    fun `the view button offers the shelf layout from the list`() {
+    fun `the layout button switches from the index to shelves`() {
         var mode: LibraryViewMode? = null
         show(
             stateOf(mode = LibraryViewMode.LIST),
             LibraryActions(onViewModeSelected = { mode = it }),
         )
 
-        rule.onNodeWithText("Shelf").performClick()
+        rule.onNodeWithContentDescription("Change layout").performClick()
 
         assertEquals(LibraryViewMode.SHELF, mode)
-    }
-
-    @Test
-    fun `the filter sheet lists categories and tags and toggles them`() {
-        val categories = mutableListOf<String>()
-        val tags = mutableListOf<String>()
-        show(
-            stateOf {
-                copy(availableCategories = listOf("Fiction"), availableTags = listOf("favourite"))
-            },
-            LibraryActions(onCategoryToggled = { categories += it }, onTagToggled = { tags += it }),
-        )
-
-        rule.onNodeWithText("Filters").performClick()
-        rule.onNodeWithText("Fiction").performClick()
-        rule.onNodeWithText("favourite").performClick()
-
-        assertEquals(listOf("Fiction"), categories)
-        assertEquals(listOf("favourite"), tags)
-    }
-
-    @Test
-    fun `the filters button counts the selected categories and tags`() {
-        show(stateOf { copy(categories = setOf("Fiction"), tags = setOf("lent", "favourite")) })
-
-        rule.onNodeWithText("Filters (3)").assertIsDisplayed()
-    }
-
-    @Test
-    fun `the filter sheet explains itself when there are no labels yet`() {
-        show(stateOf())
-
-        rule.onNodeWithText("Filters").performClick()
-
-        rule.onNodeWithText("Categories and tags appear here once your books have them.")
-            .assertIsDisplayed()
     }
 
     // --- Developer tools ---

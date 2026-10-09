@@ -61,7 +61,7 @@ class DetailContentTest {
 
         rule.onNodeWithText("Dune").assertIsDisplayed()
         rule.onNodeWithText("Frank Herbert").assertIsDisplayed()
-        rule.onNodeWithText("In progress").assertIsDisplayed()
+        rule.onNodeWithText("Reading").assertIsDisplayed()
         rule.onNodeWithText("Page 100 of 400").assertIsDisplayed()
         rule.onNodeWithText("Science fiction").assertIsDisplayed()
         rule.onNodeWithText("favourite").assertIsDisplayed()

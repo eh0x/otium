@@ -3,8 +3,8 @@
     <string name="app_name">Otium</string>
 
     <!-- Status and progress -->
-    <string name="status_not_started">Not started</string>
-    <string name="status_in_progress">In progress</string>
+    <string name="status_not_started">Unread</string>
+    <string name="status_in_progress">Reading</string>
     <string name="status_read">Read</string>
     <string name="progress_percent">%1$d%%</string>
     <string name="progress_page_of">Page %1$d of %2$d</string>
@@ -24,38 +24,52 @@
 
     <!-- Library -->
     <string name="library_title">Library</string>
-    <string name="library_search_hint">Search title or author</string>
+    <string name="library_subtitle">Leisure for the learned</string>
+    <string name="library_search_label">Search</string>
+    <string name="library_search_hint">Search the catalogue</string>
     <string name="library_search_clear">Clear search</string>
-    <string name="library_sort">Sort</string>
-    <string name="library_filters">Filters</string>
-    <string name="library_filters_active">Filters (%1$d)</string>
-    <string name="library_view_shelf">Shelf</string>
-    <string name="library_view_list">List</string>
+    <string name="library_change_layout">Change layout</string>
+    <string name="library_arrange">Filter and sort</string>
     <string name="library_more_options">More options</string>
     <string name="library_debug_seed">Seed 5,000 test books</string>
     <string name="library_debug_catalog">Theme catalog</string>
     <plurals name="library_book_count">
-        <item quantity="one">%1$d book</item>
-        <item quantity="other">%1$d books</item>
+        <item quantity="one">%1$d volume</item>
+        <item quantity="other">%1$d volumes</item>
     </plurals>
+    <!-- Two parts joined by a middle dot, as in "3 volumes · Reading" or "Reading · p. 12/300". -->
+    <string name="dot_joined">%1$s · %2$s</string>
+    <string name="library_desk">On the desk</string>
+    <plurals name="library_desk_count">
+        <item quantity="one">%1$d open</item>
+        <item quantity="other">%1$d open</item>
+    </plurals>
+    <string name="library_unshelved">Unshelved</string>
+    <!-- A book's place in the list, as in a library accession number: "001". -->
+    <string name="library_accession">%1$03d</string>
+    <string name="library_page_short">p. %1$d/%2$d</string>
     <string name="library_empty_title">Your shelves are empty</string>
     <string name="library_empty_message">Add your first book to start your library.</string>
     <string name="library_empty_action">Add a book</string>
-    <string name="library_no_results_title">No books match</string>
-    <string name="library_no_results_message">Try a different search, or clear the filters.</string>
+    <string name="library_no_results_title">No volumes match</string>
+    <string name="library_no_results_message">Try different words, or clear the filters.</string>
 
     <string name="sort_title">Title</string>
     <string name="sort_author">Author</string>
-    <string name="sort_recently_added">Recently added</string>
     <string name="sort_last_updated">Recently updated</string>
     <string name="sort_progress">Progress</string>
+    <string name="sort_by_title">By title</string>
+    <string name="sort_by_author">By author</string>
+    <string name="sort_by_recently_added">By recently added</string>
+    <string name="sort_by_last_updated">By recently updated</string>
+    <string name="sort_by_progress">By progress</string>
 
     <string name="filter_status_all">All</string>
     <string name="filter_clear">Clear filters</string>
-    <string name="filter_categories">Categories</string>
-    <string name="filter_tags">Tags</string>
-    <string name="filter_none_available">Categories and tags appear here once your books have them.</string>
     <string name="filter_done">Done</string>
+    <string name="arrange_title">Arrange</string>
+    <string name="arrange_status">Status</string>
+    <string name="arrange_sort">Sort by</string>
 
     <!-- Book detail -->
     <string name="detail_back">Back</string>

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -43,14 +42,13 @@ private val DIALOG_MAX_WIDTH = 400.dp
 fun OtiumSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MaterialTheme.otiumColors
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier.border(1.dp, colors.divider, SheetShape),
-        sheetState = sheetState,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = SheetShape,
         containerColor = colors.sheet,
         contentColor = MaterialTheme.colorScheme.onSurface,

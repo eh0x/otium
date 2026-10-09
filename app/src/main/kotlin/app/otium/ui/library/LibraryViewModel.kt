@@ -33,7 +33,7 @@ private const val QUERY_DEBOUNCE_MILLIS = 200L
 private const val STOP_TIMEOUT_MILLIS = 5_000L
 
 /**
- * State holder for the library screen. It owns what the user has chosen (search text, filters,
+ * State holder for the library screen. It owns what the user has chosen (search text, status,
  * sort) and turns it into one [LibraryFilter] for the database. It holds no business rules:
  * filtering and ordering happen in the query, and reads that need no rule go straight to the
  * repository.
@@ -49,8 +49,6 @@ class LibraryViewModel @Inject constructor(
     private data class Controls(
         val query: String = "",
         val status: BookStatus? = null,
-        val categories: Set<String> = emptySet(),
-        val tags: Set<String> = emptySet(),
         val sort: SortOrder = SortOrder.TITLE,
     )
 
@@ -67,8 +65,6 @@ class LibraryViewModel @Inject constructor(
         LibraryFilter(
             query = debouncedQuery,
             status = current.status,
-            categories = current.categories,
-            tags = current.tags,
             sort = current.sort,
         )
     }.distinctUntilChanged()
@@ -80,28 +76,18 @@ class LibraryViewModel @Inject constructor(
         .map<List<BookSummary>, List<BookSummary>?> { it }
         .onStart { emit(null) }
 
-    private val filterOptions = combine(
-        repository.observeCategories(),
-        repository.observeTags(),
-    ) { categories, tags -> categories to tags }
-
     val uiState: StateFlow<LibraryUiState> = combine(
         controls,
         books,
         preferences.viewMode,
         repository.observeCount(),
-        filterOptions,
-    ) { current, loaded, viewMode, count, (categories, tags) ->
+    ) { current, loaded, viewMode, count ->
         LibraryUiState(
             query = current.query,
             status = current.status,
-            categories = current.categories,
-            tags = current.tags,
             sort = current.sort,
             viewMode = viewMode,
             books = loaded.orEmpty(),
-            availableCategories = categories,
-            availableTags = tags,
             totalBooks = count,
             isLoading = loaded == null,
             debugToolsAvailable = debugTools.isAvailable,
@@ -116,14 +102,9 @@ class LibraryViewModel @Inject constructor(
 
     fun onStatusSelected(status: BookStatus?) = controls.update { it.copy(status = status) }
 
-    fun onCategoryToggled(name: String) =
-        controls.update { it.copy(categories = it.categories.toggled(name)) }
-
-    fun onTagToggled(name: String) = controls.update { it.copy(tags = it.tags.toggled(name)) }
-
     fun onSortSelected(sort: SortOrder) = controls.update { it.copy(sort = sort) }
 
-    /** Clears search and filters. Sort order and view mode are presentation, so they stay. */
+    /** Clears search and the status filter. Sort order and view mode are presentation, so they stay. */
     fun onClearFilters() = controls.update { Controls(sort = it.sort) }
 
     fun onViewModeSelected(mode: LibraryViewMode) {
@@ -133,7 +114,4 @@ class LibraryViewModel @Inject constructor(
     fun onSeedDebugData() {
         viewModelScope.launch { debugTools.seedLibrary() }
     }
-
-    private fun Set<String>.toggled(name: String): Set<String> =
-        if (name in this) this - name else this + name
 }

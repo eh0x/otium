@@ -143,41 +143,18 @@ class LibraryViewModelTest {
     // --- Filters and sorting ---
 
     @Test
-    fun `status categories tags and sort combine into one filter`() = runTest {
+    fun `status and sort combine into one filter`() = runTest {
         val vm = viewModel()
         screenOpen(vm)
 
         vm.onStatusSelected(BookStatus.READ)
-        vm.onCategoryToggled("Fiction")
-        vm.onTagToggled("favourite")
         vm.onSortSelected(SortOrder.PROGRESS)
         advanceUntilIdle()
 
         assertEquals(
-            LibraryFilter(
-                status = BookStatus.READ,
-                categories = setOf("Fiction"),
-                tags = setOf("favourite"),
-                sort = SortOrder.PROGRESS,
-            ),
+            LibraryFilter(status = BookStatus.READ, sort = SortOrder.PROGRESS),
             repo.lastFilter,
         )
-    }
-
-    @Test
-    fun `selecting a category or tag again removes it`() = runTest {
-        val vm = viewModel()
-        screenOpen(vm)
-
-        vm.onCategoryToggled("Fiction")
-        vm.onCategoryToggled("History")
-        vm.onCategoryToggled("Fiction")
-        vm.onTagToggled("lent")
-        vm.onTagToggled("lent")
-        advanceUntilIdle()
-
-        assertEquals(setOf("History"), vm.uiState.value.categories)
-        assertTrue(vm.uiState.value.tags.isEmpty())
     }
 
     @Test
@@ -195,13 +172,11 @@ class LibraryViewModelTest {
     }
 
     @Test
-    fun `clear filters resets search and filters but keeps sort and view`() = runTest {
+    fun `clear filters resets search and status but keeps sort and view`() = runTest {
         val vm = viewModel()
         screenOpen(vm)
         vm.onQueryChange("dune")
         vm.onStatusSelected(BookStatus.READ)
-        vm.onCategoryToggled("Fiction")
-        vm.onTagToggled("lent")
         vm.onSortSelected(SortOrder.AUTHOR)
         vm.onViewModeSelected(LibraryViewMode.LIST)
         advanceUntilIdle()
@@ -216,21 +191,6 @@ class LibraryViewModelTest {
         assertEquals(SortOrder.AUTHOR, state.sort)
         assertEquals(LibraryViewMode.LIST, state.viewMode)
         assertEquals(LibraryFilter(sort = SortOrder.AUTHOR), repo.lastFilter)
-    }
-
-    @Test
-    fun `filter options come from the books in the library`() = runTest {
-        repo.seed(
-            book(title = "A", categories = listOf("Fiction", "Classics"), tags = listOf("lent")),
-        )
-        repo.seed(book(title = "B", categories = listOf("Fiction"), tags = listOf("favourite")))
-        val vm = viewModel()
-        screenOpen(vm)
-
-        advanceUntilIdle()
-
-        assertEquals(listOf("Classics", "Fiction"), vm.uiState.value.availableCategories)
-        assertEquals(listOf("favourite", "lent"), vm.uiState.value.availableTags)
     }
 
     // --- View mode ---

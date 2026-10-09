@@ -14,8 +14,6 @@ import app.otium.domain.model.SortOrder
 data class LibraryActions(
     val onQueryChange: (String) -> Unit = {},
     val onStatusSelected: (BookStatus?) -> Unit = {},
-    val onCategoryToggled: (String) -> Unit = {},
-    val onTagToggled: (String) -> Unit = {},
     val onSortSelected: (SortOrder) -> Unit = {},
     val onClearFilters: () -> Unit = {},
     val onViewModeSelected: (LibraryViewMode) -> Unit = {},
