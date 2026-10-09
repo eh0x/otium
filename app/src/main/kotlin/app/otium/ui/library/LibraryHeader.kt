@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -150,7 +151,8 @@ private fun HeaderIcon(icon: Int, description: String, tint: Color, onClick: () 
 /** All · Unread · Reading · Read. The active tab is ink with an accent underline. */
 @Composable
 internal fun StatusTabs(selected: BookStatus?, onSelected: (BookStatus?) -> Unit) {
-    Row(
+    // Whole tabs wrap to a second line at large text sizes; a label never breaks.
+    FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 20.dp, top = 4.dp, end = 20.dp),
@@ -172,6 +174,7 @@ internal fun StatusTabs(selected: BookStatus?, onSelected: (BookStatus?) -> Unit
                 Text(
                     text = stringResource(status?.labelRes() ?: R.string.filter_status_all),
                     style = MaterialTheme.typography.labelLarge,
+                    softWrap = false,
                     color = if (active) {
                         MaterialTheme.colorScheme.onBackground
                     } else {

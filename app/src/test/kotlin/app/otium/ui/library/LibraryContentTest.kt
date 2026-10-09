@@ -4,21 +4,23 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.unit.dp
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryViewMode
@@ -298,6 +300,22 @@ class LibraryContentTest {
         rule.onNodeWithContentDescription("Change layout").performClick()
 
         assertEquals(LibraryViewMode.SHELF, mode)
+    }
+
+    // --- Touch targets ---
+
+    @Test
+    fun `header controls and status tabs are at least 44 dp`() {
+        show(stateOf())
+
+        listOf("Change layout", "Filter and sort").forEach {
+            rule.onNodeWithContentDescription(
+                it,
+            ).assertHeightIsAtLeast(44.dp).assertWidthIsAtLeast(44.dp)
+        }
+        listOf("All", "Unread", "Reading", "Read").forEach {
+            rule.onNode(hasText(it) and isSelectable()).assertHeightIsAtLeast(44.dp)
+        }
     }
 
     // --- Developer tools ---

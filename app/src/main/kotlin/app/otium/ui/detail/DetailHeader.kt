@@ -38,6 +38,7 @@ import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.PlatedCover
 import app.otium.ui.components.StatusGlyph
 import app.otium.ui.components.hairlineBottom
+import app.otium.ui.components.isLargeFontScale
 import app.otium.ui.components.labelRes
 import app.otium.ui.theme.TABULAR_FIGURES
 import app.otium.ui.theme.otiumColors
@@ -46,48 +47,69 @@ private val PLATE_WIDTH = 122.dp
 private const val DESCRIPTION_COLLAPSED_LINES = 4
 private const val DESCRIPTION_LINE_HEIGHT = 1.62f
 
-/** The plated cover beside the status, title, author and "Collection · year". */
+/**
+ * The plated cover beside the status, title, author and "Collection · year". With very large
+ * text the words go below the cover instead, so the title gets the full width.
+ */
 @Composable
 internal fun DetailHeader(book: Book) {
     val authors = book.authors.joinToString(", ")
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
+    val cover = @Composable {
         PlatedCover(
             title = book.title,
             authors = authors,
             painter = rememberCoverPainter(book.coverPath),
             modifier = Modifier.width(PLATE_WIDTH),
         )
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            StatusGlyph(
-                status = book.status,
-                label = stringResource(book.status.labelRes()).uppercase(),
-                labelStyle = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.16.em),
-                labelColor = MaterialTheme.colorScheme.primary,
-            )
+    }
+    if (isLargeFontScale()) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            cover()
+            HeaderText(book, authors)
+        }
+    } else {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            cover()
+            HeaderText(book, authors, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun HeaderText(book: Book, authors: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        StatusGlyph(
+            status = book.status,
+            label = stringResource(book.status.labelRes()).uppercase(),
+            labelStyle = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.16.em),
+            labelColor = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            text = book.title,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                lineBreak = LineBreak.Heading,
+                hyphens = Hyphens.Auto,
+            ),
+            modifier = Modifier.semantics { heading() },
+        )
+        book.subtitle?.takeIf { it.isNotBlank() }?.let {
+            Text(text = it, style = MaterialTheme.typography.bodyMedium)
+        }
+        if (authors.isNotBlank()) {
             Text(
-                text = book.title,
-                style = MaterialTheme.typography.headlineMedium.copy(lineBreak = LineBreak.Heading),
-                modifier = Modifier.semantics { heading() },
+                text = authors,
+                style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
             )
-            book.subtitle?.takeIf { it.isNotBlank() }?.let {
-                Text(text = it, style = MaterialTheme.typography.bodyMedium)
-            }
-            if (authors.isNotBlank()) {
-                Text(
-                    text = authors,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
-                )
-            }
-            headerMeta(book)?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
-                    color = MaterialTheme.otiumColors.muted,
-                )
-            }
+        }
+        headerMeta(book)?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                color = MaterialTheme.otiumColors.muted,
+            )
         }
     }
 }

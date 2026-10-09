@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +48,7 @@ import app.otium.ui.components.BookCover
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumProgressBar
+import app.otium.ui.components.OtiumSnackbarHost
 import app.otium.ui.components.hairlineTop
 import app.otium.ui.theme.OtiumTheme
 import app.otium.ui.theme.PaperBackground
@@ -105,7 +106,7 @@ fun ReadingContent(state: ReadingUiState, actions: ReadingActions, modifier: Mod
                 }
             }
         }
-        SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
+        OtiumSnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
     }
 }
 
@@ -172,29 +173,38 @@ private fun OpenBook(book: BookSummary, actions: ReadingActions) {
                 progress = book.currentPage.toFloat() / book.totalPages,
                 modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OtiumButton(
-                    text = stringResource(R.string.reading_add_pages),
-                    onClick = { actions.onAddPages(book) },
-                    style = OtiumButtonStyle.Secondary,
-                    compact = true,
-                    contentDescription = stringResource(
-                        R.string.reading_add_pages_description,
-                        book.title,
-                    ),
-                )
-                OtiumButton(
-                    text = stringResource(R.string.reading_open),
-                    onClick = { actions.onOpenBook(book.id) },
-                    style = OtiumButtonStyle.Ghost,
-                    compact = true,
-                    contentDescription = stringResource(
-                        R.string.reading_open_description,
-                        book.title,
-                    ),
-                )
-            }
+            OpenBookActions(book, actions)
         }
+    }
+}
+
+/** "+10 pages" and "Open"; they wrap as whole buttons when text is large. */
+@Composable
+private fun OpenBookActions(book: BookSummary, actions: ReadingActions) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OtiumButton(
+            text = stringResource(R.string.reading_add_pages),
+            onClick = { actions.onAddPages(book) },
+            style = OtiumButtonStyle.Secondary,
+            compact = true,
+            contentDescription = stringResource(
+                R.string.reading_add_pages_description,
+                book.title,
+            ),
+        )
+        OtiumButton(
+            text = stringResource(R.string.reading_open),
+            onClick = { actions.onOpenBook(book.id) },
+            style = OtiumButtonStyle.Ghost,
+            compact = true,
+            contentDescription = stringResource(
+                R.string.reading_open_description,
+                book.title,
+            ),
+        )
     }
 }
 

@@ -1,12 +1,15 @@
 package app.otium.ui.navigation
 
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.dp
 import app.otium.ui.theme.OtiumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -54,5 +57,15 @@ class OtiumBottomBarTest {
         rule.onNodeWithContentDescription("Add a book").assertIsDisplayed().performClick()
 
         assertEquals(1, adds)
+    }
+
+    @Test
+    fun `tabs are at least 56 dp tall and the add action 54 dp wide`() {
+        show(TopLevelDestination.LIBRARY)
+
+        listOf("Library", "Reading", "Settings").forEach {
+            rule.onNodeWithText(it).assertHeightIsAtLeast(56.dp)
+        }
+        rule.onNodeWithContentDescription("Add a book").assertWidthIsAtLeast(54.dp)
     }
 }

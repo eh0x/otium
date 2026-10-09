@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -87,7 +88,10 @@ fun ShelfBook(book: BookSummary, onOpen: () -> Unit, modifier: Modifier = Modifi
         )
         Text(
             text = book.title,
-            style = MaterialTheme.typography.titleSmall.copy(lineBreak = LineBreak.Heading),
+            style = MaterialTheme.typography.titleSmall.copy(
+                lineBreak = LineBreak.Heading,
+                hyphens = Hyphens.Auto,
+            ),
             maxLines = SHELF_TITLE_LINES,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 8.dp),

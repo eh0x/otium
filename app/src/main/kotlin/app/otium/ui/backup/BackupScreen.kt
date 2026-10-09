@@ -3,11 +3,9 @@ package app.otium.ui.backup
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
-import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -15,37 +13,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -57,24 +39,17 @@ import app.otium.R
 import app.otium.auth.ConsentResult
 import app.otium.domain.error.AppError
 import app.otium.domain.model.BackupFrequency
-import app.otium.domain.model.BackupInfo
 import app.otium.domain.model.BackupSlot
-import app.otium.domain.model.DriveAuthState
 import app.otium.domain.model.RestorePreview
 import app.otium.ui.common.messageRes
-import app.otium.ui.components.Hairline
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumChip
 import app.otium.ui.components.OtiumDialog
-import app.otium.ui.components.OtiumIndeterminateRule
-import app.otium.ui.components.OtiumTopBar
+import app.otium.ui.components.OtiumSnackbarHost
 import app.otium.ui.components.hairlineTop
 import app.otium.ui.theme.PaperBackground
-import app.otium.ui.theme.TABULAR_FIGURES
 import app.otium.ui.theme.otiumColors
-import java.text.DateFormat
-import java.util.Date
 
 /**
  * Connects the backup screen to its ViewModel and to the two system screens it needs: Google's
@@ -185,7 +160,7 @@ fun BackupContent(
             Section { RestoreSection(state, actions) }
             Section { AutoBackupSection(state, actions) }
         }
-        SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
+        OtiumSnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
         state.restorePreview?.let { RestoreDialog(it, actions) }
         EncryptionDialogs(state, encryption, actions, encryptionActions)
     }

@@ -18,7 +18,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +40,7 @@ import app.otium.ui.common.messageRes
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumDialog
+import app.otium.ui.components.OtiumSnackbarHost
 import app.otium.ui.components.hairlineTop
 import app.otium.ui.theme.PaperBackground
 import app.otium.ui.theme.otiumColors
@@ -96,7 +96,7 @@ fun DetailContent(state: DetailUiState, actions: DetailActions, modifier: Modifi
                 )
             }
         }
-        SnackbarHost(
+        OtiumSnackbarHost(
             hostState = snackbar,
             modifier = Modifier
                 .align(Alignment.BottomCenter)

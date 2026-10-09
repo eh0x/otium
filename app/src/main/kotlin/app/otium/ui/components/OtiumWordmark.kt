@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -63,7 +64,10 @@ fun OtiumMasthead(modifier: Modifier = Modifier) {
         OtiumWordmark()
         Text(
             text = stringResource(R.string.library_subtitle).uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.2.em),
+            style = MaterialTheme.typography.labelSmall.copy(
+                letterSpacing = 0.2.em,
+                textAlign = TextAlign.Center,
+            ),
             color = MaterialTheme.otiumColors.muted,
         )
     }

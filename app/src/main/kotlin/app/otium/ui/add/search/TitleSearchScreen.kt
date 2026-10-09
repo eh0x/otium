@@ -22,7 +22,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -49,6 +48,7 @@ import app.otium.domain.model.BookCandidate
 import app.otium.ui.add.AddDestination
 import app.otium.ui.common.messageRes
 import app.otium.ui.components.BookCover
+import app.otium.ui.components.OtiumSnackbarHost
 import app.otium.ui.components.OtiumTopBar
 import app.otium.ui.theme.PaperBackground
 import coil3.compose.rememberAsyncImagePainter
@@ -102,7 +102,7 @@ fun TitleSearchContent(
     PaperBackground(modifier = modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.Transparent,
-            snackbarHost = { SnackbarHost(snackbar) },
+            snackbarHost = { OtiumSnackbarHost(snackbar) },
             topBar = {
                 OtiumTopBar(
                     title = stringResource(R.string.search_title),

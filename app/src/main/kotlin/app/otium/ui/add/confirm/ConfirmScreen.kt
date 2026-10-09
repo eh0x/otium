@@ -12,18 +12,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +25,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -46,7 +38,7 @@ import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumDialog
 import app.otium.ui.components.OtiumIndeterminateRule
-import app.otium.ui.components.OtiumTopBar
+import app.otium.ui.components.OtiumSnackbarHost
 import app.otium.ui.components.hairlineTop
 import app.otium.ui.theme.PaperBackground
 import app.otium.ui.theme.otiumColors
@@ -123,7 +115,7 @@ fun ConfirmContent(state: ConfirmUiState, actions: ConfirmActions, modifier: Mod
             }
             if (!state.notFound) ConfirmFooter(state, actions)
         }
-        SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
+        OtiumSnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
         state.duplicateOf?.let { existingId ->
             DuplicateDialog(
                 onOpen = { actions.onOpenBook(existingId) },
