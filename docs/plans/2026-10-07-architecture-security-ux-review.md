@@ -53,8 +53,8 @@ Already right, and to keep as it is:
 |----|------|--------|------|--------|
 | S1 | Security | Build and test the release variant in CI | M | CI and smoke test done; scan, backup, restore by hand open |
 | S2 | Security | Validate the Drive upload session URL | S | Done |
-| S3 | Security | Restrict the Google Books API key | S | Documented; Cloud console steps open |
-| S4 | Security | Encrypted backups, then app lock; defer SQLCipher | L | Open |
+| S3 | Security | Restrict the Google Books API key | S | Documented; Cloud console steps Done |
+| S4 | Security | Encrypted backups, then app lock; defer SQLCipher | L | Encrypted backups done; app lock open |
 | S5 | Security | Network security config, manifest cap, dependency verification | S | Open |
 | S6 | Security | Store cover file names, not absolute paths | M | Open |
 | A1 | Architecture | Keep the draft out of `ConfirmRoute` | M | Open |
@@ -185,6 +185,17 @@ Design points for encrypted backups:
 
 Revisit SQLCipher only if the threat model changes, for example when private notes arrive in
 roadmap Phase 3.
+
+Status (2026-10-09): encrypted backups are done, as designed above, with one change. Instead of
+raising `BackupManifest.FORMAT`, the whole zip is wrapped in an encrypted envelope with its own
+versioned header (`OTIUMENC`), so the zip and manifest inside are unchanged and plain backups
+still restore. Encryption is Tink's streaming AES-256-GCM (HKDF-SHA256 per file, 256 KiB
+segments, the header bound as associated data); the key comes from Argon2id at 64 MiB and three
+passes, and a header asking for settings outside a fixed range is treated as damaged. The key is
+wrapped by an Android Keystore key and kept in its own DataStore file, apart from the library
+settings (see S15). A lost Keystore key stops backups with a request for the passphrase; it never
+falls back to an unencrypted upload. Restoring an encrypted backup on a new phone keeps
+encryption on with the same key. The app lock is still open.
 
 ### S5. Small hardening items
 
@@ -555,8 +566,9 @@ protection, which is free for public repositories).
 
 - **S3:** the API restriction and quota cap live in the Cloud console and cannot be checked from
   the repository. Confirm once, and again whenever the key is rotated.
-- **S4:** still open and the main privacy gap. The `appDataFolder` is hidden from the Drive UI
-  and other apps, but anyone with the Google account, and Google itself, can read the zip.
+- **S4:** encrypted backups done on 2026-10-09 (see S4). With a passphrase set, Drive holds only
+  ciphertext. Encryption is opt-in, so a user who never sets a passphrase still has a readable
+  zip in Drive. The app lock is still open.
 - **S5:** all parts still open. At target SDK 37 cleartext is already off and
   `ManifestPolicyTest` checks it, so the network security config is documentation of intent.
 - **S6, S7, S8, S9:** still open as described. S8 confirmed: nothing deletes `cache/camera/`.

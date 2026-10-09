@@ -9,12 +9,17 @@ import app.otium.domain.model.BackupSlot
 import app.otium.domain.model.RemoteBackup
 import app.otium.domain.model.RestorePreview
 import app.otium.domain.port.BackupArchiver
+import app.otium.domain.port.BackupEncryption
 import app.otium.domain.port.DriveBackupClient
+import java.io.File
 
 /**
- * The first half of a restore: finds the backup in Drive, downloads it and checks it. Nothing in
- * the library changes. The result tells the user what they are about to restore, and [RestoreBackup]
- * applies it once they confirm.
+ * The first half of a restore: finds the backup in Drive, downloads it, decrypts it when it is
+ * encrypted, and checks it. Nothing in the library changes. The result tells the user what they
+ * are about to restore, and [RestoreBackup] applies it once they confirm.
+ *
+ * An encrypted backup whose key this device does not hold needs its passphrase. Without one the
+ * call fails with `PassphraseRequired` before anything is downloaded, and the user is asked.
  *
  * A backup written by a newer schema than [appSchemaVersion] is refused, first from what Drive
  * recorded, so it is not even downloaded, and again from the downloaded file itself. Older
@@ -23,28 +28,56 @@ import app.otium.domain.port.DriveBackupClient
 class PrepareRestore(
     private val drive: DriveBackupClient,
     private val archiver: BackupArchiver,
+    private val encryption: BackupEncryption,
     private val appSchemaVersion: Int,
 ) {
-    suspend operator fun invoke(slot: BackupSlot = BackupSlot.LATEST): Try<RestorePreview> =
-        drive.list()
-            .flatMap { backups -> backups.inSlot(slot) }
-            .flatMap { remote -> checkSchema(remote.info) }
-            .flatMap { download(slot) }
+    suspend operator fun invoke(
+        slot: BackupSlot = BackupSlot.LATEST,
+        passphrase: CharArray? = null,
+    ): Try<RestorePreview> = drive.list()
+        .flatMap { backups -> backups.inSlot(slot) }
+        .flatMap { remote -> checkSchema(remote.info).map { remote.info } }
+        .flatMap { info -> checkKey(info, passphrase).map { info } }
+        .flatMap { info -> download(slot, info, passphrase) }
 
-    private suspend fun download(slot: BackupSlot): Try<RestorePreview> =
-        drive.download(slot).flatMap { file ->
-            val checked = archiver.inspect(file).flatMap { info ->
-                checkSchema(info).map { info }
-            }
-            when (checked) {
-                is Try.Success -> Try.Success(RestorePreview(slot, checked.value, file))
+    private suspend fun checkKey(info: BackupInfo, passphrase: CharArray?): Try<Unit> {
+        val keyId = info.keyId
+        return if (keyId != null && passphrase == null && !encryption.canOpen(keyId)) {
+            Try.Failure(AppError.PassphraseRequired)
+        } else {
+            Try.Success(Unit)
+        }
+    }
 
-                is Try.Failure -> {
-                    file.delete()
-                    checked
-                }
+    private suspend fun download(
+        slot: BackupSlot,
+        remote: BackupInfo,
+        passphrase: CharArray?,
+    ): Try<RestorePreview> = drive.download(slot)
+        .flatMap { file ->
+            if (remote.isEncrypted) decrypt(file, passphrase) else Try.Success(file)
+        }
+        .flatMap { file -> preview(slot, file, remote.keyId) }
+
+    /** The plain backup inside [file]; the encrypted download is deleted either way. */
+    private suspend fun decrypt(file: File, passphrase: CharArray?): Try<File> = try {
+        encryption.decrypt(file, passphrase)
+    } finally {
+        file.delete()
+    }
+
+    private suspend fun preview(slot: BackupSlot, file: File, keyId: String?): Try<RestorePreview> {
+        val checked = archiver.inspect(file).flatMap { info -> checkSchema(info).map { info } }
+        return when (checked) {
+            is Try.Success ->
+                Try.Success(RestorePreview(slot, checked.value.copy(keyId = keyId), file))
+
+            is Try.Failure -> {
+                file.delete()
+                checked
             }
         }
+    }
 
     private fun checkSchema(info: BackupInfo): Try<Unit> =
         if (info.schemaVersion > appSchemaVersion) {

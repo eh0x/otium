@@ -60,6 +60,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D20 | Typed `Try<T>` / `AppError` returned from repositories and use cases | Exceptions; `kotlin.Result` | The failure cases in 4.3 and 4.4 (offline, 429, duplicate, expired auth, incompatible backup) are expected outcomes the UI handles differently. A sealed type makes each one explicit and testable |
 | D21 | Use cases only where logic exists; ViewModels call repositories directly for plain reads | A use case per repository call | Avoids pass-through classes while keeping business rules out of ViewModels |
 | D22 | Domain interfaces for scanner, Drive client, cover store, backup archiver and restorer, and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
+| D23 | Optional passphrase encryption of the backup file (Argon2id, then Tink streaming AES-256-GCM), key kept wrapped by the Android Keystore for scheduled runs | SQLCipher for the database; no encryption; a key held only in the Keystore | The backup is the only copy that leaves the phone. A Keystore-only key would be lost with the phone; a passphrase lets a new phone restore (review S4) |
 
 ## 4. Final Design
 
@@ -290,6 +291,15 @@ Drive backup:
   as the latest file and keep the one it replaces as the previous copy. The file lands under a
   temporary name and is renamed in only once its checksum matches, so a failed upload never
   touches an earlier backup. An empty library is never uploaded.
+- Encryption (optional, D23): with a passphrase set, the zip is encrypted before upload and only
+  the encrypted file leaves the phone. The file starts with a plain header (`OTIUMENC`, format
+  version, Argon2id settings, salt, key id) that is bound to the data as associated data. The key
+  is derived with Argon2id (64 MiB, 3 passes) and stored wrapped by an Android Keystore key in its
+  own DataStore file (`backup_key`), never with the passphrase, so scheduled backups run without
+  the user. If that key can no longer be unwrapped, backups stop with `PassphraseRequired` rather
+  than upload in the clear. Drive records the key id, so a restore on a phone without the key
+  asks for the passphrase before downloading. Plain backups made before stay readable; the zip
+  inside and its manifest format are unchanged.
 - Restore: two steps. `PrepareRestore` downloads, verifies the checksum and the manifest, and
   refuses a schema newer than the app's (before and after the download). The confirm dialog
   ("replaces current library") shows what will be restored. `RestoreBackup` then imports the

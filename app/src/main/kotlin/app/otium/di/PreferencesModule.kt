@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
+import app.otium.data.backup.crypto.BackupKeyStore
 import app.otium.data.prefs.DataStoreBackupPreferences
 import app.otium.data.prefs.DataStoreLibraryPreferences
 import app.otium.domain.port.BackupPreferences
@@ -34,5 +35,12 @@ abstract class PreferencesModule {
         @Singleton
         fun provideLibraryDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
             PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("library") }
+
+        /** The wrapped backup key, in a file of its own: see [BackupKeyStore]. */
+        @Provides
+        @Singleton
+        @BackupKeyStore
+        fun provideBackupKeyStore(@ApplicationContext context: Context): DataStore<Preferences> =
+            PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("backup_key") }
     }
 }

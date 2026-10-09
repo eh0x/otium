@@ -5,6 +5,7 @@ import app.otium.auth.DriveConsent
 import app.otium.data.backup.GoogleAuthManager
 import app.otium.data.backup.RoomLibraryRestorer
 import app.otium.data.backup.ZipBackupArchiver
+import app.otium.data.backup.crypto.KeystoreBackupEncryption
 import app.otium.data.backup.drive.AccessTokenProvider
 import app.otium.data.backup.drive.DRIVE_BASE_URL
 import app.otium.data.backup.drive.DriveApi
@@ -12,6 +13,7 @@ import app.otium.data.backup.drive.GoogleDriveBackupClient
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.remote.RemoteClients
 import app.otium.domain.port.BackupArchiver
+import app.otium.domain.port.BackupEncryption
 import app.otium.domain.port.BackupPreferences
 import app.otium.domain.port.BackupScheduler
 import app.otium.domain.port.DispatcherProvider
@@ -26,6 +28,7 @@ import app.otium.domain.usecase.PrepareRestore
 import app.otium.domain.usecase.RestoreBackup
 import app.otium.domain.usecase.RunBackup
 import app.otium.domain.usecase.RunScheduledBackup
+import app.otium.domain.usecase.SetBackupPassphrase
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -50,6 +53,9 @@ internal abstract class BackupModule {
 
     @Binds
     abstract fun bindRestorer(impl: RoomLibraryRestorer): LibraryRestorer
+
+    @Binds
+    abstract fun bindEncryption(impl: KeystoreBackupEncryption): BackupEncryption
 
     @Binds
     abstract fun bindTokens(impl: GoogleAuthManager): AccessTokenProvider
@@ -85,24 +91,33 @@ internal abstract class BackupModule {
         fun provideRunBackup(
             drive: DriveBackupClient,
             archiver: BackupArchiver,
+            encryption: BackupEncryption,
             preferences: BackupPreferences,
             lock: BackupLock,
-        ) = RunBackup(drive, archiver, preferences, lock)
+        ) = RunBackup(drive, archiver, encryption, preferences, lock)
 
         @Provides
         fun provideRunScheduledBackup(runBackup: RunBackup, preferences: BackupPreferences) =
             RunScheduledBackup(runBackup, preferences)
 
         @Provides
-        fun providePrepareRestore(drive: DriveBackupClient, archiver: BackupArchiver) =
-            PrepareRestore(drive, archiver, OtiumDatabase.VERSION)
+        fun providePrepareRestore(
+            drive: DriveBackupClient,
+            archiver: BackupArchiver,
+            encryption: BackupEncryption,
+        ) = PrepareRestore(drive, archiver, encryption, OtiumDatabase.VERSION)
 
         @Provides
         fun provideRestoreBackup(
             restorer: LibraryRestorer,
             lookups: LookupScheduler,
+            encryption: BackupEncryption,
             lock: BackupLock,
-        ) = RestoreBackup(restorer, lookups, lock)
+        ) = RestoreBackup(restorer, lookups, encryption, lock)
+
+        @Provides
+        fun provideSetBackupPassphrase(encryption: BackupEncryption) =
+            SetBackupPassphrase(encryption)
 
         @Provides
         fun provideFindBackups(drive: DriveBackupClient) = FindBackups(drive)

@@ -72,3 +72,19 @@ APK. It is treated as public, and it is limited so that misuse costs only quota:
 Drive access needs no key in the app. It uses an OAuth client bound to the package name and the
 signing certificate's SHA-1, and only the `drive.appdata` scope. Release signing keys live outside
 the repository and are read from `keystore.properties`, which git ignores.
+
+## Backup encryption
+
+Backups go to the user's own Drive `appDataFolder`. Without a passphrase they are plain zips:
+hidden from the Drive UI and other apps, but readable by anyone with access to the Google account.
+With a passphrase set on the backup screen, only ciphertext leaves the phone:
+
+- The key is derived from the passphrase with Argon2id (64 MiB, 3 passes, random 16-byte salt).
+- The file is encrypted with Tink's streaming AES-256-GCM. The header (format version, Argon2id
+  settings, salt, key id) is authenticated, so any change to the file makes it fail to open.
+- The key id is an HMAC of the key, so it reveals nothing about the key or the passphrase.
+- The derived key is stored on the phone wrapped by a non-exportable Android Keystore key, in a
+  DataStore file of its own that Android backup and device transfer exclude. The passphrase is
+  never stored. If the Keystore key is lost, backups stop and ask for the passphrase; they never
+  fall back to plain uploads.
+- A forgotten passphrase cannot be recovered, by the user or by anyone else.

@@ -4,6 +4,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -33,8 +35,21 @@ class BackupContentTest {
 
     private val signedIn = BackupUiState(auth = DriveAuthState.SignedIn("reader@example.org"))
 
-    private fun show(state: BackupUiState, actions: BackupActions = BackupActions()) =
-        rule.setContent { OtiumTheme(darkTheme = false) { BackupContent(state, actions) } }
+    private fun show(
+        state: BackupUiState,
+        actions: BackupActions = BackupActions(),
+        encryption: EncryptionUiState = EncryptionUiState(),
+        encryptionActions: EncryptionActions = EncryptionActions(),
+    ) = rule.setContent {
+        OtiumTheme(darkTheme = false) {
+            BackupContent(
+                state = state,
+                actions = actions,
+                encryption = encryption,
+                encryptionActions = encryptionActions,
+            )
+        }
+    }
 
     // --- Google Drive ---
 
@@ -45,8 +60,10 @@ class BackupContentTest {
 
         rule.onNodeWithText("Back up now").assertIsNotEnabled()
         rule.onNodeWithText("Restore from Drive").assertIsNotEnabled()
-        rule.onNodeWithText("Connect Google Drive to back up automatically.").assertIsDisplayed()
-        rule.onNodeWithText("Connect Google Drive").performClick()
+        rule.onNodeWithText("Connect Google Drive to back up automatically.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        rule.onNodeWithText("Connect Google Drive").performScrollTo().performClick()
 
         assertEquals(1, connected)
     }
@@ -205,5 +222,84 @@ class BackupContentTest {
         show(BackupUiState())
 
         rule.onNodeWithText("Back up automatically").performScrollTo().assertIsNotEnabled()
+    }
+
+    // --- Encryption ---
+
+    @Test
+    fun `with encryption off, it is recommended and a passphrase can be set`() {
+        var asked = 0
+        show(signedIn, encryptionActions = EncryptionActions(onSetPassphrase = { asked++ }))
+
+        rule.onNodeWithText("Off. Backups are kept in your Drive without a passphrase.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        rule.onNodeWithText("Turn off").assertDoesNotExist()
+        rule.onNodeWithText("Set a passphrase").performScrollTo().performClick()
+
+        assertEquals(1, asked)
+    }
+
+    @Test
+    fun `with encryption on, the passphrase can be changed or encryption turned off`() {
+        var turnedOff = 0
+        show(
+            signedIn,
+            encryption = EncryptionUiState(isOn = true),
+            encryptionActions = EncryptionActions(onTurnOff = { turnedOff++ }),
+        )
+
+        rule.onNodeWithText("On. New backups are encrypted with your passphrase.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        rule.onNodeWithText("Change passphrase").performScrollTo().assertIsEnabled()
+        rule.onNodeWithText("Turn off").performScrollTo().performClick()
+
+        assertEquals(1, turnedOff)
+    }
+
+    @Test
+    fun `the passphrase cannot be changed while a backup runs`() {
+        show(
+            signedIn.copy(busy = BackupBusy.BACKING_UP),
+            encryption = EncryptionUiState(isOn = true),
+        )
+
+        rule.onNodeWithText("Change passphrase").performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithText("Turn off").performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun `while the key is derived, progress is shown`() {
+        show(signedIn, encryption = EncryptionUiState(isWorking = true))
+
+        rule.onNodeWithText("Protecting your key…").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Set a passphrase").performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun `turning encryption off asks first`() {
+        var confirmed = 0
+        show(
+            signedIn,
+            encryption = EncryptionUiState(isOn = true, confirmTurnOff = true),
+            encryptionActions = EncryptionActions(onTurnOffConfirmed = { confirmed++ }),
+        )
+
+        rule.onNodeWithText("Turn off encryption?").assertIsDisplayed()
+        rule.onNodeWithText(
+            "New backups will not be encrypted. Backups already in Drive stay encrypted and " +
+                "still need your passphrase.",
+        ).assertIsDisplayed()
+        rule.onAllNodesWithText("Turn off").onLast().performClick()
+
+        assertEquals(1, confirmed)
+    }
+
+    @Test
+    fun `the last backup says when it is encrypted`() {
+        show(signedIn.copy(lastBackup = backupInfo(keyId = "abc")))
+
+        rule.onNodeWithText("Encrypted with your passphrase.").performScrollTo().assertIsDisplayed()
     }
 }

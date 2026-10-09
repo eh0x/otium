@@ -3,6 +3,7 @@ package app.otium.domain.usecase
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeBackupArchiver
+import app.otium.domain.fakes.FakeBackupEncryption
 import app.otium.domain.fakes.FakeBackupFiles
 import app.otium.domain.fakes.FakeDriveBackupClient
 import app.otium.domain.fakes.backupInfo
@@ -17,7 +18,8 @@ class PrepareRestoreTest {
 
     private val appSchema = 3
     private val drive = FakeDriveBackupClient()
-    private val prepareRestore = PrepareRestore(drive, FakeBackupArchiver(), appSchema)
+    private val encryption = FakeBackupEncryption()
+    private val prepareRestore = PrepareRestore(drive, FakeBackupArchiver(), encryption, appSchema)
 
     @Test
     fun `downloads the latest backup and describes it`() = runTest {
@@ -123,5 +125,64 @@ class PrepareRestoreTest {
         preview.discard()
 
         assertFalse(preview.file.exists())
+    }
+
+    // --- Encrypted backups ---
+
+    private val plain = backupInfo(createdAt = 9L)
+    private val keyId = FakeBackupEncryption.keyIdOf("correct horse")
+
+    private fun putEncrypted() = drive.put(
+        BackupSlot.LATEST,
+        plain.copy(keyId = keyId),
+        content = FakeBackupEncryption.encryptedContent(plain, "correct horse"),
+    )
+
+    @Test
+    fun `an encrypted backup asks for its passphrase before downloading`() = runTest {
+        putEncrypted()
+
+        assertEquals(Try.Failure(AppError.PassphraseRequired), prepareRestore())
+        assertEquals(0, drive.downloads)
+    }
+
+    @Test
+    fun `the right passphrase opens an encrypted backup`() = runTest {
+        putEncrypted()
+
+        val preview = (prepareRestore(passphrase = "correct horse".toCharArray()) as Try.Success)
+            .value
+
+        assertEquals(plain.copy(keyId = keyId), preview.info)
+        assertEquals(FakeBackupFiles.encode(plain), preview.file.readText())
+        assertFalse("the encrypted download is removed", drive.downloaded.single().exists())
+    }
+
+    @Test
+    fun `a wrong passphrase is reported and leaves no files behind`() = runTest {
+        putEncrypted()
+
+        val result = prepareRestore(passphrase = "wrong".toCharArray())
+
+        assertEquals(Try.Failure(AppError.WrongPassphrase), result)
+        assertFalse(drive.downloaded.single().exists())
+    }
+
+    @Test
+    fun `an encrypted backup made on this phone opens without asking`() = runTest {
+        encryption.turnOn("correct horse")
+        putEncrypted()
+
+        assertTrue(prepareRestore() is Try.Success)
+    }
+
+    @Test
+    fun `a damaged encrypted backup is rejected`() = runTest {
+        drive.put(BackupSlot.LATEST, plain.copy(keyId = keyId), content = FakeBackupFiles.DAMAGED)
+
+        val result = prepareRestore(passphrase = "correct horse".toCharArray())
+
+        assertEquals(Try.Failure(AppError.CorruptBackup), result)
+        assertFalse(drive.downloaded.single().exists())
     }
 }

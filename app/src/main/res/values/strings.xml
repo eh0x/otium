@@ -161,6 +161,8 @@
     <string name="error_incompatible_backup">That backup was made by a newer version of Otium.</string>
     <string name="error_corrupt_backup">That backup is damaged and could not be read.</string>
     <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
+    <string name="error_passphrase_required">This phone no longer holds your backup key. Set your passphrase again under Encrypt backups.</string>
+    <string name="error_wrong_passphrase">That passphrase does not open this backup.</string>
     <string name="error_storage">Something went wrong saving your library. Please try again.</string>
     <string name="error_unexpected">Something went wrong. Please try again.</string>
 
@@ -186,6 +188,45 @@
         <item quantity="one">%1$d book</item>
         <item quantity="other">%1$d books</item>
     </plurals>
+    <string name="backup_last_encrypted">Encrypted with your passphrase.</string>
+    <string name="encryption_heading">Encrypt backups</string>
+    <string name="encryption_off">Off. Backups are kept in your Drive without a passphrase.</string>
+    <string name="encryption_on">On. New backups are encrypted with your passphrase.</string>
+    <string name="encryption_note">Recommended. With a passphrase, only you can read your backups, even if someone gets into your Google account.</string>
+    <string name="encryption_turn_on">Set a passphrase</string>
+    <string name="encryption_change">Change passphrase</string>
+    <string name="encryption_turn_off">Turn off</string>
+    <string name="encryption_working">Protecting your key…</string>
+    <string name="encryption_on_done">New backups will be encrypted.</string>
+    <string name="encryption_off_done">New backups will no longer be encrypted.</string>
+    <string name="encryption_off_title">Turn off encryption?</string>
+    <string name="encryption_off_message">New backups will not be encrypted. Backups already in Drive stay encrypted and still need your passphrase.</string>
+    <string name="encryption_off_action">Turn off</string>
+    <string name="passphrase_set_title">Set a backup passphrase</string>
+    <string name="passphrase_change_title">Change the backup passphrase</string>
+    <string name="passphrase_label">Passphrase</string>
+    <string name="passphrase_confirm_label">Type it again</string>
+    <plurals name="passphrase_hint">
+        <item quantity="one">At least %1$d character. A few unrelated words are easy to remember and hard to guess.</item>
+        <item quantity="other">At least %1$d characters. A few unrelated words are easy to remember and hard to guess.</item>
+    </plurals>
+    <string name="passphrase_warning">If you forget this passphrase, your encrypted backups cannot be restored. Otium does not keep it and cannot recover it.</string>
+    <string name="passphrase_acknowledge">I understand that a forgotten passphrase cannot be recovered</string>
+    <string name="passphrase_change_note">Backups made before the change still need the old passphrase.</string>
+    <plurals name="passphrase_too_short">
+        <item quantity="one">Use at least %1$d character.</item>
+        <item quantity="other">Use at least %1$d characters.</item>
+    </plurals>
+    <string name="passphrase_mismatch">The two passphrases do not match.</string>
+    <string name="passphrase_show">Show</string>
+    <string name="passphrase_hide">Hide</string>
+    <string name="passphrase_show_description">Show passphrase</string>
+    <string name="passphrase_hide_description">Hide passphrase</string>
+    <string name="passphrase_turn_on_action">Turn on encryption</string>
+    <string name="passphrase_change_action">Change passphrase</string>
+    <string name="passphrase_restore_title">Enter the backup passphrase</string>
+    <string name="passphrase_restore_message">This backup is encrypted. Enter the passphrase it was made with.</string>
+    <string name="passphrase_restore_action">Unlock</string>
     <string name="restore_heading">Restore</string>
     <string name="restore_action">Restore from Drive</string>
     <string name="restore_previous_action">Restore the previous backup</string>

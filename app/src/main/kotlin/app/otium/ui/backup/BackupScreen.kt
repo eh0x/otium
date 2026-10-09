@@ -52,6 +52,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
 import app.otium.auth.ConsentResult
+import app.otium.domain.error.AppError
 import app.otium.domain.model.BackupFrequency
 import app.otium.domain.model.BackupInfo
 import app.otium.domain.model.BackupSlot
@@ -72,8 +73,10 @@ fun BackupScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BackupViewModel = hiltViewModel(),
+    encryptionViewModel: EncryptionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val encryption by encryptionViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val consentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
@@ -104,7 +107,8 @@ fun BackupScreen(
             onConnect = viewModel::onConnect,
             onDisconnect = viewModel::onDisconnect,
             onBackUpNow = viewModel::onBackUpNow,
-            onRestore = viewModel::onRestore,
+            onRestore = { slot -> viewModel.onRestore(slot) },
+            onUnlock = viewModel::onRestore,
             onRestoreConfirmed = viewModel::onRestoreConfirmed,
             onRestoreDismissed = viewModel::onRestoreDismissed,
             onSettingsChanged = viewModel::onSettingsChanged,
@@ -112,27 +116,50 @@ fun BackupScreen(
             onErrorShown = viewModel::onErrorShown,
         )
     }
-    BackupContent(state = state, actions = actions, modifier = modifier)
+    BackupContent(
+        state = state,
+        encryption = encryption,
+        actions = actions,
+        encryptionActions = rememberEncryptionActions(encryptionViewModel),
+        modifier = modifier,
+    )
 }
 
-/** The backup screen as a pure function of [state], so it can be tested without a ViewModel. */
 @Composable
-fun BackupContent(state: BackupUiState, actions: BackupActions, modifier: Modifier = Modifier) {
+private fun rememberEncryptionActions(viewModel: EncryptionViewModel) = remember(viewModel) {
+    EncryptionActions(
+        onSetPassphrase = viewModel::onSetPassphrase,
+        onPassphraseEntered = viewModel::onPassphraseEntered,
+        onPassphraseDismissed = viewModel::onPassphraseDismissed,
+        onTurnOff = viewModel::onTurnOff,
+        onTurnOffConfirmed = viewModel::onTurnOffConfirmed,
+        onTurnOffDismissed = viewModel::onTurnOffDismissed,
+        onMessageShown = viewModel::onMessageShown,
+        onErrorShown = viewModel::onErrorShown,
+    )
+}
+
+/**
+ * The backup screen as a pure function of [state] and [encryption], so it can be tested without
+ * a ViewModel.
+ */
+@Composable
+fun BackupContent(
+    state: BackupUiState,
+    actions: BackupActions,
+    modifier: Modifier = Modifier,
+    encryption: EncryptionUiState = EncryptionUiState(),
+    encryptionActions: EncryptionActions = EncryptionActions(),
+) {
     val snackbar = remember { SnackbarHostState() }
-    val message = state.message?.let { stringResource(it.textRes()) }
-    val error = state.error?.let { stringResource(it.messageRes()) }
-    LaunchedEffect(message) {
-        if (message != null) {
-            snackbar.showSnackbar(message)
-            actions.onMessageShown()
-        }
-    }
-    LaunchedEffect(error) {
-        if (error != null) {
-            snackbar.showSnackbar(error)
-            actions.onErrorShown()
-        }
-    }
+    Notices(snackbar, state.message, state.error, actions.onMessageShown, actions.onErrorShown)
+    Notices(
+        snackbar,
+        encryption.message,
+        encryption.error,
+        encryptionActions.onMessageShown,
+        encryptionActions.onErrorShown,
+    )
 
     PaperBackground(modifier = modifier.fillMaxSize()) {
         Scaffold(
@@ -165,12 +192,41 @@ fun BackupContent(state: BackupUiState, actions: BackupActions, modifier: Modifi
                 HorizontalDivider()
                 BackupSection(state, actions)
                 HorizontalDivider()
+                SectionHeading(stringResource(R.string.encryption_heading))
+                EncryptionSection(encryption, state.isBusy, encryptionActions)
+                HorizontalDivider()
                 RestoreSection(state, actions)
                 HorizontalDivider()
                 AutoBackupSection(state, actions)
             }
         }
         state.restorePreview?.let { RestoreDialog(it, actions) }
+        EncryptionDialogs(state, encryption, actions, encryptionActions)
+    }
+}
+
+/** Shows [message] or [error] once in [snackbar], then reports it shown. */
+@Composable
+private fun Notices(
+    snackbar: SnackbarHostState,
+    message: BackupMessage?,
+    error: AppError?,
+    onMessageShown: () -> Unit,
+    onErrorShown: () -> Unit,
+) {
+    val messageText = message?.let { stringResource(it.textRes()) }
+    val errorText = error?.let { stringResource(it.messageRes()) }
+    LaunchedEffect(messageText) {
+        if (messageText != null) {
+            snackbar.showSnackbar(messageText)
+            onMessageShown()
+        }
+    }
+    LaunchedEffect(errorText) {
+        if (errorText != null) {
+            snackbar.showSnackbar(errorText)
+            onErrorShown()
+        }
     }
 }
 
@@ -243,6 +299,13 @@ private fun BackupSection(state: BackupUiState, actions: BackupActions) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    if (last?.isEncrypted == true) {
+        Text(
+            text = stringResource(R.string.backup_last_encrypted),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable

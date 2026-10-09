@@ -168,6 +168,9 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     // Identity Services authorization for the Drive app data scope (no sign-in screen of ours).
     implementation(libs.play.services.auth)
+    // Encrypted backups: Tink's streaming AES-256-GCM, and Bouncy Castle's Argon2id (pure Java).
+    implementation(libs.tink.android)
+    implementation(libs.bouncycastle.bcprov)
     implementation(libs.okhttp)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)

@@ -14,6 +14,12 @@ sealed interface AppError {
     data class IncompatibleBackup(val backupSchema: Int, val appSchema: Int) : AppError
     data object CorruptBackup : AppError
     data object NothingToBackUp : AppError
+
+    /** The backup is encrypted with a key this device does not hold; ask for its passphrase. */
+    data object PassphraseRequired : AppError
+
+    /** The passphrase given does not open this backup. */
+    data object WrongPassphrase : AppError
     data class Storage(val message: String) : AppError
     data class Unexpected(val message: String) : AppError
 }

@@ -32,7 +32,9 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
  * State holder for the backup screen. It runs one thing at a time: a tap while something runs is
  * ignored. A restore is two steps, [onRestore] to download and check, [onRestoreConfirmed] once
  * the user has seen what it holds; a downloaded file that is never confirmed is deleted when the
- * user cancels or leaves.
+ * user cancels or leaves. An encrypted backup whose key this phone lacks asks for its passphrase
+ * in between, and [onRestore] is called again with it. The encryption setting itself belongs to
+ * [EncryptionViewModel].
  */
 @HiltViewModel
 class BackupViewModel @Inject constructor(
@@ -47,10 +49,22 @@ class BackupViewModel @Inject constructor(
     private data class Transient(
         val busy: BackupBusy = BackupBusy.NONE,
         val preview: RestorePreview? = null,
+        val unlock: PassphrasePrompt.Unlock? = null,
         val consent: ConsentStep.AskUser? = null,
         val message: BackupMessage? = null,
         val error: AppError? = null,
-    )
+    ) {
+        /** After preparing the restore of [slot]: show it, ask for the passphrase, or fail. */
+        fun prepared(slot: BackupSlot, result: Try<RestorePreview>): Transient = when (result) {
+            is Try.Success -> copy(preview = result.value, unlock = null)
+
+            is Try.Failure -> when (result.error) {
+                AppError.PassphraseRequired -> copy(unlock = PassphrasePrompt.Unlock(slot))
+                AppError.WrongPassphrase -> copy(unlock = PassphrasePrompt.Unlock(slot, true))
+                else -> copy(unlock = null, error = result.error)
+            }
+        }
+    }
 
     private val transient = MutableStateFlow(Transient())
 
@@ -66,6 +80,7 @@ class BackupViewModel @Inject constructor(
             lastBackup = last,
             busy = now.busy,
             restorePreview = now.preview,
+            unlock = now.unlock,
             consent = now.consent,
             message = now.message,
             error = now.error,
@@ -76,13 +91,15 @@ class BackupViewModel @Inject constructor(
         initialValue = BackupUiState(),
     )
 
-    fun onConnect() = whenIdle(BackupBusy.CONNECTING) {
-        when (val step = consent.begin()) {
-            is Try.Failure -> fail(step.error)
+    fun onConnect() {
+        whenIdle(BackupBusy.CONNECTING) {
+            when (val step = consent.begin()) {
+                is Try.Failure -> fail(step.error)
 
-            is Try.Success -> when (val next = step.value) {
-                ConsentStep.Granted -> Unit
-                is ConsentStep.AskUser -> transient.update { it.copy(consent = next) }
+                is Try.Success -> when (val next = step.value) {
+                    ConsentStep.Granted -> Unit
+                    is ConsentStep.AskUser -> transient.update { it.copy(consent = next) }
+                }
             }
         }
     }
@@ -105,18 +122,29 @@ class BackupViewModel @Inject constructor(
         }
     }
 
-    fun onBackUpNow() = whenIdle(BackupBusy.BACKING_UP) {
-        when (val result = runBackup()) {
-            is Try.Success -> transient.update { it.copy(message = BackupMessage.BACKED_UP) }
-            is Try.Failure -> fail(result.error)
+    fun onBackUpNow() {
+        whenIdle(BackupBusy.BACKING_UP) {
+            when (val result = runBackup()) {
+                is Try.Success -> transient.update { it.copy(message = BackupMessage.BACKED_UP) }
+                is Try.Failure -> fail(result.error)
+            }
         }
     }
 
-    fun onRestore(slot: BackupSlot) = whenIdle(BackupBusy.PREPARING_RESTORE) {
-        when (val result = prepareRestore(slot)) {
-            is Try.Success -> transient.update { it.copy(preview = result.value) }
-            is Try.Failure -> fail(result.error)
+    /**
+     * Downloads and checks the backup in [slot]. An encrypted one this phone cannot open asks for
+     * its [passphrase], and the call is repeated with it. The array is cleared once used.
+     */
+    fun onRestore(slot: BackupSlot, passphrase: CharArray? = null) {
+        val started = whenIdle(BackupBusy.PREPARING_RESTORE) {
+            try {
+                val result = prepareRestore(slot, passphrase)
+                transient.update { it.prepared(slot, result) }
+            } finally {
+                passphrase?.fill(Char.MIN_VALUE)
+            }
         }
+        if (!started) passphrase?.fill(Char.MIN_VALUE)
     }
 
     fun onRestoreConfirmed() {
@@ -134,9 +162,10 @@ class BackupViewModel @Inject constructor(
         }
     }
 
+    /** Cancels the restore: drops a downloaded backup, or stops asking for its passphrase. */
     fun onRestoreDismissed() {
         transient.value.preview?.discard()
-        transient.update { it.copy(preview = null) }
+        transient.update { it.copy(preview = null, unlock = null) }
     }
 
     fun onSettingsChanged(settings: BackupSettings) {
@@ -153,9 +182,11 @@ class BackupViewModel @Inject constructor(
 
     private fun fail(error: AppError) = transient.update { it.copy(error = error) }
 
-    /** Runs [block] as [busy] unless something is already running. */
-    private fun whenIdle(busy: BackupBusy, block: suspend () -> Unit) {
-        if (transient.value.busy != BackupBusy.NONE) return
+    /**
+     * Runs [block] as [busy] unless something is already running. True when [block] was started.
+     */
+    private fun whenIdle(busy: BackupBusy, block: suspend () -> Unit): Boolean {
+        if (transient.value.busy != BackupBusy.NONE) return false
         transient.update { it.copy(busy = busy) }
         viewModelScope.launch {
             try {
@@ -164,5 +195,6 @@ class BackupViewModel @Inject constructor(
                 transient.update { it.copy(busy = BackupBusy.NONE) }
             }
         }
+        return true
     }
 }

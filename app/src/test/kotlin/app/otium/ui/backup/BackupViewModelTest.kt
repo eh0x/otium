@@ -10,6 +10,7 @@ import app.otium.auth.DriveConsent
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeBackupArchiver
+import app.otium.domain.fakes.FakeBackupEncryption
 import app.otium.domain.fakes.FakeBackupPreferences
 import app.otium.domain.fakes.FakeBackupScheduler
 import app.otium.domain.fakes.FakeDriveBackupClient
@@ -78,6 +79,7 @@ class BackupViewModelTest {
     private val prefs = FakeBackupPreferences()
     private val restorer = FakeLibraryRestorer()
     private val scheduler = FakeBackupScheduler()
+    private val encryption = FakeBackupEncryption()
     private var lookupsPlanned = 0
 
     private fun viewModel(): BackupViewModel {
@@ -85,9 +87,9 @@ class BackupViewModelTest {
         return BackupViewModel(
             consent = consent,
             preferences = prefs,
-            runBackup = RunBackup(drive, archiver, prefs, lock),
-            prepareRestore = PrepareRestore(drive, archiver, appSchemaVersion = 1),
-            restoreBackup = RestoreBackup(restorer, { lookupsPlanned++ }, lock),
+            runBackup = RunBackup(drive, archiver, encryption, prefs, lock),
+            prepareRestore = PrepareRestore(drive, archiver, encryption, appSchemaVersion = 1),
+            restoreBackup = RestoreBackup(restorer, { lookupsPlanned++ }, encryption, lock),
             configureAutoBackup = ConfigureAutoBackup(prefs, scheduler),
         )
     }
@@ -327,6 +329,91 @@ class BackupViewModelTest {
         assertFalse(prefs.currentSettings.autoBackup)
         assertNull(scheduler.scheduled)
         assertEquals(DriveAuthState.SignedOut, vm.uiState.value.auth)
+    }
+
+    // --- Encrypted backups ---
+
+    private val plain = backupInfo(bookCount = 7)
+
+    private fun putEncrypted() = drive.put(
+        BackupSlot.LATEST,
+        plain.copy(keyId = FakeBackupEncryption.keyIdOf("correct horse")),
+        content = FakeBackupEncryption.encryptedContent(plain, "correct horse"),
+    )
+
+    @Test
+    fun `an encrypted backup asks for its passphrase instead of failing`() = runTest {
+        putEncrypted()
+        val vm = viewModel()
+        screenOpen(vm)
+
+        vm.onRestore(BackupSlot.LATEST)
+        advanceUntilIdle()
+
+        assertEquals(PassphrasePrompt.Unlock(BackupSlot.LATEST), vm.uiState.value.unlock)
+        assertNull(vm.uiState.value.error)
+        assertNull(vm.uiState.value.restorePreview)
+    }
+
+    @Test
+    fun `the right passphrase shows the backup and clears the typed text`() = runTest {
+        putEncrypted()
+        val vm = viewModel()
+        screenOpen(vm)
+        vm.onRestore(BackupSlot.LATEST)
+        advanceUntilIdle()
+        val typed = "correct horse".toCharArray()
+
+        vm.onRestore(BackupSlot.LATEST, typed)
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.unlock)
+        assertEquals(7, vm.uiState.value.restorePreview!!.info.bookCount)
+        assertTrue(typed.all { it == Char.MIN_VALUE })
+    }
+
+    @Test
+    fun `a wrong passphrase asks again and says it was wrong`() = runTest {
+        putEncrypted()
+        val vm = viewModel()
+        screenOpen(vm)
+
+        vm.onRestore(BackupSlot.LATEST, "wrong".toCharArray())
+        advanceUntilIdle()
+
+        assertEquals(
+            PassphrasePrompt.Unlock(BackupSlot.LATEST, wrong = true),
+            vm.uiState.value.unlock,
+        )
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `cancelling the passphrase prompt ends the restore`() = runTest {
+        putEncrypted()
+        val vm = viewModel()
+        screenOpen(vm)
+        vm.onRestore(BackupSlot.LATEST)
+        advanceUntilIdle()
+
+        vm.onRestoreDismissed()
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.unlock)
+    }
+
+    @Test
+    fun `a passphrase sent while busy is cleared and ignored`() = runTest {
+        val vm = viewModel()
+        screenOpen(vm)
+        vm.onBackUpNow() // Still archiving: the fake takes a moment.
+        val typed = "correct horse".toCharArray()
+
+        vm.onRestore(BackupSlot.LATEST, typed)
+        advanceUntilIdle()
+
+        assertTrue(typed.all { it == Char.MIN_VALUE })
+        assertEquals(0, drive.downloads)
     }
 
     // --- Automatic backups ---
