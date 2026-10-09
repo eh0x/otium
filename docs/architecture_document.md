@@ -8,7 +8,7 @@ definitive, cited architecture view of the codebase on disk.
 **What the repository is:** Otium is an Android app for cataloguing and tracking physical books. It
 allows users to scan an ISBN, fetch details, keep their place by page, and find any book in their
 library instantly. It is built to feel like a quiet study rather than a utility, and it keeps user
-data on their device. ([README.md#L8-L10](file:///Users/ehoxhaj/dev/otium/README.md#L8-L10))
+data on their device. ([README.md](../README.md))
 
 ### Tech-Stack Detection
 
