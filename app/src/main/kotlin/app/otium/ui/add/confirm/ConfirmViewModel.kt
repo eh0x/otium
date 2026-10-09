@@ -54,8 +54,12 @@ class ConfirmViewModel @Inject constructor(
     )
 
     val uiState: StateFlow<ConfirmUiState> =
-        combine(state, repository.observeTags()) { current, tags ->
-            current.copy(knownTags = tags)
+        combine(state, repository.observeTags(), repository.observeCategories()) {
+                current,
+                tags,
+                categories,
+            ->
+            current.copy(knownTags = tags, knownCategories = categories)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),

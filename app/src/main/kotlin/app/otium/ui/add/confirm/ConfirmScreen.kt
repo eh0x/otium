@@ -151,6 +151,7 @@ private fun ConfirmBody(
             form = state.form,
             pagesUnknown = state.pagesUnknown,
             knownTags = state.knownTags,
+            knownCategories = state.knownCategories,
             onFormChange = actions.onFormChange,
         )
     }

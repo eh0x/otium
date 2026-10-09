@@ -163,6 +163,9 @@
     <string name="confirm_field_categories">Categories</string>
     <string name="confirm_field_description">Description</string>
     <string name="confirm_tags">Tags</string>
+    <string name="confirm_shelf">Shelf</string>
+    <string name="confirm_more_details">More details</string>
+    <string name="confirm_fewer_details">Fewer details</string>
     <string name="confirm_tag_add">Add a tag</string>
     <string name="confirm_tag_remove">Remove tag %1$s</string>
     <string name="confirm_cover_option">Cover option %1$d</string>

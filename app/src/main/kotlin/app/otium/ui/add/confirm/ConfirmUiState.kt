@@ -25,6 +25,18 @@ data class BookForm(
     val description: String = "",
     val tags: List<String> = emptyList(),
 ) {
+    /** The shelf the book will stand on: its first category, or null when it has none. */
+    val shelf: String? get() = categories.splitList().firstOrNull()
+
+    /**
+     * The form with [name] as the shelf: moved to the front of the categories (or added there),
+     * so the other categories are kept.
+     */
+    fun withShelf(name: String): BookForm {
+        val others = categories.splitList().filterNot { it.equals(name, ignoreCase = true) }
+        return copy(categories = (listOf(name) + others).joinToString(LIST_SEPARATOR))
+    }
+
     /** The form as a candidate. Text that is not a number counts as unknown. */
     fun toCandidate(source: BookSource, isbn10: String?) = BookCandidate(
         isbn13 = isbn.trim().takeIf(String::isNotEmpty),
@@ -98,6 +110,8 @@ data class ConfirmUiState(
     val remoteCovers: List<String> = emptyList(),
     /** Every tag in the library, for suggestions while typing a tag. */
     val knownTags: List<String> = emptyList(),
+    /** Categories already in the library, offered as shelves. */
+    val knownCategories: List<String> = emptyList(),
     val isSaving: Boolean = false,
     val savedBookId: Long? = null,
     val duplicateOf: Long? = null,
