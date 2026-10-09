@@ -9,26 +9,19 @@ import android.provider.Settings
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,7 +32,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -56,8 +48,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
 import app.otium.ui.add.AddDestination
 import app.otium.ui.common.messageRes
-import app.otium.ui.components.OtiumTopBar
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumIndeterminateRule
+import app.otium.ui.components.OtiumScreenHeader
 import app.otium.ui.theme.PaperBackground
+import app.otium.ui.theme.otiumColors
 
 private val FRAME_WIDTH = 280.dp
 private val FRAME_HEIGHT = 160.dp
@@ -117,23 +113,9 @@ fun ScanContent(
     preview: @Composable (analyzing: Boolean) -> Unit,
 ) {
     PaperBackground(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                OtiumTopBar(
-                    title = stringResource(R.string.scan_title),
-                    navigationIcon = {
-                        IconButton(onClick = actions.onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.detail_back),
-                            )
-                        }
-                    },
-                )
-            },
-        ) { padding ->
-            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            OtiumScreenHeader(title = stringResource(R.string.scan_title), onBack = actions.onBack)
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (access == CameraAccess.GRANTED) {
                     preview(state.phase == ScanPhase.SCANNING)
                     Viewfinder(modifier = Modifier.align(Alignment.Center))
@@ -152,19 +134,21 @@ private fun Viewfinder(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(FRAME_WIDTH, FRAME_HEIGHT)
-            .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium),
+            .border(2.dp, MaterialTheme.otiumColors.accent, MaterialTheme.shapes.small),
     )
 }
 
 /** What happens with the read: a hint while scanning, progress, or a failure and the ways out. */
 @Composable
 private fun ScanStatus(state: ScanUiState, actions: ScanActions, modifier: Modifier = Modifier) {
-    Surface(
+    val colors = MaterialTheme.otiumColors
+    val shape = MaterialTheme.shapes.small
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        shape = MaterialTheme.shapes.large,
-        tonalElevation = 2.dp,
+            .padding(22.dp)
+            .background(colors.sheet, shape)
+            .border(1.dp, colors.divider, shape),
     ) {
         Column(
             modifier = Modifier
@@ -178,9 +162,12 @@ private fun ScanStatus(state: ScanUiState, actions: ScanActions, modifier: Modif
                         stringResource(R.string.scan_hint),
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    TextButton(onClick = actions.onEnterIsbn) {
-                        Text(stringResource(R.string.scan_enter_isbn))
-                    }
+                    OtiumButton(
+                        text = stringResource(R.string.scan_enter_isbn),
+                        onClick = actions.onEnterIsbn,
+                        style = OtiumButtonStyle.Ghost,
+                        compact = true,
+                    )
                 }
 
                 ScanPhase.LOOKING_UP -> {
@@ -188,7 +175,7 @@ private fun ScanStatus(state: ScanUiState, actions: ScanActions, modifier: Modif
                         text = stringResource(R.string.scan_looking_up, state.isbn13.orEmpty()),
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    OtiumIndeterminateRule()
                 }
 
                 ScanPhase.FAILED -> ScanFailure(state, actions)
@@ -206,17 +193,25 @@ private fun ScanFailure(state: ScanUiState, actions: ScanActions) {
             color = MaterialTheme.colorScheme.error,
         )
     }
-    Button(onClick = actions.onScanAgain, modifier = Modifier.fillMaxWidth()) {
-        Text(stringResource(R.string.scan_again))
-    }
+    OtiumButton(
+        text = stringResource(R.string.scan_again),
+        onClick = actions.onScanAgain,
+        modifier = Modifier.fillMaxWidth(),
+    )
     if (state.canSaveForLater) {
-        OutlinedButton(onClick = actions.onSaveForLater, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.isbn_save_for_later))
-        }
+        OtiumButton(
+            text = stringResource(R.string.isbn_save_for_later),
+            onClick = actions.onSaveForLater,
+            style = OtiumButtonStyle.Secondary,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
-    TextButton(onClick = actions.onEnterManually) {
-        Text(stringResource(R.string.add_enter_manually))
-    }
+    OtiumButton(
+        text = stringResource(R.string.add_enter_manually),
+        onClick = actions.onEnterManually,
+        style = OtiumButtonStyle.Ghost,
+        compact = true,
+    )
 }
 
 /** Why the camera cannot be used, what would fix it, and the way to carry on without it. */
@@ -234,19 +229,23 @@ private fun NoCamera(access: CameraAccess, actions: ScanActions, modifier: Modif
         }
         Text(stringResource(message), style = MaterialTheme.typography.bodyLarge)
         when (access) {
-            CameraAccess.ASK -> Button(onClick = actions.onAllowCamera) {
-                Text(stringResource(R.string.scan_camera_allow))
-            }
+            CameraAccess.ASK -> OtiumButton(
+                text = stringResource(R.string.scan_camera_allow),
+                onClick = actions.onAllowCamera,
+            )
 
-            CameraAccess.BLOCKED -> Button(onClick = actions.onOpenSettings) {
-                Text(stringResource(R.string.scan_open_settings))
-            }
+            CameraAccess.BLOCKED -> OtiumButton(
+                text = stringResource(R.string.scan_open_settings),
+                onClick = actions.onOpenSettings,
+            )
 
             else -> Unit
         }
-        OutlinedButton(onClick = actions.onEnterIsbn) {
-            Text(stringResource(R.string.scan_enter_isbn))
-        }
+        OtiumButton(
+            text = stringResource(R.string.scan_enter_isbn),
+            onClick = actions.onEnterIsbn,
+            style = OtiumButtonStyle.Secondary,
+        )
     }
 }
 

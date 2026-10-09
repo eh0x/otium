@@ -112,9 +112,9 @@
     <string name="add_method_search_hint">Find the edition by title or author</string>
 
     <!-- Scan barcode -->
-    <string name="scan_title">Scan barcode</string>
+    <string name="scan_title">Scan the barcode</string>
     <string name="scan_hint">Hold the barcode on the back cover inside the frame</string>
-    <string name="scan_looking_up">Looking up %1$s</string>
+    <string name="scan_looking_up">Consulting the catalogue for %1$s…</string>
     <string name="scan_again">Scan again</string>
     <string name="scan_enter_isbn">Enter the ISBN instead</string>
     <string name="scan_camera_rationale">Otium uses the camera only to read the barcode on a book. Nothing is recorded or sent anywhere.</string>
@@ -124,13 +124,14 @@
     <string name="scan_no_camera">This device has no camera. You can still add books by ISBN or title.</string>
 
     <!-- Enter ISBN -->
-    <string name="isbn_title">Enter ISBN</string>
+    <string name="isbn_title">Enter an ISBN</string>
     <string name="isbn_field">ISBN</string>
     <string name="isbn_hint">The 10 or 13 digits above the barcode</string>
     <string name="isbn_look_up">Look up</string>
     <string name="isbn_try_again">Try again</string>
     <string name="isbn_save_for_later">Save the ISBN, fill in details later</string>
     <string name="isbn_save_for_later_hint">Otium looks it up once you are back online.</string>
+    <string name="add_consulting">Consulting the catalogue…</string>
     <string name="add_enter_manually">Type the details yourself</string>
 
     <!-- Search by title -->
