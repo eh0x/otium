@@ -404,9 +404,11 @@ title/author query, with fallbacks and errors handled.
 - [x] All MockWebServer scenarios pass. (22 repository tests: both services, Google only, Open
   Library only, 429 then success, persistent 429, 5xx, a slow service, both failing, not found,
   and the search fallback. Plus API, mapper, error-mapping and cover-store tests.)
-- [ ] A real ISBN lookup returns a merged candidate on a device or emulator (manual check). (Run
-  against the live services from the JVM: three real ISBNs resolved and an unknown one was
-  `NotFound`. Not yet run on a device or emulator.)
+- [x] A real ISBN lookup returns a merged candidate on a device or emulator (manual check).
+  (2026-10-09, debug build on a Xiaomi phone running Android 16: three real ISBNs resolved with
+  details and covers; an unknown ISBN opened an empty confirm screen; a bad checksum was rejected;
+  an ISBN-10 was converted; a lookup on mobile data worked; an ISBN typed offline was saved and
+  filled in once back online. An owned ISBN opens that book without saying why: OTI-143.)
 - [x] Missing key still works. (Google rejects keyless requests with 429, so without a key the
   lookup relies on Open Library; a test covers a persistent Google 429.)
 - [x] No API key committed. (Searched the full git history and every tracked file for the key
@@ -590,17 +592,22 @@ Robolectric):
 
 Still to do (needs a device and a Google account):
 
-- [ ] The Cloud project setup from decision P4 (OAuth client for the debug and release SHA-1).
-  Until it exists, asking for access fails with a Google setup error.
+- [x] The Cloud project setup from decision P4 (OAuth client for the debug and release SHA-1).
+  (Done in OTI-79.)
 - [ ] Device checks: back up, uninstall, reinstall, sign in, restore; restore the previous backup;
-  an automatic backup run; the consent screen; the failure notice.
+  an automatic backup run; the consent screen; the failure notice. (2026-10-09, debug build on a
+  Xiaomi phone running Android 16: sign-in and consent, back up, restore on a fresh install,
+  restore the previous backup (with confirmation) and the offline error all passed. The automatic
+  run is scheduled with the right constraints but has not been seen to upload, because WorkManager
+  skips a forced periodic run before its interval. The Backup screen shows "Connected" without the
+  account: OTI-144.)
 
 ### Acceptance
 
 - [ ] Round-trip test passes.
 - [ ] Schema-version rejection works.
 - [ ] Failure at any step never deletes local data.
-- [ ] Manual device test: backup on one install, restore on a fresh install.
+- [x] Manual device test: backup on one install, restore on a fresh install. (2026-10-09.)
 - [ ] Auto backup runs under constraints and notifies only after repeated failure.
 
 ---
@@ -641,7 +648,11 @@ Complexity: Medium. Last.
 
 ### Acceptance
 
-- [ ] Release build passes the smoke test on a real device.
+- [x] Release build passes the smoke test on a real device. (2026-10-09, upload-key build on a
+  Xiaomi phone running Android 16: restore from a debug-build backup, add by ISBN, progress,
+  search, filters, sort, edit, delete, back up and a cold restart all passed. Scanning crashed
+  until a keep rule for ML Kit's component registrars was added to `app/proguard-rules.pro`; it
+  works since. The motion check (task 2) also passed on the same phone.)
 - [ ] Accessibility checks pass.
 - [ ] Privacy policy URL live; data safety form drafted.
 - [ ] No secrets or keystores in git.
