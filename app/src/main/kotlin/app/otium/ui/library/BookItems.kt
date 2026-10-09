@@ -27,7 +27,7 @@ import app.otium.ui.common.rememberCoverPainter
 import app.otium.ui.components.BookCover
 import app.otium.ui.components.OtiumProgressBar
 import app.otium.ui.components.ShelfBoard
-import app.otium.ui.components.StatusChip
+import app.otium.ui.components.StatusGlyph
 import app.otium.ui.components.labelRes
 
 private val LIST_COVER_WIDTH = 56.dp
@@ -66,6 +66,7 @@ fun ShelfBook(book: BookSummary, onOpen: () -> Unit, modifier: Modifier = Modifi
         ) {
             BookCover(
                 title = book.title,
+                authors = book.authors,
                 painter = rememberCoverPainter(book.coverPath),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -105,6 +106,7 @@ fun BookListItem(book: BookSummary, onOpen: () -> Unit, modifier: Modifier = Mod
     ) {
         BookCover(
             title = book.title,
+            authors = book.authors,
             painter = rememberCoverPainter(book.coverPath),
             modifier = Modifier.width(LIST_COVER_WIDTH),
         )
@@ -122,7 +124,7 @@ fun BookListItem(book: BookSummary, onOpen: () -> Unit, modifier: Modifier = Mod
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            StatusChip(status = book.status)
+            StatusGlyph(status = book.status)
             if (book.totalPages > 0) {
                 OtiumProgressBar(progress = book.currentPage.toFloat() / book.totalPages)
             }

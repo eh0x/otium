@@ -33,6 +33,7 @@ style:
     # Previews are called by the IDE, not by code.
     ignoreAnnotated:
       - 'Preview'
+      - 'PreviewLightDark'
   UnnecessaryAbstractClass:
     active: false
 

@@ -107,8 +107,9 @@ class LibraryContentTest {
         show(stateOf(), LibraryActions(onOpenBook = { opened = it }))
 
         // Each book is one grouped item for screen readers; its parts live in the unmerged tree.
-        rule.onNodeWithText("Dune", useUnmergedTree = true).assertIsDisplayed()
-        rule.onNodeWithText("Emma", useUnmergedTree = true).assertIsDisplayed()
+        // Without a cover image the title shows twice: on the generated cover and as the caption.
+        rule.onAllNodesWithText("Dune", useUnmergedTree = true).assertCountEquals(2)
+        rule.onAllNodesWithText("Emma", useUnmergedTree = true).assertCountEquals(2)
         rule.onNodeWithContentDescription("Dune by Frank Herbert").performClick()
 
         assertEquals(1L, opened)

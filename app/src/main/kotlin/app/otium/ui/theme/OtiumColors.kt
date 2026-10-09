@@ -40,6 +40,10 @@ class CoverColors(
     val ornament: Color,
     /** Board colors for generated covers; pick one by a stable hash of the title. */
     val boards: List<Color>,
+    /** Horizontal gradient stops that shade the spine of a generated cover. */
+    val spine: List<Color>,
+    /** Vertical gradient stops for the sheen over a generated cover. */
+    val sheen: List<Color>,
 )
 
 internal fun OtiumPaletteSpec.toOtiumColors() = OtiumColors(
@@ -53,6 +57,8 @@ internal fun OtiumPaletteSpec.toOtiumColors() = OtiumColors(
         text = Color(COVER_TEXT),
         ornament = Color(COVER_ORNAMENT),
         boards = CoverBoards.map(::Color),
+        spine = CoverSpine.map(::Color),
+        sheen = CoverSheen.map(::Color),
     ),
 )
 

@@ -91,6 +91,12 @@ internal val DarkPalette = OtiumPaletteSpec(
 internal const val COVER_TEXT = 0xFFF3ECDD
 internal const val COVER_ORNAMENT = 0xFFE1AD66
 
+/** Spine shading across a generated cover, left to right: shade, clear, highlight, clear. */
+internal val CoverSpine = listOf(0x4D000000L, 0x00000000L, 0x17FFFFFFL, 0x00000000L)
+
+/** The faint top-to-bottom sheen over a generated cover. */
+internal val CoverSheen = listOf(0x0DFFFFFFL, 0x24000000L)
+
 /**
  * Board colors for generated covers: deep, muted tones spread around the hue circle (OKLCH
  * lightness 0.33 to 0.44, chroma 0.05 to 0.09, kept in the sRGB gamut). A stable hash of the

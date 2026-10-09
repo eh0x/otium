@@ -49,7 +49,7 @@ import app.otium.ui.common.messageRes
 import app.otium.ui.common.rememberCoverPainter
 import app.otium.ui.components.BookCover
 import app.otium.ui.components.OtiumTopBar
-import app.otium.ui.components.StatusChip
+import app.otium.ui.components.StatusGlyph
 import app.otium.ui.theme.PaperBackground
 
 private val COVER_WIDTH = 160.dp
@@ -211,7 +211,7 @@ private fun BookDetails(book: Book, actions: DetailActions, modifier: Modifier =
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        StatusChip(status = book.status)
+        StatusGlyph(status = book.status)
         ProgressCard(book = book, actions = actions)
         val labels = book.categories + book.tags
         if (labels.isNotEmpty()) {
