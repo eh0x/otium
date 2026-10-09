@@ -168,7 +168,7 @@ private fun LastBackup(last: BackupInfo?) {
         } else {
             formatDate(last.createdAt)
         },
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
     )
     if (last != null) {
         val size = backupSizeText(last)
