@@ -1,7 +1,10 @@
 package app.otium.data.repo
 
+import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteException
+import app.otium.data.cover.CoverFiles
+import app.otium.data.cover.coversDirectory
 import app.otium.data.local.LibraryQueryBuilder
 import app.otium.data.local.dao.BookDao
 import app.otium.data.local.entity.BookEntity
@@ -14,17 +17,27 @@ import app.otium.domain.model.Book
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.repo.BookRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
-class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRepository {
+class RoomBookRepository internal constructor(
+    private val dao: BookDao,
+    private val covers: CoverFiles,
+) : BookRepository {
+
+    @Inject
+    internal constructor(
+        dao: BookDao,
+        @ApplicationContext context: Context,
+    ) : this(dao, CoverFiles(coversDirectory(context)))
 
     override fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>> =
         dao.observeLibrary(LibraryQueryBuilder.build(filter).toSupportQuery())
-            .map { rows -> rows.map { it.toSummary() } }
+            .map { rows -> rows.map { it.toSummary(covers) } }
 
     override fun observeCount(): Flow<Int> = dao.observeCount()
 
@@ -34,25 +47,25 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
         dao.observeCategoryNames(id),
         dao.observeTagNames(id),
     ) { entity, authors, categories, tags ->
-        entity?.toDomain(authors, categories, tags)
+        entity?.toDomain(authors, categories, tags, covers)
     }
 
     override suspend fun getBook(id: Long): Try<Book> = guard {
         val entity = dao.getBookEntity(id) ?: return@guard Try.Failure(AppError.NotFound)
-        Try.Success(entity.toDomain(dao.authorNames(id), dao.categoryNames(id), dao.tagNames(id)))
+        Try.Success(dao.withLabels(entity, covers))
     }
 
     override suspend fun findByIsbn13(isbn13: String): Try<Book?> = guard {
         val entity = dao.findEntityByIsbn13(isbn13) ?: return@guard Try.Success(null)
-        Try.Success(dao.withLabels(entity))
+        Try.Success(dao.withLabels(entity, covers))
     }
 
     override suspend fun getBooksNeedingLookup(): Try<List<Book>> = guard {
-        Try.Success(dao.booksNeedingLookup().map { dao.withLabels(it) })
+        Try.Success(dao.booksNeedingLookup().map { dao.withLabels(it, covers) })
     }
 
     override suspend fun add(book: Book): Try<Long> = try {
-        Try.Success(dao.insertBook(book.toEntity(), book.authors, book.categories, book.tags))
+        Try.Success(dao.insertBook(book.toEntity(covers), book.authors, book.categories, book.tags))
     } catch (e: CancellationException) {
         throw e
     } catch (e: SQLiteConstraintException) {
@@ -67,7 +80,7 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
     }
 
     override suspend fun update(book: Book): Try<Unit> = guard {
-        if (dao.updateBook(book.toEntity(), book.authors, book.categories, book.tags)) {
+        if (dao.updateBook(book.toEntity(covers), book.authors, book.categories, book.tags)) {
             Try.Success(Unit)
         } else {
             Try.Failure(AppError.NotFound)
@@ -103,6 +116,10 @@ class RoomBookRepository @Inject constructor(private val dao: BookDao) : BookRep
     }
 }
 
+/** The domain book for [entity], with its authors, categories and tags in order. */
+private suspend fun BookDao.withLabels(entity: BookEntity, covers: CoverFiles): Book =
+    entity.toDomain(authorNames(entity.id), categoryNames(entity.id), tagNames(entity.id), covers)
+
 /** Best effort lookup used while reporting a constraint failure; never throws. */
 @Suppress("SwallowedException") // The original constraint failure is already being reported.
 private suspend fun BookDao.findExistingOrNull(isbn13: String) = try {
@@ -112,7 +129,3 @@ private suspend fun BookDao.findExistingOrNull(isbn13: String) = try {
 } catch (e: SQLiteException) {
     null
 }
-
-/** The domain book for [entity], with its authors, categories and tags in order. */
-private suspend fun BookDao.withLabels(entity: BookEntity): Book =
-    entity.toDomain(authorNames(entity.id), categoryNames(entity.id), tagNames(entity.id))

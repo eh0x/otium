@@ -19,6 +19,7 @@ import app.otium.domain.port.DriveAuth
 import com.google.android.gms.auth.api.identity.AuthorizationClient
 import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
+import com.google.android.gms.auth.api.identity.ClearTokenRequest
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.identity.RevokeAccessRequest
 import com.google.android.gms.common.api.ApiException
@@ -73,6 +74,18 @@ internal class GoogleAuthManager @Inject constructor(
             Try.Success(token)
         }
     }
+
+    /** Removes [token] from Google's cache. Offline, the next silent request may return it again. */
+    @Suppress("SwallowedException") // The retry that follows reports whatever went wrong.
+    override suspend fun discard(token: String) {
+        try {
+            client.clearToken(ClearTokenRequest.builder().setToken(token).build()).await()
+        } catch (error: ApiException) {
+            // Nothing to clear, or Google cannot be reached.
+        }
+    }
+
+    override suspend fun revoked() = markExpired()
 
     override suspend fun begin(): Try<ConsentStep> = authorize().flatMap { result ->
         val pending = result.pendingIntent

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Every connection is https and trusts only the system's certificate authorities. The platform
+    already blocks cleartext at the target SDK; this states it so lint and ManifestPolicyTest can
+    check it. No certificate pins: Google rotates its certificates, and a stale pin would break
+    lookups and backups.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

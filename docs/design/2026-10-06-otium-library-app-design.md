@@ -200,7 +200,8 @@ Tables:
 
 - `book`: `id`, `isbn13` (unique, nullable), `isbn10`, `title`, `subtitle`, `authors` (display
   string), `publisher`, `publishedYear`, `language`, `description`, `totalPages`, `currentPage`
-  (default 0), `coverPath`, `coverSourceUrl`, `source` (google/openlibrary/manual), `addedAt`,
+  (default 0), `coverPath` (the cover's file name in the covers directory), `coverSourceUrl`,
+  `source` (google/openlibrary/manual), `addedAt`,
   `updatedAt`, `userEdited`, `needsLookup`.
 - `author`, `book_author`; `category`, `book_category`; `tag`, `book_tag`.
 - `book_fts`: FTS4 over title, subtitle, authors.
@@ -303,8 +304,9 @@ Drive backup:
 - Restore: two steps. `PrepareRestore` downloads, verifies the checksum and the manifest, and
   refuses a schema newer than the app's (before and after the download). The confirm dialog
   ("replaces current library") shows what will be restored. `RestoreBackup` then imports the
-  books in one transaction, copies the covers and rewrites their paths, since the database holds
-  absolute paths that differ between installs.
+  books in one transaction and copies the covers in under their own names. The database names a
+  cover by its file name only, resolved against this install's covers directory when a book is
+  read, so restored rows need no rewriting.
 - Auto backup: `PeriodicWorkRequest` using the user's constraints. Failures retry with backoff; a
   notification appears only after repeated failures.
 - Failure cases: expired auth (prompt re-sign-in), no space, network drop (retry next run). Local

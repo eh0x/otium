@@ -23,8 +23,8 @@ import kotlinx.coroutines.withContext
  * leaves the library as it was, and the covers copied in before it are removed again. Only after
  * the commit are the covers of the replaced library deleted.
  *
- * The cover paths in a backup are those of the install that made it, so each is rewritten to the
- * same file name in this install's covers directory.
+ * Books name their covers by file name, so a cover copied in under its own name is found by the
+ * restored rows wherever this install keeps its covers.
  */
 class RoomLibraryRestorer internal constructor(
     private val context: Context,
@@ -84,7 +84,7 @@ class RoomLibraryRestorer internal constructor(
         for (cover in covers.values) copyCover(cover)?.let(copiedIn::add)
 
         return try {
-            database.replaceAll(rows.withCoversIn(coversDirectory, covers.keys))
+            database.replaceAll(rows.withCoversFrom(covers.keys))
             // The library is the backup's now; only what it does not use goes.
             val kept = covers.keys.map { File(coversDirectory, it) }.toSet()
             (before - kept).forEach { it.delete() }
@@ -153,12 +153,13 @@ class RoomLibraryRestorer internal constructor(
 }
 
 /**
- * These rows with each cover path pointing into [directory]. A cover the backup did not carry
- * ([present] lacks its file name) is dropped from the book, which keeps its source link.
+ * These rows with each cover named by its file name alone, which the covers directory resolves.
+ * A backup made before names were stored holds full paths of the install that made it; only the
+ * name counts. A cover the backup did not carry ([present] lacks its name) is dropped from the
+ * book, which keeps its source link.
  */
-private fun LibraryRows.withCoversIn(directory: File, present: Set<String>): LibraryRows = copy(
+private fun LibraryRows.withCoversFrom(present: Set<String>): LibraryRows = copy(
     books = books.map { book ->
-        val name = book.coverPath?.let { File(it).name }
-        book.copy(coverPath = name?.takeIf { it in present }?.let { File(directory, it).path })
+        book.copy(coverPath = book.coverPath?.let { File(it).name }?.takeIf { it in present })
     },
 )

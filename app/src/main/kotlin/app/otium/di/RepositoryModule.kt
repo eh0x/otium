@@ -1,9 +1,11 @@
 package app.otium.di
 
 import app.otium.data.SystemClock
+import app.otium.data.cover.CameraPhotoFiles
 import app.otium.data.cover.FileCoverStore
 import app.otium.data.repo.RemoteMetadataRepository
 import app.otium.data.repo.RoomBookRepository
+import app.otium.domain.port.CapturedPhotos
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
 import app.otium.domain.repo.BookRepository
@@ -29,6 +31,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCoverStore(impl: FileCoverStore): CoverStore
+
+    @Binds
+    @Singleton
+    abstract fun bindCapturedPhotos(impl: CameraPhotoFiles): CapturedPhotos
 
     @Binds
     @Singleton

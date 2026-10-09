@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.otium.data.backup.archive.BackupManifest
 import app.otium.data.backup.archive.BackupZip
+import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.local.testBook
 import app.otium.data.repo.RoomBookRepository
@@ -59,8 +60,8 @@ class LibraryBackupRoundTripTest {
         targetCovers = temp.newFolder("target-covers")
         source = database()
         target = database()
-        sourceBooks = RoomBookRepository(source.bookDao())
-        targetBooks = RoomBookRepository(target.bookDao())
+        sourceBooks = RoomBookRepository(source.bookDao(), CoverFiles(sourceCovers))
+        targetBooks = RoomBookRepository(target.bookDao(), CoverFiles(targetCovers))
     }
 
     @After

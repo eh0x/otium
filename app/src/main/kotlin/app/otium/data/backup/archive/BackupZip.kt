@@ -3,6 +3,7 @@ package app.otium.data.backup.archive
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -17,6 +18,9 @@ import kotlinx.serialization.json.Json
 private const val BUFFER_BYTES = 64 * 1024
 private const val DEFAULT_MAX_ENTRIES = 50_000
 private const val DEFAULT_MAX_UNPACKED_BYTES = 512L * 1024 * 1024
+
+/** A manifest is a few hundred bytes; one larger than this was not written by the app. */
+private const val MAX_MANIFEST_BYTES = 16 * 1024
 
 /** A name safe to use as a file name inside the backup: no path separators, no leading dot. */
 private val SAFE_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
@@ -62,7 +66,7 @@ internal class BackupZip(
         ZipFile(zip).use { file ->
             val entry =
                 file.getEntry(MANIFEST) ?: return@unreadable Try.Failure(AppError.CorruptBackup)
-            Try.Success(json.decodeFromString(BackupManifest.serializer(), file.text(entry)))
+            Try.Success(file.manifest(entry))
         }
     }
 
@@ -88,7 +92,7 @@ internal class BackupZip(
         val budget = Budget(maxUnpackedBytes)
         for (entry in entries) {
             if (entry.name == MANIFEST) {
-                manifest = json.decodeFromString(BackupManifest.serializer(), file.text(entry))
+                manifest = file.manifest(entry)
                 continue
             }
             val target = targetOf(entry.name, into)
@@ -134,8 +138,29 @@ internal class BackupZip(
         Try.Failure(AppError.Storage(error.message ?: "Could not read the backup"))
     }
 
-    private fun ZipFile.text(entry: ZipEntry): String =
-        getInputStream(entry).use { it.readBytes().toString(Charsets.UTF_8) }
+    /**
+     * The manifest in [entry]. One holding more than [MAX_MANIFEST_BYTES] is a damaged zip; the
+     * size the zip declares is not trusted, and reading stops once the limit is passed.
+     */
+    @Throws(ZipException::class, SerializationException::class)
+    private fun ZipFile.manifest(entry: ZipEntry): BackupManifest {
+        val bytes = getInputStream(entry).use { it.readAtMost(MAX_MANIFEST_BYTES) }
+            ?: throw ZipException("The manifest is larger than $MAX_MANIFEST_BYTES bytes")
+        return json.decodeFromString(BackupManifest.serializer(), bytes.toString(Charsets.UTF_8))
+    }
+
+    /** All of this stream, or null when it holds more than [limit] bytes. */
+    private fun InputStream.readAtMost(limit: Int): ByteArray? {
+        val out = ByteArrayOutputStream()
+        val buffer = ByteArray(BUFFER_BYTES)
+        var count = read(buffer)
+        while (count >= 0) {
+            out.write(buffer, 0, count)
+            if (out.size() > limit) return null
+            count = read(buffer)
+        }
+        return out.toByteArray()
+    }
 
     private fun ZipOutputStream.addFile(name: String, source: File, level: Int) {
         setLevel(level)

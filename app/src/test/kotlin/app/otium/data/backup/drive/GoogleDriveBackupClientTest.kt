@@ -206,6 +206,26 @@ class GoogleDriveBackupClientTest {
     private val drive = FakeDrive()
     private var token: Try<String> = Try.Success("secret-token")
 
+    /** What Google hands out once the first token was discarded. */
+    private var fresh: Try<String> = Try.Success("fresh-token")
+    private val tokens = FakeTokens()
+
+    /** Hands out [token], then [fresh] after a discard, and records what the client reported. */
+    private inner class FakeTokens : AccessTokenProvider {
+        val discarded = CopyOnWriteArrayList<String>()
+        var revoked = false
+
+        override suspend fun accessToken(): Try<String> = if (discarded.isEmpty()) token else fresh
+
+        override suspend fun discard(token: String) {
+            discarded += token
+        }
+
+        override suspend fun revoked() {
+            revoked = true
+        }
+    }
+
     @Before
     fun start() {
         drive.origin = server.url("/").toString().trimEnd('/')
@@ -223,7 +243,7 @@ class GoogleDriveBackupClientTest {
         val api = RemoteClients.retrofit(server.url("/"), http).create(DriveApi::class.java)
         return GoogleDriveBackupClient(
             api = api,
-            tokens = { token },
+            tokens = tokens,
             cacheDir = cacheDir,
             dispatchers = RealDispatchers,
             retryDelayMillis = 1,
@@ -469,10 +489,42 @@ class GoogleDriveBackupClientTest {
     }
 
     @Test
-    fun `a rejected token means signing in again`() {
+    fun `a refused cached token is dropped and the call made again with a fresh one`() {
         drive.failWith(401) { it == "GET $FILES" }
 
+        assertEquals(Try.Success(emptyList<RemoteBackup>()), run { list() })
+        assertEquals(listOf("secret-token"), tokens.discarded)
+        assertEquals("Bearer fresh-token", drive.authorizations.last())
+        assertFalse(tokens.revoked)
+    }
+
+    @Test
+    fun `a refused fresh token means the grant is gone`() {
+        drive.failWith(401, times = 2) { it == "GET $FILES" }
+
         assertEquals(Try.Failure(AppError.AuthExpired), run { list() })
+        assertEquals(2, drive.count("GET $FILES"))
+        assertTrue(tokens.revoked)
+    }
+
+    @Test
+    fun `no fresh token after a refusal is reported as is`() {
+        drive.failWith(401) { it == "GET $FILES" }
+        fresh = Try.Failure(AppError.Offline)
+
+        assertEquals(Try.Failure(AppError.Offline), run { list() })
+        assertFalse(tokens.revoked)
+    }
+
+    @Test
+    fun `an upload refused part way is made again in full with a fresh token`() {
+        drive.failWith(401) { it.startsWith("PUT $UPLOAD_SESSION") }
+
+        val result = run { upload(localBackup("data"), backupInfo()) }
+
+        assertEquals(Try.Success(Unit), result)
+        assertEquals(listOf(DriveFileNames.LATEST), drive.names())
+        assertEquals("data", content(DriveFileNames.LATEST))
     }
 
     @Test

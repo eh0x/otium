@@ -22,6 +22,7 @@ import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
 import app.otium.domain.port.BackupScheduler
 import app.otium.domain.port.BarcodeScanner
+import app.otium.domain.port.CapturedPhotos
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
 import app.otium.domain.port.LookupScheduler
@@ -81,6 +82,9 @@ class AddByScanFlowTest {
 
     @BindValue @JvmField
     val clock: Clock = FixedClock()
+
+    @BindValue @JvmField
+    val capturedPhotos: CapturedPhotos = CapturedPhotos {}
 
     @BindValue @JvmField
     val scheduler: LookupScheduler = LookupScheduler {}

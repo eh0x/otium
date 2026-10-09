@@ -172,7 +172,10 @@ private fun rememberCoverPickers(
     )
 }
 
-/** A fresh file in the shared camera folder (see res/xml/file_paths.xml) for the camera app. */
+/**
+ * A fresh file in the shared camera folder (see res/xml/file_paths.xml) for the camera app.
+ * `CameraPhotoFiles` deletes these by folder and name, so keep both in step with it.
+ */
 private fun Context.newPhotoUri() = FileProvider.getUriForFile(
     this,
     "$packageName.covers",

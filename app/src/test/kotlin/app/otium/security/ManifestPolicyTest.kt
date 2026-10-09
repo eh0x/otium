@@ -8,11 +8,14 @@ import android.content.pm.PackageManager
 import android.content.pm.ProviderInfo
 import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
+import app.otium.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.xmlpull.v1.XmlPullParser
 
 /**
  * The privacy promise, checked against the merged manifest: what the app may ask for and what
@@ -79,6 +82,27 @@ class ManifestPolicyTest {
             "cleartext traffic must stay off",
             flags and ApplicationInfo.FLAG_USES_CLEARTEXT_TRAFFIC != 0,
         )
+    }
+
+    @Test
+    fun `the network security config allows https only and trusts only system authorities`() {
+        val cleartext = mutableListOf<String?>()
+        val anchors = mutableListOf<String?>()
+        context.resources.getXml(R.xml.network_security_config).use { xml ->
+            while (xml.next() != XmlPullParser.END_DOCUMENT) {
+                if (xml.eventType != XmlPullParser.START_TAG) continue
+                when (xml.name) {
+                    "base-config", "domain-config" ->
+                        cleartext += xml.getAttributeValue(null, "cleartextTrafficPermitted")
+
+                    "certificates" -> anchors += xml.getAttributeValue(null, "src")
+                }
+            }
+        }
+
+        assertTrue("the config must have a base-config", cleartext.isNotEmpty())
+        assertEquals("cleartext must be off everywhere", cleartext.map { "false" }, cleartext)
+        assertEquals("only the system's authorities", listOf("system"), anchors)
     }
 
     private fun components(): List<ComponentInfo> = info.activities.orEmpty().toList() +

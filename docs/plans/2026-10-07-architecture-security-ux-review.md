@@ -55,8 +55,8 @@ Already right, and to keep as it is:
 | S2 | Security | Validate the Drive upload session URL | S | Done |
 | S3 | Security | Restrict the Google Books API key | S | Documented; Cloud console steps Done |
 | S4 | Security | Encrypted backups, then app lock; defer SQLCipher | L | Encrypted backups done; app lock open |
-| S5 | Security | Network security config, manifest cap, dependency verification | S | Open |
-| S6 | Security | Store cover file names, not absolute paths | M | Open |
+| S5 | Security | Network security config, manifest cap, dependency verification | S | Done; dependency verification deferred |
+| S6 | Security | Store cover file names, not absolute paths | M | Done |
 | A1 | Architecture | Keep the draft out of `ConfirmRoute` | M | Open |
 | A2 | Architecture | Keep library controls across process death | S | Open |
 | A3 | Architecture | Settle the schema before the first release | S | Open |
@@ -68,10 +68,10 @@ Already right, and to keep as it is:
 | U5 | UX | Copy and accessibility fixes | S | Open |
 | U6 | UX | Play listing privacy material | S | Open |
 | U7 | UX | Keep the library when moving to a new phone | M | Open |
-| S7 | Security | Recover from a revoked Drive token without a stale screen | S | Open |
-| S8 | Security | Delete cover photos left in the camera cache | S | Open |
+| S7 | Security | Recover from a revoked Drive token without a stale screen | S | Done |
+| S8 | Security | Delete cover photos left in the camera cache | S | Done |
 | B1 | Build | Build an app bundle in CI and keep it with the R8 mapping | S | Open |
-| S9 | Security | Pin the Gradle distribution checksum | S | Open |
+| S9 | Security | Pin the Gradle distribution checksum | S | Done |
 | B2 | Build | Build the release variant in a parallel CI job | S | Open |
 | U8 | Feature | Launcher shortcuts for adding books | S | Open |
 | U9 | Feature | Add a book shared from another app | M | Open |
@@ -211,6 +211,17 @@ encryption on with the same key. The app lock is still open.
   bumps. Do it together with S9.
 - The integrity check on the extracted `library.db` is now part of S14.
 
+Status (2026-10-09): the network security config is in place (cleartext off, system authorities
+only, no pins) and `ManifestPolicyTest` reads it. `BackupZip` reads the manifest only up to
+16 KiB and treats a larger one as `CorruptBackup`, in both `readManifest` and `extract`.
+
+Dependency verification is deferred. Dependabot does not update `verification-metadata.xml`, so
+every Gradle bump it opens would fail CI until someone regenerates the file on that branch, and
+the file has to carry the Linux and Windows `aapt2` checksums by hand when it is generated on
+macOS. Until then the wrapper checksum (S9) and the OSV-Scanner gate (S22) carry the load, and
+S12's group filtering, still open, would narrow it further. Revisit when Dependabot supports the
+file, or with a workflow that regenerates it on Dependabot branches.
+
 ### S6. Store cover file names, not absolute paths
 
 `FileCoverStore.store` returns `finished.absolutePath` and the database keeps it as `coverPath`.
@@ -220,6 +231,12 @@ of `filesDir` breaks every cover.
 Change: store the file name, resolve it against `coversDirectory(context)` at read time (in the
 mapper or a small resolver), and add a migration that strips the directory from existing rows.
 Do this together with A3 so it ships in the first schema.
+
+Status (2026-10-09): done without a schema change. `CoverFiles` turns a stored name into a path
+in `RoomBookRepository`'s mappers, and the domain still sees full paths. Writes keep the name
+only. There is no migration: a row written before holds a full path, and only its file name is
+used, so old rows and old backups resolve into the current covers directory. The restorer copies
+covers in under their own names and no longer rewrites rows.
 
 ## 4. Architecture
 
@@ -375,6 +392,13 @@ Change:
 - If the retry also gets a 401, mark the grant expired so the screen offers "Reconnect" (U5).
 - Test both paths with the fake Drive in `GoogleDriveBackupClientTest`.
 
+Status (2026-10-09): done. `AccessTokenProvider` gained `discard` and `revoked`.
+`GoogleAuthManager` clears a refused token with `AuthorizationClient.clearToken` (present in
+play-services-auth 22.0.0) and marks the grant expired on `revoked`. `GoogleDriveBackupClient`
+reruns the whole call once with a fresh token after a 401; an upload cut off part way is cleared
+up by the settled layout before it is sent again. The fake Drive tests cover the retry, a second
+refusal, no fresh token and an upload refused part way. T1 is still open.
+
 ### S8. Delete cover photos left in the camera cache
 
 `ui/add/confirm/CoverSection.kt` has the camera write `cache/camera/cover-<nanos>.jpg`. When the
@@ -384,6 +408,13 @@ cache. These are the user's own photos.
 
 Change: delete the camera file once the cover store has copied it or the user has cancelled, and
 empty `cache/camera/` when the app starts, for files left by a process that died.
+
+Status (2026-10-09): done. `ConfirmViewModel` remembers every photo picked on the screen and
+hands them to the `CapturedPhotos` port when it is cleared, which happens after a save and after
+backing out alike. `CameraPhotoFiles` deletes only addresses with the app's FileProvider
+authority, the `camera` folder and a `cover-<digits>.jpg` name. At start it deletes photos older
+than a day instead of emptying the folder: after process death the camera app may have just
+written a photo that the restored screen still needs.
 
 ### B1. Build an app bundle in CI and keep it with the R8 mapping
 
@@ -405,6 +436,9 @@ Change: add `distributionSha256Sum` for the Gradle 9.8.0 binary distribution (fr
 services.gradle.org), for example with
 `./gradlew wrapper --gradle-version 9.8.0 --gradle-distribution-sha256-sum <sum>`. Dependabot
 updates the sum together with the version. This complements dependency verification (S5).
+
+Status (2026-10-09): done. `distributionSha256Sum` is set for Gradle 9.8.0; the value from
+services.gradle.org matched the hash of the locally downloaded distribution.
 
 ### B2. Build the release variant in a parallel CI job
 
@@ -569,9 +603,11 @@ protection, which is free for public repositories).
 - **S4:** encrypted backups done on 2026-10-09 (see S4). With a passphrase set, Drive holds only
   ciphertext. Encryption is opt-in, so a user who never sets a passphrase still has a readable
   zip in Drive. The app lock is still open.
-- **S5:** all parts still open. At target SDK 37 cleartext is already off and
+- **S5:** all parts still open at the time. At target SDK 37 cleartext is already off and
   `ManifestPolicyTest` checks it, so the network security config is documentation of intent.
-- **S6, S7, S8, S9:** still open as described. S8 confirmed: nothing deletes `cache/camera/`.
+  Done on 2026-10-09 except dependency verification (see S5).
+- **S6, S7, S8, S9:** still open at the time. S8 confirmed: nothing deleted `cache/camera/`.
+  All four done on 2026-10-09.
 
 ### S10. Pin `upload-artifact` by commit SHA (Medium)
 
