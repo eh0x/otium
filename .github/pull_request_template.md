@@ -1,5 +1,3 @@
-# {PR Title}
-
 ## 🎫 Linear Issue
 <!-- Link the Linear issue(s) associated with this PR -->
 Fixes / Relates to: [Issue-XXX](https://linear.app/your-org/issue/XXX)

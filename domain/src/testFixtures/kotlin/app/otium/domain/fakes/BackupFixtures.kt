@@ -9,7 +9,8 @@ fun backupInfo(
     bookCount: Int = 3,
     appVersion: String = "0.1.0",
     schemaVersion: Int = 1,
-) = BackupInfo(createdAt, sizeBytes, bookCount, appVersion, schemaVersion)
+    keyId: String? = null,
+) = BackupInfo(createdAt, sizeBytes, bookCount, appVersion, schemaVersion, keyId)
 
 /** Fake backup files hold their [BackupInfo] as text, so every fake can read what another wrote. */
 internal object FakeBackupFiles {

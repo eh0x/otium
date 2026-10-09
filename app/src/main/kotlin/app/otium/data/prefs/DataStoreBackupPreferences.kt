@@ -43,6 +43,7 @@ class DataStoreBackupPreferences @Inject constructor(
                 bookCount = preferences[LAST_BOOKS] ?: 0,
                 appVersion = preferences[LAST_APP_VERSION].orEmpty(),
                 schemaVersion = preferences[LAST_SCHEMA] ?: 0,
+                keyId = preferences[LAST_KEY_ID],
             )
         }
     }
@@ -63,6 +64,8 @@ class DataStoreBackupPreferences @Inject constructor(
             it[LAST_BOOKS] = info.bookCount
             it[LAST_APP_VERSION] = info.appVersion
             it[LAST_SCHEMA] = info.schemaVersion
+            val keyId = info.keyId
+            if (keyId == null) it.remove(LAST_KEY_ID) else it[LAST_KEY_ID] = keyId
             it[FAILED_RUNS] = 0
         }
     }
@@ -83,6 +86,7 @@ class DataStoreBackupPreferences @Inject constructor(
         val LAST_BOOKS = intPreferencesKey("backup_last_books")
         val LAST_APP_VERSION = stringPreferencesKey("backup_last_app_version")
         val LAST_SCHEMA = intPreferencesKey("backup_last_schema")
+        val LAST_KEY_ID = stringPreferencesKey("backup_last_key_id")
         val FAILED_RUNS = intPreferencesKey("backup_failed_runs")
     }
 }

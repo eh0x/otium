@@ -113,6 +113,8 @@ internal fun formatDate(epochMillis: Long): String {
 internal fun BackupMessage.textRes(): Int = when (this) {
     BackupMessage.BACKED_UP -> R.string.backup_done
     BackupMessage.RESTORED -> R.string.restore_done
+    BackupMessage.ENCRYPTION_ON -> R.string.encryption_on_done
+    BackupMessage.ENCRYPTION_OFF -> R.string.encryption_off_done
 }
 
 internal fun BackupFrequency.labelRes(): Int = when (this) {

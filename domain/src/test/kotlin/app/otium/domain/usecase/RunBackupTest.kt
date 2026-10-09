@@ -3,6 +3,7 @@ package app.otium.domain.usecase
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeBackupArchiver
+import app.otium.domain.fakes.FakeBackupEncryption
 import app.otium.domain.fakes.FakeBackupPreferences
 import app.otium.domain.fakes.FakeDriveBackupClient
 import app.otium.domain.fakes.backupInfo
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RunBackupTest {
@@ -21,7 +23,8 @@ class RunBackupTest {
     private val archiver = FakeBackupArchiver(info)
     private val drive = FakeDriveBackupClient()
     private val preferences = FakeBackupPreferences()
-    private val runBackup = RunBackup(drive, archiver, preferences, BackupLock())
+    private val encryption = FakeBackupEncryption()
+    private val runBackup = RunBackup(drive, archiver, encryption, preferences, BackupLock())
 
     @Test
     fun `uploads the archive as the latest backup and remembers it`() = runTest {
@@ -122,5 +125,73 @@ class RunBackupTest {
 
         assertEquals(1, archiver.maxConcurrent)
         assertEquals(2, drive.uploads)
+    }
+
+    // --- Encryption ---
+
+    @Test
+    fun `with a passphrase set, only the encrypted archive is uploaded`() = runTest {
+        encryption.turnOn("correct horse")
+
+        val result = runBackup()
+
+        val keyId = FakeBackupEncryption.keyIdOf("correct horse")
+        val content = checkNotNull(drive.contentIn(BackupSlot.LATEST))
+        assertTrue(content.startsWith("ENC:$keyId:"))
+        val uploaded = checkNotNull(drive.infoIn(BackupSlot.LATEST))
+        assertEquals(keyId, uploaded.keyId)
+        assertEquals(Try.Success(uploaded), result)
+        assertEquals(uploaded, preferences.currentLastBackup)
+    }
+
+    @Test
+    fun `the recorded size is that of the encrypted file`() = runTest {
+        encryption.turnOn("correct horse")
+
+        runBackup()
+
+        val content = checkNotNull(drive.contentIn(BackupSlot.LATEST))
+        assertEquals(content.length.toLong(), drive.infoIn(BackupSlot.LATEST)?.sizeBytes)
+    }
+
+    @Test
+    fun `both temporary files are removed after an encrypted upload`() = runTest {
+        encryption.turnOn("correct horse")
+
+        runBackup()
+
+        assertFalse(archiver.created.single().exists())
+        assertFalse(encryption.produced.single().exists())
+    }
+
+    @Test
+    fun `the encrypted file is removed when the upload fails`() = runTest {
+        encryption.turnOn("correct horse")
+        drive.failure = AppError.Offline
+
+        runBackup()
+
+        assertFalse(encryption.produced.single().exists())
+    }
+
+    @Test
+    fun `a lost key stops the backup instead of uploading it unencrypted`() = runTest {
+        encryption.turnOn("correct horse")
+        encryption.keyLost = true
+
+        val result = runBackup()
+
+        assertEquals(Try.Failure(AppError.PassphraseRequired), result)
+        assertEquals(0, drive.uploads)
+        assertNull(preferences.currentLastBackup)
+        assertFalse(archiver.created.single().exists())
+    }
+
+    @Test
+    fun `without a passphrase the backup is not encrypted`() = runTest {
+        runBackup()
+
+        assertNull(drive.infoIn(BackupSlot.LATEST)?.keyId)
+        assertTrue(encryption.produced.isEmpty())
     }
 }

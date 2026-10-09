@@ -69,6 +69,7 @@ application can mature:
 | D-RM8 | Local-only lending tracker | Google Contacts integration; Calendar alarms | Privacy-first; eliminates unnecessary runtime permission prompts. |
 | D-RM9 | Continuous batch barcode scanning with background resolution | Blocking camera flow; External barcode scanners | Maximizes ingestion speed when cataloguing whole bookshelves without UI freezes. |
 | D-RM10 | Jetpack Compose Glance home screen widget | Legacy RemoteViews; No widget | Cohesive with the "Earth & Ink" theme and provides glanceable reading progress without opening the app. |
+| D-RM11 | Encrypted backups first, biometric app lock second, SQLCipher deferred (changes the order and scope of D-RM2 to D-RM4; review S4) | SQLCipher first, as planned | The backup is the only copy that leaves the phone, and Android's file-based encryption already protects the database on the device. SQLCipher adds native libraries and makes a lost key mean lost data. Revisit it when private notes arrive. |
 
 ## 5. Phased roadmap
 
@@ -97,14 +98,15 @@ their lifelong libraries without lock-in.
 
 #### Security hardening
 
-- **SQLCipher integration:** 256-bit AES database encryption using SQLCipher for Android.
-  Existing unencrypted v1 databases are migrated automatically on first launch via a temporary
-  in-memory SQLCipher bridge.
+- **SQLCipher integration (deferred, D-RM11):** 256-bit AES database encryption using SQLCipher
+  for Android. Existing unencrypted v1 databases are migrated automatically on first launch via a
+  temporary in-memory SQLCipher bridge.
 - **Biometric app lock:** Integrated Android `BiometricPrompt` supporting fingerprint, facial
   recognition, and device PIN. Includes configurable auto-lock timeouts (immediate, 1 minute, 5
   minutes) and dynamic `FLAG_SECURE` window masking in the Android app switcher.
-- **Client-side encrypted backups:** Google Drive backups and manual exports are encrypted with
-  AES-256-GCM using PBKDF2/Argon2 key derivation from a user passphrase.
+- **Client-side encrypted backups (done for Drive backups):** with a passphrase set, Drive
+  backups are encrypted with AES-256-GCM (Tink streaming AEAD) under a key derived with Argon2id.
+  Manual exports will use the same format when they arrive.
 
 #### Open data mobility
 

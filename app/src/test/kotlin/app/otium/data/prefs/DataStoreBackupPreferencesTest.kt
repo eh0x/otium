@@ -115,4 +115,17 @@ class DataStoreBackupPreferencesTest {
         assertTrue(reopened.settings.first().autoBackup)
         assertEquals(info, reopened.lastBackup.first())
     }
+
+    @Test
+    fun `an encrypted backup is remembered with its key id, and a later plain one without`() =
+        runTest {
+            val prefs = preferences()
+            val encrypted = info.copy(keyId = "0123456789abcdef0123456789abcdef")
+
+            prefs.recordBackup(encrypted)
+            assertEquals(encrypted, prefs.lastBackup.first())
+
+            prefs.recordBackup(info)
+            assertNull(prefs.lastBackup.first()?.keyId)
+        }
 }

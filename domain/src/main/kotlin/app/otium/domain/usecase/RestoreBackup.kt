@@ -2,6 +2,7 @@ package app.otium.domain.usecase
 
 import app.otium.domain.error.Try
 import app.otium.domain.model.RestorePreview
+import app.otium.domain.port.BackupEncryption
 import app.otium.domain.port.LibraryRestorer
 import app.otium.domain.port.LookupScheduler
 
@@ -13,12 +14,15 @@ import app.otium.domain.port.LookupScheduler
 class RestoreBackup(
     private val restorer: LibraryRestorer,
     private val lookups: LookupScheduler,
+    private val encryption: BackupEncryption,
     private val lock: BackupLock,
 ) {
     suspend operator fun invoke(preview: RestorePreview): Try<Unit> = lock.withLock {
         restorer.restore(preview.file).also { result ->
             if (result is Try.Success) {
                 preview.discard()
+                // A library restored from an encrypted backup keeps being backed up encrypted.
+                preview.info.keyId?.let { encryption.adopt(it) }
                 // Books that were still waiting for their details when backed up resume the lookup.
                 lookups.schedule()
             }
