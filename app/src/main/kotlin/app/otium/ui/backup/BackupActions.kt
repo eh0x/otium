@@ -10,7 +10,6 @@ import app.otium.domain.model.BackupSlot
  */
 @Immutable
 data class BackupActions(
-    val onBack: () -> Unit = {},
     val onConnect: () -> Unit = {},
     val onDisconnect: () -> Unit = {},
     val onBackUpNow: () -> Unit = {},

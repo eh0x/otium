@@ -16,14 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -70,7 +66,6 @@ import java.util.Date
  */
 @Composable
 fun BackupScreen(
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BackupViewModel = hiltViewModel(),
     encryptionViewModel: EncryptionViewModel = hiltViewModel(),
@@ -101,9 +96,8 @@ fun BackupScreen(
         if (needsAsking) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 
-    val actions = remember(viewModel, onBack) {
+    val actions = remember(viewModel) {
         BackupActions(
-            onBack = onBack,
             onConnect = viewModel::onConnect,
             onDisconnect = viewModel::onDisconnect,
             onBackUpNow = viewModel::onBackUpNow,
@@ -166,17 +160,7 @@ fun BackupContent(
             containerColor = Color.Transparent,
             snackbarHost = { SnackbarHost(snackbar) },
             topBar = {
-                OtiumTopBar(
-                    title = stringResource(R.string.backup_title),
-                    navigationIcon = {
-                        IconButton(onClick = actions.onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.backup_back),
-                            )
-                        }
-                    },
-                )
+                OtiumTopBar(title = stringResource(R.string.backup_title))
             },
         ) { padding ->
             Column(

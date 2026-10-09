@@ -4,7 +4,6 @@ import androidx.compose.runtime.Immutable
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
-import app.otium.ui.add.AddMethod
 
 /**
  * Everything the library screen can ask for, in one stable holder so the stateless content
@@ -21,9 +20,8 @@ data class LibraryActions(
     val onClearFilters: () -> Unit = {},
     val onViewModeSelected: (LibraryViewMode) -> Unit = {},
     val onOpenBook: (Long) -> Unit = {},
-    /** The user picked a way to add a book in the add sheet. */
-    val onAddBook: (AddMethod) -> Unit = {},
+    /** Asks the app shell to open the add sheet. */
+    val onOpenAddSheet: () -> Unit = {},
     val onSeedDebugData: () -> Unit = {},
     val onOpenCatalog: () -> Unit = {},
-    val onOpenBackup: () -> Unit = {},
 )

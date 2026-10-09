@@ -26,7 +26,6 @@
     <string name="library_title">Library</string>
     <string name="library_search_hint">Search title or author</string>
     <string name="library_search_clear">Clear search</string>
-    <string name="library_add_book">Add book</string>
     <string name="library_sort">Sort</string>
     <string name="library_filters">Filters</string>
     <string name="library_filters_active">Filters (%1$d)</string>
@@ -167,9 +166,7 @@
     <string name="error_unexpected">Something went wrong. Please try again.</string>
 
     <!-- Backup and restore -->
-    <string name="library_backup">Backup and restore</string>
     <string name="backup_title">Backup</string>
-    <string name="backup_back">Back</string>
     <string name="backup_drive_heading">Google Drive</string>
     <string name="backup_drive_signed_out">Not connected. Your library is only on this phone.</string>
     <string name="backup_drive_signed_in">Connected as %1$s</string>
@@ -246,4 +243,10 @@
     <string name="backup_channel_name">Backups</string>
     <string name="backup_channel_description">Tells you when automatic backups keep failing.</string>
     <string name="backup_failed_title">Backup did not run</string>
+
+    <!-- App shell: bottom navigation and the Reading tab -->
+    <string name="settings_title">Settings</string>
+    <string name="reading_title">Reading</string>
+    <string name="reading_kicker">On the desk</string>
+    <string name="reading_empty">Nothing open at the moment. Begin a book from your library.</string>
 </resources>

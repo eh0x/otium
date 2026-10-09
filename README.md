@@ -349,6 +349,8 @@ To work on a change:
   [Lora](https://github.com/cyrealtype/Lora-Cyrillic) and
   [Cinzel](https://github.com/NDISCOVER/Cinzel), all under the SIL Open Font License. The license
   texts are in `third_party/fonts`.
+- Icons: [Lucide](https://lucide.dev), under the ISC License, redrawn at a 1.5 dp stroke. The
+  license text is in `third_party/icons`.
 
 ## License
 

@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -24,7 +23,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,8 +53,6 @@ import app.otium.R
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
-import app.otium.ui.add.AddMethod
-import app.otium.ui.add.AddSheet
 import app.otium.ui.components.OtiumTopBar
 import app.otium.ui.components.labelRes
 import app.otium.ui.theme.PaperBackground
@@ -65,14 +61,13 @@ import app.otium.ui.theme.PaperBackground
 @Composable
 fun LibraryScreen(
     onOpenBook: (Long) -> Unit,
-    onAddBook: (AddMethod) -> Unit,
+    onOpenAddSheet: () -> Unit,
     onOpenCatalog: () -> Unit,
-    onOpenBackup: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val actions = remember(viewModel, onOpenBook, onAddBook, onOpenCatalog, onOpenBackup) {
+    val actions = remember(viewModel, onOpenBook, onOpenAddSheet, onOpenCatalog) {
         LibraryActions(
             onQueryChange = viewModel::onQueryChange,
             onStatusSelected = viewModel::onStatusSelected,
@@ -82,10 +77,9 @@ fun LibraryScreen(
             onClearFilters = viewModel::onClearFilters,
             onViewModeSelected = viewModel::onViewModeSelected,
             onOpenBook = onOpenBook,
-            onAddBook = onAddBook,
+            onOpenAddSheet = onOpenAddSheet,
             onSeedDebugData = viewModel::onSeedDebugData,
             onOpenCatalog = onOpenCatalog,
-            onOpenBackup = onOpenBackup,
         )
     }
     LibraryContent(state = state, actions = actions, modifier = modifier)
@@ -95,19 +89,10 @@ fun LibraryScreen(
 @Composable
 fun LibraryContent(state: LibraryUiState, actions: LibraryActions, modifier: Modifier = Modifier) {
     var filtersOpen by rememberSaveable { mutableStateOf(false) }
-    var addOpen by rememberSaveable { mutableStateOf(false) }
     PaperBackground(modifier = modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.Transparent,
             topBar = { LibraryTopBar(state = state, actions = actions) },
-            floatingActionButton = {
-                FloatingActionButton(onClick = { addOpen = true }) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.library_add_book),
-                    )
-                }
-            },
         ) { padding ->
             Column(modifier = Modifier.padding(padding).fillMaxSize()) {
                 SearchField(
@@ -126,21 +111,12 @@ fun LibraryContent(state: LibraryUiState, actions: LibraryActions, modifier: Mod
                 LibraryBody(
                     state = state,
                     actions = actions,
-                    onOpenAddSheet = { addOpen = true },
+                    onOpenAddSheet = actions.onOpenAddSheet,
                 )
             }
         }
         if (filtersOpen) {
             FilterSheet(state = state, actions = actions, onDismiss = { filtersOpen = false })
-        }
-        if (addOpen) {
-            AddSheet(
-                onChoose = { method ->
-                    addOpen = false
-                    actions.onAddBook(method)
-                },
-                onDismiss = { addOpen = false },
-            )
         }
     }
 }
@@ -151,7 +127,8 @@ private fun LibraryTopBar(state: LibraryUiState, actions: LibraryActions) {
         title = stringResource(R.string.library_title),
         actions = {
             ViewModeAction(selected = state.viewMode, onSelected = actions.onViewModeSelected)
-            MoreMenu(showDebugTools = state.debugToolsAvailable, actions = actions)
+            // The menu holds developer tools only, so it exists only in builds that have them.
+            if (state.debugToolsAvailable) MoreMenu(actions = actions)
         },
     )
 }
@@ -295,7 +272,7 @@ private fun ViewModeAction(selected: LibraryViewMode, onSelected: (LibraryViewMo
 }
 
 @Composable
-private fun MoreMenu(showDebugTools: Boolean, actions: LibraryActions) {
+private fun MoreMenu(actions: LibraryActions) {
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }) {
         Icon(
@@ -305,27 +282,18 @@ private fun MoreMenu(showDebugTools: Boolean, actions: LibraryActions) {
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
         DropdownMenuItem(
-            text = { Text(stringResource(R.string.library_backup)) },
+            text = { Text(stringResource(R.string.library_debug_seed)) },
             onClick = {
                 open = false
-                actions.onOpenBackup()
+                actions.onSeedDebugData()
             },
         )
-        if (showDebugTools) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.library_debug_seed)) },
-                onClick = {
-                    open = false
-                    actions.onSeedDebugData()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.library_debug_catalog)) },
-                onClick = {
-                    open = false
-                    actions.onOpenCatalog()
-                },
-            )
-        }
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.library_debug_catalog)) },
+            onClick = {
+                open = false
+                actions.onOpenCatalog()
+            },
+        )
     }
 }

@@ -19,7 +19,6 @@ import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
 import app.otium.domain.usecase.DeriveStatus
-import app.otium.ui.add.AddMethod
 import app.otium.ui.theme.OtiumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -77,14 +76,13 @@ class LibraryContentTest {
 
     @Test
     fun `an empty library invites the first book`() {
-        val added = mutableListOf<AddMethod>()
-        show(stateOf(books = emptyList()), LibraryActions(onAddBook = { added += it }))
+        var opened = 0
+        show(stateOf(books = emptyList()), LibraryActions(onOpenAddSheet = { opened++ }))
 
         rule.onNodeWithText("Your shelves are empty").assertIsDisplayed()
         rule.onNodeWithText("Add a book").performClick()
-        rule.onNodeWithText("Scan barcode").performClick()
 
-        assertEquals(listOf(AddMethod.SCAN), added)
+        assertEquals(1, opened)
     }
 
     @Test
@@ -267,19 +265,7 @@ class LibraryContentTest {
             .assertIsDisplayed()
     }
 
-    // --- Adding and developer tools ---
-
-    @Test
-    fun `the add button offers the ways to add and reports the choice`() {
-        val added = mutableListOf<AddMethod>()
-        show(stateOf(), LibraryActions(onAddBook = { added += it }))
-
-        rule.onNodeWithContentDescription("Add book").performClick()
-        rule.onNodeWithText("Search by title").performClick()
-
-        assertEquals(listOf(AddMethod.TITLE_SEARCH), added)
-        rule.onNodeWithText("Search by title").assertDoesNotExist()
-    }
+    // --- Developer tools ---
 
     @Test
     fun `developer tools appear only when available`() {
@@ -300,24 +286,9 @@ class LibraryContentTest {
     }
 
     @Test
-    fun `the menu opens backup and restore`() {
-        var opened = 0
-        show(stateOf(), LibraryActions(onOpenBackup = { opened++ }))
-
-        rule.onNodeWithContentDescription("More options").performClick()
-        rule.onNodeWithText("Backup and restore").performClick()
-
-        assertEquals(1, opened)
-    }
-
-    @Test
-    fun `without developer tools the menu holds no developer items`() {
+    fun `without developer tools there is no menu`() {
         show(stateOf())
 
-        rule.onNodeWithContentDescription("More options").performClick()
-
-        rule.onNodeWithText("Backup and restore").assertIsDisplayed()
-        rule.onAllNodesWithText("Seed 5,000 test books").assertCountEquals(0)
-        rule.onAllNodesWithText("Theme catalog").assertCountEquals(0)
+        rule.onNodeWithContentDescription("More options").assertDoesNotExist()
     }
 }
