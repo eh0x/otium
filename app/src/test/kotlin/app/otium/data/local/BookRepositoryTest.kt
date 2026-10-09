@@ -509,6 +509,48 @@ class BookRepositoryTest {
     }
 
     @Test
+    fun `sort by title files titles without their leading article`() = runTest {
+        add(testBook(title = "The Odyssey"))
+        add(testBook(title = "Beowulf"))
+        add(testBook(title = "A Clockwork Orange"))
+
+        assertEquals(
+            listOf("Beowulf", "A Clockwork Orange", "The Odyssey"),
+            titles(LibraryFilter(sort = SortOrder.TITLE)),
+        )
+    }
+
+    @Test
+    fun `sort by author files authors by surname`() = runTest {
+        add(testBook(title = "Dune", authors = listOf("Frank Herbert")))
+        add(testBook(title = "Meditations", authors = listOf("Marcus Aurelius")))
+        add(testBook(title = "Emma", authors = listOf("Jane Austen")))
+
+        assertEquals(
+            listOf("Meditations", "Emma", "Dune"),
+            titles(LibraryFilter(sort = SortOrder.AUTHOR)),
+        )
+    }
+
+    @Test
+    fun `a summary carries its first category as its shelf and its update time`() = runTest {
+        add(
+            testBook(
+                title = "Ethics",
+                categories = listOf("Philosophy", "Classics"),
+                updatedAt = 42,
+            ),
+        )
+        add(testBook(title = "Loose", categories = emptyList()))
+
+        val summaries = repo.observeLibrary(LibraryFilter()).first().associateBy { it.title }
+
+        assertEquals("Philosophy", summaries.getValue("Ethics").shelf)
+        assertEquals(42L, summaries.getValue("Ethics").updatedAt)
+        assertEquals(null, summaries.getValue("Loose").shelf)
+    }
+
+    @Test
     fun `sort by recently added and last updated are newest first`() = runTest {
         seedSortLibrary()
         assertEquals(

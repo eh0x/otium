@@ -21,6 +21,11 @@ object LibraryQueryBuilder {
 
     private val SEARCH_TOKEN = Regex("[\\p{L}\\p{N}]+")
 
+    /** A book's shelf is its first category. */
+    private const val SHELF = "(SELECT c.name FROM book_category bc " +
+        "JOIN category c ON c.id = bc.categoryId " +
+        "WHERE bc.bookId = b.id ORDER BY bc.position LIMIT 1)"
+
     fun build(filter: LibraryFilter): BuiltQuery {
         val conditions = mutableListOf<String>()
         val args = mutableListOf<Any>()
@@ -55,7 +60,8 @@ object LibraryQueryBuilder {
 
         val where = if (conditions.isEmpty()) "" else " WHERE " + conditions.joinToString(" AND ")
         val sql = "SELECT b.id, b.title, b.authors, b.coverPath, b.coverSourceUrl, " +
-            "b.currentPage, b.totalPages FROM book b$where ORDER BY ${orderBy(filter.sort)}"
+            "b.currentPage, b.totalPages, $SHELF AS shelf, b.updatedAt " +
+            "FROM book b$where ORDER BY ${orderBy(filter.sort)}"
         return BuiltQuery(sql, args)
     }
 
@@ -82,6 +88,10 @@ object LibraryQueryBuilder {
         BookStatus.READ -> "(b.totalPages > 0 AND b.currentPage >= b.totalPages)"
     }
 
+    /**
+     * SQL order. The repository re-sorts title and author with the domain SortKeys, which file
+     * titles without their leading article and authors by surname.
+     */
     private fun orderBy(sort: SortOrder): String = when (sort) {
         SortOrder.TITLE -> "b.title COLLATE NOCASE ASC, b.id ASC"
 

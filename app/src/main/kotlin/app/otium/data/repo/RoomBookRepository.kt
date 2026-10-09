@@ -16,6 +16,8 @@ import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.SortKeys
+import app.otium.domain.model.SortOrder
 import app.otium.domain.repo.BookRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -37,7 +39,7 @@ class RoomBookRepository internal constructor(
 
     override fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>> =
         dao.observeLibrary(LibraryQueryBuilder.build(filter).toSupportQuery())
-            .map { rows -> rows.map { it.toSummary(covers) } }
+            .map { rows -> rows.map { it.toSummary(covers) }.sortedFor(filter.sort) }
 
     override fun observeCount(): Flow<Int> = dao.observeCount()
 
@@ -128,4 +130,14 @@ private suspend fun BookDao.findExistingOrNull(isbn13: String) = try {
     throw e
 } catch (e: SQLiteException) {
     null
+}
+
+/**
+ * Catalogue order for title and author, which SQL cannot express simply. Other orders come
+ * from the query as they are. The sort is stable, so ties keep the query's order.
+ */
+private fun List<BookSummary>.sortedFor(sort: SortOrder): List<BookSummary> = when (sort) {
+    SortOrder.TITLE -> sortedWith(SortKeys.byTitle)
+    SortOrder.AUTHOR -> sortedWith(SortKeys.byAuthor)
+    SortOrder.RECENTLY_ADDED, SortOrder.LAST_UPDATED, SortOrder.PROGRESS -> this
 }

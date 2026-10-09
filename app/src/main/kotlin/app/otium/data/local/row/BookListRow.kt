@@ -9,4 +9,7 @@ data class BookListRow(
     val coverSourceUrl: String?,
     val currentPage: Int,
     val totalPages: Int,
+    /** The first category, by position. */
+    val shelf: String?,
+    val updatedAt: Long,
 )

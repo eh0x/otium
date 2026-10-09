@@ -70,4 +70,6 @@ fun BookListRow.toSummary(covers: CoverFiles) = BookSummary(
     currentPage = currentPage,
     totalPages = totalPages,
     status = DeriveStatus(currentPage, totalPages),
+    shelf = shelf,
+    updatedAt = updatedAt,
 )
