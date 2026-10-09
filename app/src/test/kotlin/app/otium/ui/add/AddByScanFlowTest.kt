@@ -112,7 +112,7 @@ class AddByScanFlowTest {
         camera.read(DUNE)
 
         waitFor("Check the details")
-        rule.onNodeWithText("Save").performClick()
+        rule.onNodeWithText("Add to library").performClick()
         rule.waitUntil(TIMEOUT) { library.all.isNotEmpty() }
         assertEquals("Dune", library.all.single().title)
     }

@@ -51,7 +51,10 @@ object OtiumFonts {
  */
 const val TABULAR_FIGURES = "lnum, tnum"
 
-/** Lining figures for controls, so "+10" on a button never reads as "+IO". */
+/**
+ * Lining figures for every Cormorant style. Its default old-style figures make a 1 read as a
+ * small capital I, so "1984" or "+10" would read as "I984" or "+IO".
+ */
 private const val LINING_FIGURES = "lnum"
 
 private fun display(size: Int, line: Double, weight: FontWeight, tracking: Double = 0.0) =
@@ -61,6 +64,7 @@ private fun display(size: Int, line: Double, weight: FontWeight, tracking: Doubl
         fontSize = size.sp,
         lineHeight = (size * line).sp,
         letterSpacing = tracking.em,
+        fontFeatureSettings = LINING_FIGURES,
     )
 
 private fun text(size: Double, line: Double, tracking: Double = 0.0) = TextStyle(
@@ -96,11 +100,9 @@ internal val OtiumTypography = Typography(
     // Shelf items.
     titleSmall = display(14, line = 1.12, FontWeight.SemiBold),
     // Buttons, chips and tabs.
-    labelLarge = display(16, line = 1.25, FontWeight.SemiBold)
-        .copy(fontFeatureSettings = LINING_FIGURES),
+    labelLarge = display(16, line = 1.25, FontWeight.SemiBold),
     // Navigation labels.
-    labelMedium = display(13, line = 1.25, FontWeight.SemiBold)
-        .copy(fontFeatureSettings = LINING_FIGURES),
+    labelMedium = display(13, line = 1.25, FontWeight.SemiBold),
     // Kickers and small caps labels; set the text in capitals where used.
     labelSmall = text(11.0, line = 1.3, tracking = 0.18),
     bodyLarge = text(15.0, line = 1.5),

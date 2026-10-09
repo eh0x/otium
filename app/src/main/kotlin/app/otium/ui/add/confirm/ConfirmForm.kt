@@ -13,9 +13,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,6 +30,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.otium.R
+import app.otium.ui.components.otiumUnderlinedFieldColors
+import app.otium.ui.theme.otiumColors
 
 private const val MAX_TAG_SUGGESTIONS = 5
 private const val DESCRIPTION_MIN_LINES = 3
@@ -129,11 +131,19 @@ private fun FormField(
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
     singleLine: Boolean = true,
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(label)) },
+        label = {
+            Text(stringResource(label).uppercase(), style = MaterialTheme.typography.labelSmall)
+        },
+        textStyle = if (singleLine) {
+            MaterialTheme.typography.titleLarge
+        } else {
+            MaterialTheme.typography.bodyLarge
+        },
+        colors = otiumUnderlinedFieldColors(),
         supportingText = supporting?.let { { Text(stringResource(it)) } },
         isError = isError,
         singleLine = singleLine,
@@ -164,8 +174,9 @@ private fun TagEditor(
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = stringResource(R.string.confirm_tags),
-            style = MaterialTheme.typography.titleSmall,
+            text = stringResource(R.string.confirm_tags).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.otiumColors.muted,
             modifier = Modifier.semantics { heading() },
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -179,11 +190,17 @@ private fun TagEditor(
                 )
             }
         }
-        OutlinedTextField(
+        TextField(
             value = input,
             onValueChange = { input = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.confirm_tag_add)) },
+            label = {
+                Text(
+                    stringResource(R.string.confirm_tag_add).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            },
+            colors = otiumUnderlinedFieldColors(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { add(input) }),

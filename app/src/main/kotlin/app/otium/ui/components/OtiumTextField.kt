@@ -13,12 +13,15 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -79,6 +82,28 @@ fun OtiumTextField(
             },
         )
     }
+}
+
+/**
+ * Colors that turn a Material [androidx.compose.material3.TextField] into an Otium underlined
+ * field, for fields that need its supporting text, error state or trailing button.
+ */
+@Composable
+fun otiumUnderlinedFieldColors(): TextFieldColors {
+    val colors = MaterialTheme.otiumColors
+    return TextFieldDefaults.colors(
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+        disabledContainerColor = Color.Transparent,
+        errorContainerColor = Color.Transparent,
+        focusedIndicatorColor = colors.accent,
+        unfocusedIndicatorColor = colors.divider,
+        focusedLabelColor = colors.muted,
+        unfocusedLabelColor = colors.muted,
+        cursorColor = colors.accent,
+        focusedSupportingTextColor = colors.muted,
+        unfocusedSupportingTextColor = colors.muted,
+    )
 }
 
 @PreviewLightDark

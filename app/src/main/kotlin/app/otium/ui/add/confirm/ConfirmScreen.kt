@@ -2,9 +2,14 @@ package app.otium.ui.add.confirm
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -25,16 +30,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
 import app.otium.ui.common.messageRes
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumDialog
+import app.otium.ui.components.OtiumIndeterminateRule
 import app.otium.ui.components.OtiumTopBar
+import app.otium.ui.components.hairlineTop
 import app.otium.ui.theme.PaperBackground
+import app.otium.ui.theme.otiumColors
 import kotlinx.coroutines.launch
 
 /**
@@ -81,30 +96,34 @@ fun ConfirmContent(state: ConfirmUiState, actions: ConfirmActions, modifier: Mod
     val cameraDenied = stringResource(R.string.confirm_camera_denied)
 
     PaperBackground(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            snackbarHost = { SnackbarHost(snackbar) },
-            topBar = { ConfirmTopBar(state, actions) },
-        ) { padding ->
-            Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-                if (state.isSaving || state.isLoading) {
-                    LinearProgressIndicator(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                when {
-                    state.notFound -> Text(
-                        text = stringResource(R.string.confirm_not_found),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(32.dp),
-                    )
-
-                    !state.isLoading -> ConfirmBody(
-                        state = state,
-                        actions = actions,
-                        onCameraDenied = { scope.launch { snackbar.showSnackbar(cameraDenied) } },
-                    )
-                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding(),
+        ) {
+            ConfirmHeader(state, actions)
+            if (state.isSaving || state.isLoading) {
+                OtiumIndeterminateRule(modifier = Modifier.padding(horizontal = 22.dp))
             }
+            when {
+                state.notFound -> Text(
+                    text = stringResource(R.string.confirm_not_found),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 32.dp),
+                )
+
+                !state.isLoading -> ConfirmBody(
+                    state = state,
+                    actions = actions,
+                    onCameraDenied = { scope.launch { snackbar.showSnackbar(cameraDenied) } },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            if (!state.notFound) ConfirmFooter(state, actions)
         }
+        SnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
         state.duplicateOf?.let { existingId ->
             DuplicateDialog(
                 onOpen = { actions.onOpenBook(existingId) },
@@ -119,18 +138,19 @@ private fun ConfirmBody(
     state: ConfirmUiState,
     actions: ConfirmActions,
     onCameraDenied: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .imePadding()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 24.dp),
+            .padding(start = 22.dp, end = 22.dp, top = 6.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         CoverSection(
-            title = state.form.title,
+            hint = stringResource(
+                if (state.isEditing) R.string.confirm_hint_edit else R.string.confirm_hint_new,
+            ),
             state = state,
             onCoverSelected = actions.onCoverSelected,
             onCameraDenied = onCameraDenied,
@@ -144,39 +164,72 @@ private fun ConfirmBody(
     }
 }
 
+/** Close, and what the screen is for: checking a new book or editing one. */
 @Composable
-private fun ConfirmTopBar(state: ConfirmUiState, actions: ConfirmActions) {
-    OtiumTopBar(
-        title = stringResource(
-            if (state.isEditing) R.string.confirm_title_edit else R.string.confirm_title_new,
-        ),
-        navigationIcon = {
-            IconButton(onClick = actions.onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.detail_back),
-                )
-            }
-        },
-        actions = {
-            TextButton(onClick = actions.onSave, enabled = state.canSave) {
-                Text(stringResource(R.string.action_save))
-            }
-        },
-    )
+private fun ConfirmHeader(state: ConfirmUiState, actions: ConfirmActions) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = actions.onBack) {
+            Icon(
+                painter = painterResource(R.drawable.ic_lucide_x),
+                contentDescription = stringResource(R.string.confirm_close),
+            )
+        }
+        Text(
+            text = stringResource(
+                if (state.isEditing) R.string.confirm_title_edit else R.string.confirm_title_new,
+            ),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.semantics { heading() },
+        )
+    }
+}
+
+/** Cancel, and the save that names what it does. Save waits for a title. */
+@Composable
+private fun ConfirmFooter(state: ConfirmUiState, actions: ConfirmActions) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .hairlineTop(MaterialTheme.otiumColors.divider)
+            .padding(start = 22.dp, top = 12.dp, end = 22.dp, bottom = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        OtiumButton(
+            text = stringResource(R.string.action_cancel),
+            onClick = actions.onBack,
+            style = OtiumButtonStyle.Secondary,
+            modifier = Modifier.weight(1f),
+        )
+        OtiumButton(
+            text = stringResource(
+                if (state.isEditing) R.string.confirm_save_edit else R.string.confirm_save_new,
+            ),
+            onClick = actions.onSave,
+            enabled = state.canSave,
+            modifier = Modifier.weight(2f),
+        )
+    }
 }
 
 @Composable
 private fun DuplicateDialog(onOpen: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    OtiumDialog(
+        title = stringResource(R.string.confirm_duplicate_title),
+        body = stringResource(R.string.confirm_duplicate_message),
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.confirm_duplicate_title)) },
-        text = { Text(stringResource(R.string.confirm_duplicate_message)) },
-        confirmButton = {
-            TextButton(onClick = onOpen) { Text(stringResource(R.string.confirm_duplicate_open)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        actions = {
+            OtiumButton(
+                text = stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+                style = OtiumButtonStyle.Secondary,
+            )
+            OtiumButton(text = stringResource(R.string.confirm_duplicate_open), onClick = onOpen)
         },
     )
 }

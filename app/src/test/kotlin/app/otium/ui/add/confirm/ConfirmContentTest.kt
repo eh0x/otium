@@ -56,7 +56,7 @@ class ConfirmContentTest {
 
         rule.onNodeWithText("Check the details").assertIsDisplayed()
         rule.onNodeWithText("Dune").assertIsDisplayed()
-        rule.onNodeWithText("Save").assertIsEnabled().performClick()
+        rule.onNodeWithText("Add to library").assertIsEnabled().performClick()
 
         assertEquals(1, saves)
     }
@@ -65,7 +65,7 @@ class ConfirmContentTest {
     fun `a missing title blocks saving and says why`() {
         show(dune.copy(form = BookForm()))
 
-        rule.onNodeWithText("Save").assertIsNotEnabled()
+        rule.onNodeWithText("Add to library").assertIsNotEnabled()
         rule.onNodeWithText("A title is needed to save the book").assertIsDisplayed()
     }
 
@@ -104,8 +104,8 @@ class ConfirmContentTest {
     fun `a typed tag is added`() {
         show(dune)
 
-        rule.onNodeWithText("Add a tag").performScrollTo().performTextInput("gift")
-        rule.onNodeWithText("Add a tag").performImeAction()
+        rule.onNodeWithText("ADD A TAG").performScrollTo().performTextInput("gift")
+        rule.onNodeWithText("ADD A TAG").performImeAction()
 
         assertEquals(listOf("gift"), forms.last().tags)
     }
@@ -114,7 +114,7 @@ class ConfirmContentTest {
     fun `a known tag is suggested while typing`() {
         show(dune.copy(knownTags = listOf("classic", "scifi")))
 
-        rule.onNodeWithText("Add a tag").performScrollTo().performTextInput("cl")
+        rule.onNodeWithText("ADD A TAG").performScrollTo().performTextInput("cl")
         rule.onNodeWithText("classic").performScrollTo().performClick()
 
         assertEquals(listOf("classic"), forms.last().tags)

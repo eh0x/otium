@@ -142,6 +142,11 @@
     <!-- Confirm and edit -->
     <string name="confirm_title_new">Check the details</string>
     <string name="confirm_title_edit">Edit book</string>
+    <string name="confirm_hint_new">Online data is often wrong. Correct anything before it joins your shelves.</string>
+    <string name="confirm_hint_edit">Change anything. The cover is generated until you add a photo.</string>
+    <string name="confirm_save_new">Add to library</string>
+    <string name="confirm_save_edit">Save changes</string>
+    <string name="confirm_close">Close</string>
     <string name="confirm_not_found">This book is no longer in your library.</string>
     <string name="confirm_field_title">Title</string>
     <string name="confirm_field_title_required">A title is needed to save the book</string>

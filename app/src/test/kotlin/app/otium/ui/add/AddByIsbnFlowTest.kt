@@ -122,7 +122,7 @@ class AddByIsbnFlowTest {
 
         waitFor("Check the details")
         rule.onNodeWithText("Dune").assertIsDisplayed()
-        rule.onNodeWithText("Save").performClick()
+        rule.onNodeWithText("Add to library").performClick()
 
         rule.waitUntil(TIMEOUT) { library.all.isNotEmpty() }
         val saved = library.all.single()
@@ -171,9 +171,9 @@ class AddByIsbnFlowTest {
         rule.onNodeWithContentDescription("More options").performClick()
         rule.onNodeWithText("Edit details").performClick()
 
-        waitFor("Save")
+        waitFor("Save changes")
         rule.onNodeWithText("Dune").performTextReplacement("Dune Messiah")
-        rule.onNodeWithText("Save").performClick()
+        rule.onNodeWithText("Save changes").performClick()
 
         rule.waitUntil(TIMEOUT) { library.all.single().title == "Dune Messiah" }
         assertTrue(library.all.single().userEdited)

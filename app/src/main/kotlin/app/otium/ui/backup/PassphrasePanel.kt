@@ -52,6 +52,7 @@ import app.otium.domain.usecase.SetBackupPassphrase
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumIndeterminateRule
+import app.otium.ui.components.otiumUnderlinedFieldColors
 import app.otium.ui.theme.otiumColors
 
 private val PANEL_MAX_WIDTH = 400.dp
@@ -222,7 +223,6 @@ private fun PassphraseField(
     val toggleDescription = stringResource(
         if (visible) R.string.passphrase_hide_description else R.string.passphrase_show_description,
     )
-    val colors = MaterialTheme.otiumColors
     // Underlined, like every Otium field: no box, a hairline that turns accent with focus.
     TextField(
         value = value,
@@ -253,19 +253,7 @@ private fun PassphraseField(
                 contentDescription = toggleDescription,
             )
         },
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent,
-            errorContainerColor = Color.Transparent,
-            focusedIndicatorColor = colors.accent,
-            unfocusedIndicatorColor = colors.divider,
-            focusedLabelColor = colors.muted,
-            unfocusedLabelColor = colors.muted,
-            cursorColor = colors.accent,
-            focusedSupportingTextColor = colors.muted,
-            unfocusedSupportingTextColor = colors.muted,
-        ),
+        colors = otiumUnderlinedFieldColors(),
         modifier = Modifier
             .fillMaxWidth()
             .semantics { this.contentType = contentType },
