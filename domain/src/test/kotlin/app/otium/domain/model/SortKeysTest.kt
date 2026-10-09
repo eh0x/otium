@@ -42,6 +42,20 @@ class SortKeysTest {
     }
 
     @Test
+    fun `particles stay with the surname`() {
+        assertEquals("Le Guin", SortKeys.surname("Ursula K. Le Guin"))
+        assertEquals("van Gogh", SortKeys.surname("Vincent van Gogh"))
+        assertEquals("de la Mare", SortKeys.surname("Walter de la Mare"))
+        assertEquals("da Vinci", SortKeys.surname("Leonardo da Vinci"))
+    }
+
+    @Test
+    fun `a first name that looks like a particle is not taken for one`() {
+        assertEquals("Fontaine", SortKeys.surname("La Fontaine"))
+        assertEquals("Rosa", SortKeys.surname("Del Rosa"))
+    }
+
+    @Test
     fun `by title ignores articles and case`() {
         val books =
             listOf(book(1, "The Odyssey"), book(2, "beowulf"), book(3, "A Clockwork Orange"))

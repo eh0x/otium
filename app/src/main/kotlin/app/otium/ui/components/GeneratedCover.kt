@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import app.otium.domain.model.SortKeys
 import app.otium.ui.theme.OtiumFonts
 import app.otium.ui.theme.OtiumTheme
 import app.otium.ui.theme.PaperBackground
@@ -158,13 +159,8 @@ private fun CoverSurname(authors: String?, size: TextUnit) {
 internal fun coverBoardIndex(title: String, boardCount: Int): Int =
     Math.floorMod(title.trim().lowercase().hashCode(), boardCount)
 
-/** The first author's surname (the last word of the name), or empty when unknown. */
-internal fun coverSurname(authors: String?): String = authors.orEmpty()
-    .substringBefore(',')
-    .trim()
-    .split(Regex("\\s+"))
-    .lastOrNull()
-    .orEmpty()
+/** The first author's surname, particles included, or empty when unknown. */
+internal fun coverSurname(authors: String?): String = SortKeys.surname(authors.orEmpty())
 
 @PreviewLightDark
 @Composable

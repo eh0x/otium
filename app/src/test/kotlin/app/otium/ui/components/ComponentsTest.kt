@@ -119,6 +119,7 @@ class ComponentsTest {
         assertEquals("Aurelius", coverSurname("Marcus Aurelius"))
         assertEquals("Pratchett", coverSurname("Terry Pratchett, Neil Gaiman"))
         assertEquals("Homer", coverSurname("  Homer "))
+        assertEquals("Le Guin", coverSurname("Ursula K. Le Guin"))
         assertEquals("", coverSurname(null))
         assertEquals("", coverSurname(""))
     }

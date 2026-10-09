@@ -24,9 +24,25 @@ object SortKeys {
         return if (startsWithArticle) words.drop(1).joinToString(" ") else title.trim()
     }
 
-    /** The surname of the first author: the last word of the first name in [authors]. */
-    fun surname(authors: String): String =
-        authors.substringBefore(',').trim().split(WHITESPACE).last()
+    /**
+     * Particles that belong to a surname: "Le Guin", "van Gogh", "de la Mare". Matched without
+     * regard to case, and only before the last word, so a first name is never taken for one.
+     */
+    private val PARTICLES = setOf(
+        "le", "la", "les", "de", "del", "della", "der", "den", "des", "di", "da", "das", "do",
+        "dos", "du", "van", "von", "ten", "ter", "st.", "saint", "mac", "al", "el", "bin", "ibn",
+    )
+
+    /**
+     * The surname of the first author: the last word of the first name in [authors], with any
+     * particles before it ("Ursula K. Le Guin" gives "Le Guin").
+     */
+    fun surname(authors: String): String {
+        val words = authors.substringBefore(',').trim().split(WHITESPACE)
+        var start = words.lastIndex
+        while (start > 1 && words[start - 1].lowercase() in PARTICLES) start--
+        return words.subList(start, words.size).joinToString(" ")
+    }
 
     /** Library books ordered by title as filed (see [title]), then by id for a stable order. */
     val byTitle: Comparator<BookSummary> =
