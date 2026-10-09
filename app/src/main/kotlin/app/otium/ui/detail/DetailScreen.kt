@@ -282,6 +282,7 @@ private fun Facts(book: Book) {
     val facts = listOfNotNull(
         book.publisher?.let { R.string.detail_publisher to it },
         book.publishedYear?.let { R.string.detail_published to it.toString() },
+        book.totalPages.takeIf { it > 0 }?.let { R.string.detail_pages to it.toString() },
         book.language?.let { R.string.detail_language to it },
         book.isbn13?.let { R.string.detail_isbn to it },
     )

@@ -73,7 +73,17 @@ class DetailContentTest {
 
         rule.onNodeWithText("Chilton Books").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("1965").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Pages").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("400").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("9780441172719").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `an unknown page count is left out of the publication details`() {
+        show(loaded(dune.copy(totalPages = 0, currentPage = 0)))
+
+        rule.onNodeWithText("Chilton Books").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Pages").assertDoesNotExist()
     }
 
     @Test

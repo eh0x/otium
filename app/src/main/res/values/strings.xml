@@ -72,6 +72,7 @@
     <string name="detail_show_less">Show less</string>
     <string name="detail_publisher">Publisher</string>
     <string name="detail_published">Published</string>
+    <string name="detail_pages">Pages</string>
     <string name="detail_language">Language</string>
     <string name="detail_isbn">ISBN-13</string>
 
