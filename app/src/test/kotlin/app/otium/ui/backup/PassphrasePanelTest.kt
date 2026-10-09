@@ -91,6 +91,33 @@ class PassphrasePanelTest {
     }
 
     @Test
+    fun `a short passphrase cannot be turned on, a long one is called good`() {
+        show(PassphrasePrompt.Set(changing = false))
+
+        typeNewPassphrase("short")
+        rule.onNodeWithText("Turn on encryption").assertIsNotEnabled()
+
+        rule.onNodeWithText("Passphrase").performTextInput(" enough")
+        rule.onNodeWithText("Good.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `a mismatch is shown as it is typed and blocks turning on`() {
+        show(PassphrasePrompt.Set(changing = false))
+
+        rule.onNodeWithText("Passphrase").performTextInput("correct horse")
+        rule.onNodeWithText("Type it again").performTextInput("correct hose")
+        rule.onNodeWithText("I understand that a forgotten passphrase cannot be recovered")
+            .performScrollTo()
+            .performClick()
+
+        rule.onNodeWithText(
+            "The two passphrases do not match.",
+        ).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Turn on encryption").assertIsNotEnabled()
+    }
+
+    @Test
     fun `a passphrase that is too short says so`() {
         show(PassphrasePrompt.Set(changing = false, problem = PassphraseProblem.TOO_SHORT))
 
@@ -112,7 +139,7 @@ class PassphrasePanelTest {
     @Test
     fun `what was typed is cleared when the prompt comes back with a problem`() {
         show(PassphrasePrompt.Set(changing = false))
-        typeNewPassphrase("short")
+        typeNewPassphrase("correct horse")
         rule.onNodeWithText("Turn on encryption").assertIsEnabled()
 
         prompt = PassphrasePrompt.Set(changing = false, problem = PassphraseProblem.TOO_SHORT)

@@ -57,6 +57,15 @@ private class PassphraseInput {
     var confirmation by mutableStateOf("")
     var acknowledged by mutableStateOf(false)
 
+    /**
+     * A new passphrase is checked as it is typed: long enough, typed the same twice, and the
+     * warning acknowledged. SetBackupPassphrase checks the same again on submit.
+     */
+    val isValidNew: Boolean
+        get() = passphrase.length >= SetBackupPassphrase.MIN_LENGTH &&
+            confirmation == passphrase &&
+            acknowledged
+
     fun clearTyped() {
         passphrase = ""
         confirmation = ""
@@ -79,8 +88,7 @@ internal fun PassphrasePanel(
     val input = remember { PassphraseInput() }
     LaunchedEffect(prompt) { input.clearTyped() }
     val creating = prompt is PassphrasePrompt.Set
-    val ready = input.passphrase.isNotEmpty() && !busy &&
-        (!creating || (input.confirmation.isNotEmpty() && input.acknowledged))
+    val ready = input.passphrase.isNotEmpty() && !busy && (!creating || input.isValidNew)
     val submit = {
         if (ready) onSubmit(input.passphrase.toCharArray(), input.confirmation.toCharArray())
     }
@@ -154,15 +162,21 @@ private fun NewPassphraseFields(
         label = stringResource(R.string.passphrase_label),
         error = minLengthText(R.plurals.passphrase_too_short)
             .takeIf { prompt.problem == PassphraseProblem.TOO_SHORT },
-        hint = minLengthText(R.plurals.passphrase_hint),
+        hint = if (input.passphrase.length >= SetBackupPassphrase.MIN_LENGTH) {
+            stringResource(R.string.passphrase_good)
+        } else {
+            minLengthText(R.plurals.passphrase_hint)
+        },
         contentType = ContentType.NewPassword,
     )
     PassphraseField(
         value = input.confirmation,
         onValueChange = { input.confirmation = it },
         label = stringResource(R.string.passphrase_confirm_label),
-        error = stringResource(R.string.passphrase_mismatch)
-            .takeIf { prompt.problem == PassphraseProblem.MISMATCH },
+        error = stringResource(R.string.passphrase_mismatch).takeIf {
+            prompt.problem == PassphraseProblem.MISMATCH ||
+                (input.confirmation.isNotEmpty() && input.confirmation != input.passphrase)
+        },
         contentType = ContentType.NewPassword,
         onDone = onDone,
     )

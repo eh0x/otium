@@ -243,6 +243,7 @@
         <item quantity="one">Use at least %1$d character.</item>
         <item quantity="other">Use at least %1$d characters.</item>
     </plurals>
+    <string name="passphrase_good">Good.</string>
     <string name="passphrase_mismatch">The two passphrases do not match.</string>
     <string name="passphrase_show">Show</string>
     <string name="passphrase_hide">Hide</string>
