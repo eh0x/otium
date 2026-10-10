@@ -1,0 +1,202 @@
+name: Release
+
+# Pushing a version tag (v1.0.0, v1.2.0-RC1) on a commit of main builds the signed release, attests
+# its provenance and drafts a GitHub release with the notes from CHANGELOG.md. The maintainer
+# publishes the draft after a smoke test. The process is described in docs/RELEASING.md.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+permissions:
+  contents: read
+
+# One release at a time, and never cancel one half way through.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Builds and signs with read-only repository access. The build runs Gradle plugins and
+  # dependencies, so it gets the upload key but no token that can write to the repository or
+  # sign attestations.
+  build:
+    name: Build and sign
+    # A fixed image rather than ubuntu-latest, so a release is not built on a runner that changed
+    # underneath it. Raise it on purpose, with CI.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # Holds the upload key. Only tags matching the environment's deployment rule can use it.
+    environment: release
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # A release is broken if its version information is wrong, so check before building.
+      - name: Check the tag, version and changelog
+        id: check
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          if ! printf '%s\n' "$version" |
+              grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-(ALPHA|BETA|RC)[1-9][0-9]?)?$'; then
+            echo "::error::Tag '$TAG' is not vMAJOR.MINOR.PATCH[-ALPHA|BETA|RCn]"
+            exit 1
+          fi
+          declared=$(sed -n 's/^otium\.versionName=//p' gradle.properties)
+          if [ "$declared" != "$version" ]; then
+            echo "::error::Tag '$TAG' does not match otium.versionName '$declared' in gradle.properties"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag '$TAG' points at a commit that is not on main"
+            exit 1
+          fi
+          if ! grep -Fq "## [$version] - " CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$version] - <date>' section"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # No Gradle cache: the release is built from a clean state, so nothing a branch build left
+      # in the cache can end up in it.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-disabled: true
+
+      # The tagged commit passed CI on its way to main; this is a last check of the exact source.
+      - name: Unit tests and Android Lint
+        run: ./gradlew testDebugUnitTest :domain:test lint
+
+      - name: Write the signing configuration
+        env:
+          UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_STORE_PASSWORD: ${{ secrets.UPLOAD_STORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.UPLOAD_KEY_PASSWORD }}
+        run: |
+          for name in UPLOAD_KEYSTORE_BASE64 UPLOAD_STORE_PASSWORD UPLOAD_KEY_ALIAS UPLOAD_KEY_PASSWORD; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "::error::Secret $name is not set in the release environment"
+              exit 1
+            fi
+          done
+          umask 077
+          keystore="$RUNNER_TEMP/upload.jks"
+          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          {
+            echo "storeFile=$keystore"
+            echo "storePassword=$UPLOAD_STORE_PASSWORD"
+            echo "keyAlias=$UPLOAD_KEY_ALIAS"
+            echo "keyPassword=$UPLOAD_KEY_PASSWORD"
+          } > keystore.properties
+
+      - name: Build the signed bundle, APK and SBOM
+        run: ./gradlew bundleRelease assembleRelease cyclonedxBom
+
+      - name: Remove the signing configuration
+        if: always()
+        run: rm -f keystore.properties "$RUNNER_TEMP/upload.jks"
+
+      - name: Collect and check the release files
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          set -o pipefail
+          mkdir dist
+          cp app/build/outputs/bundle/release/app-release.aab "dist/otium-$VERSION.aab"
+          cp app/build/outputs/apk/release/app-release.apk "dist/otium-$VERSION.apk"
+          cp app/build/outputs/mapping/release/mapping.txt "dist/otium-$VERSION-mapping.txt"
+          cp build/reports/cyclonedx/bom.json "dist/otium-$VERSION-sbom.cdx.json"
+          # The build falls back to the debug key only when asked to; make sure neither file did.
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+          apk_certs=$("$apksigner" verify --print-certs "dist/otium-$VERSION.apk")
+          aab_certs=$(keytool -printcert -jarfile "dist/otium-$VERSION.aab")
+          if printf '%s\n%s\n' "$apk_certs" "$aab_certs" | grep -q 'CN=Android Debug'; then
+            echo "::error::A release file is signed with the debug key"
+            exit 1
+          fi
+          printf '%s\n' "$apk_certs" | grep 'certificate SHA-256 digest'
+          (cd dist && sha256sum -- * > SHA256SUMS)
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-files
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  # Attests and drafts the release. It runs no build code, so the write and signing permissions
+  # stay away from Gradle and its dependencies.
+  publish:
+    name: Attest and draft the release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # creates the draft GitHub release
+      id-token: write # signs the build provenance attestation (Sigstore)
+      attestations: write # stores the attestation in the repository
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-files
+          path: dist
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/otium-*
+
+      # A draft with every file attached: the maintainer installs the APK from it, runs the smoke
+      # test and then publishes it (docs/RELEASING.md). With immutable releases on, the files and
+      # the tag lock at that moment. The notes are the version's section of CHANGELOG.md, how to
+      # install and verify, and the pull requests GitHub lists from .github/release.yml. ALPHA, BETA
+      # and RC stages are marked as pre-releases.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          notes="$RUNNER_TEMP/notes.md"
+          awk -v heading="## [$VERSION] - " '
+            index($0, heading) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found && /^\[.*\]: http/ { exit }
+            found { print }
+          ' CHANGELOG.md > "$notes"
+          cat >> "$notes" <<EOF
+
+          ### Install and verify
+
+          Download \`otium-$VERSION.apk\` and open it on a phone with Android 8.0 or later. It is
+          signed with the upload key, so it cannot update or be updated by an install from Google
+          Play; uninstall one before installing the other. To check a download:
+
+          \`\`\`bash
+          sha256sum --check --ignore-missing SHA256SUMS
+          gh attestation verify otium-$VERSION.apk --repo $GITHUB_REPOSITORY
+          \`\`\`
+          EOF
+          prerelease=""
+          case "$VERSION" in
+            *-*) prerelease="--prerelease" ;;
+          esac
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --draft --verify-tag \
+            $prerelease --title "Otium $TAG" --notes-file "$notes" --generate-notes
