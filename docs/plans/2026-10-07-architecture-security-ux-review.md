@@ -3,7 +3,7 @@
 Date: 2026-10-07, second pass 2026-10-08, security pass 2026-10-08
 Status: In progress; see the Status column in section 2
 Related documents: [app design](../design/2026-10-06-otium-library-app-design.md),
-[implementation plan](2026-10-06-otium-implementation-plan.md), [roadmap](../ROADMAP.md),
+[implementation plan](2026-10-06-otium-implementation-plan.md), the roadmap (removed),
 [style guide](../STYLE_GUIDE.md), [security policy](../../SECURITY.md)
 
 This is the backlog from a review of the codebase on `develop` (commit `e6e65ed`) against Android
@@ -160,7 +160,7 @@ Change, in the Google Cloud console:
 ### S4. Encrypted backups first, app lock second, defer SQLCipher
 
 The roadmap plans SQLCipher (D-RM2), Keystore key management (D-RM3) and encrypted Drive backups
-(D-RM4). The order and scope below change that plan. Update the [roadmap](../ROADMAP.md) decision
+(D-RM4). The order and scope below change that plan. Update the roadmap decision
 log when this is accepted.
 
 Reasoning:
