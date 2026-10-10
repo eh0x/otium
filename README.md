@@ -190,8 +190,8 @@ The reasoning behind each choice, with the alternatives, is in
   for a connection.
 - **Backup:** Google Play services auth and the Drive REST API; Tink and Bouncy Castle (Argon2id)
   for encryption.
-- **Quality:** Spotless with ktlint, detekt, Android Lint, markdownlint, gitleaks, OSV-Scanner, and
-  architecture rules written as tests (Konsist).
+- **Quality:** Spotless with ktlint, detekt, Android Lint, markdownlint, gitleaks, OSV-Scanner,
+  actionlint and zizmor for the CI workflows, and architecture rules written as tests (Konsist).
 - **Tests:** JUnit, Turbine, Robolectric, Kover for coverage, Macrobenchmark.
 
 Library versions are pinned in [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
