@@ -19,6 +19,13 @@ if ! run_gradle spotlessCheck; then
     exit 1
 fi
 
+# actionlint and zizmor on the staged workflows, if any. Skips without the tools.
+if ! "$(dirname "$0")/../scripts/lint-workflows.sh" --staged; then
+    echo >&2
+    echo "pre-commit: workflow lint failed. Fix the findings above and re-stage." >&2
+    exit 1
+fi
+
 # Markdown rules (docs/MARKDOWN_GUIDE.md) on the files being committed. Skips without Node.js.
 if ! "$(dirname "$0")/../scripts/lint-markdown.sh" --staged; then
     echo >&2

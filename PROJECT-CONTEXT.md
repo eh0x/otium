@@ -23,7 +23,7 @@ is private and offline-first, built to feel like a quiet study.
   passphrase encryption.
 - Modules: `:app`, `:domain` (pure Kotlin), `:benchmark`. minSdk 26, compileSdk 37, JDK 17.
 - CI on GitHub Actions: Spotless, detekt, Android Lint, unit tests with a Kover floor, gitleaks,
-  OSV-Scanner, CodeQL, assemble debug and release. Dependabot weekly into `develop`.
+  OSV-Scanner, actionlint and zizmor, CodeQL, assemble debug and release. Dependabot weekly into `develop`.
 
 ## Current phase
 
