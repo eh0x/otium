@@ -24,6 +24,7 @@ rules the tools cannot see.
 | Layering (`:domain` stays pure Kotlin) | `DomainPurityTest` | `domain/src/test` | every `:domain:test` |
 | Architecture rules (UI/data boundaries, ViewModels, single activity, naming) | Konsist `ArchitectureTest` | `app/src/test/.../architecture` | every `testDebugUnitTest`, CI |
 | Commit messages | `commit-msg` hook | `.githooks/commit-msg` | every commit |
+| `main` changes only through a pull request | GitHub repository ruleset; local guard in the hooks | repository settings, `.githooks/lib.sh` | server on every push; `pre-commit`, `pre-merge-commit`, `pre-push` |
 | Documentation drift (links, commands, paths, facts) | `checkDocs` | `gradle/docs-check.gradle.kts` | `check`, `pre-push` hook, CI |
 | Docs missing after build, tooling or CI changes | `scripts/docs-impact.sh` (warning) | `scripts/docs-impact.sh` | `pre-push` hook, CI |
 | Markdown style (100 columns, lists, fences, links, headings) | markdownlint | `.markdownlint-cli2.jsonc`, [Markdown guidelines](MARKDOWN_GUIDE.md) | `pre-commit` (staged files), `check` via `lintMarkdown`, `pre-push`, CI |
@@ -45,7 +46,7 @@ rules the tools cannot see.
 ### One-time setup
 
 ```bash
-./gradlew installGitHooks    # points git at .githooks (pre-commit, commit-msg, pre-push)
+./gradlew installGitHooks    # points git at .githooks (pre-commit, pre-merge-commit, commit-msg, pre-push)
 ```
 
 The hooks look for a JDK, and for gitleaks (`brew install gitleaks`), in the usual places. If one

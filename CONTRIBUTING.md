@@ -50,9 +50,13 @@ on commit, a Conventional Commits check on the message, and a history secret sca
 suite on push. The hooks look for a JDK in the usual places and skip the local run when none is
 found. They are a convenience; CI is the gate.
 
+`main` changes only through a pull request. The hooks refuse a commit or merge on `main` and a
+push to it, and the repository ruleset on GitHub refuses the push even when the hooks are skipped.
+
 ## Workflow
 
-1. Branch from `develop`, named `<type>/<short-description>` with a Conventional Commits type.
+1. Branch from `develop` (never commit on `main`), named `<type>/<short-description>` with a
+   Conventional Commits type.
 2. Keep each commit to one logical change, with a
    [Conventional Commits](https://www.conventionalcommits.org/) subject of at most 72 characters:
    `type(scope): subject`, for example `fix(library): keep particles with surnames`.
