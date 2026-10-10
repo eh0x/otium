@@ -2,6 +2,7 @@ package app.otium.domain.usecase
 
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.FakeBackupArchiver
+import app.otium.domain.fakes.FakeBackupEncryption
 import app.otium.domain.fakes.FakeBackupPreferences
 import app.otium.domain.fakes.FakeDriveBackupClient
 import app.otium.domain.fakes.backupInfo
@@ -26,7 +27,8 @@ class RunScheduledBackupTest {
             BackupSettings(autoBackup = enabled, frequency = frequency),
             failedRuns,
         )
-        val runBackup = RunBackup(drive, archiver, preferences, BackupLock())
+        val runBackup =
+            RunBackup(drive, archiver, FakeBackupEncryption(), preferences, BackupLock())
         return RunScheduledBackup(runBackup, preferences) to preferences
     }
 

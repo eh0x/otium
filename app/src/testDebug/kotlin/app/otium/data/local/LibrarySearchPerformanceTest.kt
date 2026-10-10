@@ -36,7 +36,7 @@ class LibrarySearchPerformanceTest {
             ApplicationProvider.getApplicationContext(),
             OtiumDatabase::class.java,
         ).allowMainThreadQueries().build()
-        repo = RoomBookRepository(db.bookDao())
+        repo = RoomBookRepository(db.bookDao(), ApplicationProvider.getApplicationContext())
     }
 
     @After

@@ -15,6 +15,7 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
     alias(libs.plugins.kover)
+    alias(libs.plugins.cyclonedx)
 }
 
 // Coverage: one report over :domain's tests and :app's debug unit tests (Robolectric included).
@@ -108,6 +109,8 @@ detekt {
     config.setFrom(files("config/detekt/detekt.yml"))
     source.setFrom(files("app/src", "domain/src"))
     parallel = true
+    // Report paths relative to the repository, so CI's SARIF upload maps findings to files.
+    basePath = rootDir.absolutePath
 }
 
 // Documentation drift check (see gradle/docs-check.gradle.kts). Part of `check`.
@@ -121,6 +124,36 @@ tasks.register<Exec>("lintMarkdown") {
     commandLine("sh", "scripts/lint-markdown.sh")
 }
 tasks.matching { it.name == "check" }.configureEach { dependsOn("lintMarkdown") }
+
+// Secret scan of the git history with gitleaks (scripts/scan-secrets.sh). Part of `check`.
+tasks.register<Exec>("scanSecrets") {
+    group = "verification"
+    description = "Scans the git history for secrets with gitleaks."
+    commandLine("sh", "scripts/scan-secrets.sh")
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn("scanSecrets") }
+
+// GitHub Actions workflows: actionlint and zizmor (scripts/lint-workflows.sh). Part of `check`.
+tasks.register<Exec>("lintWorkflows") {
+    group = "verification"
+    description = "Lints the GitHub Actions workflows with actionlint and zizmor."
+    commandLine("sh", "scripts/lint-workflows.sh")
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn("lintWorkflows") }
+
+// Known vulnerabilities in the shipped dependencies: OSV-Scanner on the CycloneDX SBOM that
+// `cyclonedxBom` builds from each module's runtime classpath (scripts/scan-dependencies.sh). Not
+// part of `check`: it needs the network. CI runs it on every pull request and push.
+tasks.cyclonedxDirectBom {
+    // The root project ships nothing; its build tooling is covered by the dependency graph.
+    includeConfigs = listOf("runtimeClasspath")
+}
+tasks.register<Exec>("scanDependencies") {
+    group = "verification"
+    description = "Scans the shipped dependencies for known vulnerabilities with OSV-Scanner."
+    dependsOn(tasks.cyclonedxBom)
+    commandLine("sh", "scripts/scan-dependencies.sh")
+}
 
 // Points git at the tracked hooks in .githooks (formatting, commit message and push checks).
 tasks.register<Exec>("installGitHooks") {

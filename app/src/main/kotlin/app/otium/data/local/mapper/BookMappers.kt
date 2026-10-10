@@ -1,5 +1,6 @@
 package app.otium.data.local.mapper
 
+import app.otium.data.cover.CoverFiles
 import app.otium.data.local.entity.BookEntity
 import app.otium.data.local.row.BookListRow
 import app.otium.domain.model.Book
@@ -9,7 +10,12 @@ import app.otium.domain.usecase.DeriveStatus
 
 private const val AUTHOR_SEPARATOR = ", "
 
-fun BookEntity.toDomain(authors: List<String>, categories: List<String>, tags: List<String>) = Book(
+fun BookEntity.toDomain(
+    authors: List<String>,
+    categories: List<String>,
+    tags: List<String>,
+    covers: CoverFiles,
+) = Book(
     id = id,
     isbn13 = isbn13,
     isbn10 = isbn10,
@@ -24,7 +30,7 @@ fun BookEntity.toDomain(authors: List<String>, categories: List<String>, tags: L
     currentPage = currentPage,
     categories = categories,
     tags = tags,
-    coverPath = coverPath,
+    coverPath = covers.pathOf(coverPath),
     coverSourceUrl = coverSourceUrl,
     source = BookSource.entries.firstOrNull { it.name == source } ?: BookSource.MANUAL,
     addedAt = addedAt,
@@ -33,7 +39,7 @@ fun BookEntity.toDomain(authors: List<String>, categories: List<String>, tags: L
     needsLookup = needsLookup,
 )
 
-fun Book.toEntity() = BookEntity(
+fun Book.toEntity(covers: CoverFiles) = BookEntity(
     id = id,
     isbn13 = isbn13,
     isbn10 = isbn10,
@@ -46,7 +52,7 @@ fun Book.toEntity() = BookEntity(
     description = description,
     totalPages = totalPages,
     currentPage = currentPage,
-    coverPath = coverPath,
+    coverPath = covers.nameOf(coverPath),
     coverSourceUrl = coverSourceUrl,
     source = source.name,
     addedAt = addedAt,
@@ -55,13 +61,15 @@ fun Book.toEntity() = BookEntity(
     needsLookup = needsLookup,
 )
 
-fun BookListRow.toSummary() = BookSummary(
+fun BookListRow.toSummary(covers: CoverFiles) = BookSummary(
     id = id,
     title = title,
     authors = authors,
-    coverPath = coverPath,
+    coverPath = covers.pathOf(coverPath),
     coverSourceUrl = coverSourceUrl,
     currentPage = currentPage,
     totalPages = totalPages,
     status = DeriveStatus(currentPage, totalPages),
+    shelf = shelf,
+    updatedAt = updatedAt,
 )

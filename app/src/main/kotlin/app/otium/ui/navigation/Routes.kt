@@ -94,9 +94,13 @@ data class ConfirmRoute(
     )
 }
 
-/** Backing up the library to Google Drive and restoring it. */
+/** Top-level tab: the books being read. */
 @Serializable
-data object BackupRoute
+data object ReadingRoute
+
+/** Top-level tab: settings, which hold backing up to Google Drive and restoring. */
+@Serializable
+data object SettingsRoute
 
 /** Debug builds only: the theme catalog. */
 @Serializable

@@ -10,6 +10,11 @@ plugins {
     alias(libs.plugins.kover)
 }
 
+// SBOM for the dependency scan (scanDependencies in the root build file): the release app only.
+tasks.named<org.cyclonedx.gradle.CyclonedxDirectTask>("cyclonedxDirectBom") {
+    includeConfigs = listOf("releaseRuntimeClasspath")
+}
+
 // Secrets come from local.properties (never committed). A missing key means
 // keyless Google Books access with the low public quota.
 val localProperties = Properties().apply {
@@ -24,14 +29,45 @@ val openLibraryContact: String =
     localProperties.getProperty("openlibrary.contact", "https://github.com/eh0x/otium")
 
 // The release upload key comes from keystore.properties (never committed; see
-// keystore.properties.example). Without it, release builds are signed with the debug key so CI
-// can build and shrink them with no secret. Such a build is for testing only: Play rejects it.
+// keystore.properties.example). Without it, a release build is signed with the debug key only when
+// asked for with -Potium.allowDebugSigning=true, as CI does to build and shrink it with no secret.
+// Anyone can sign with the well-known debug key, so such an APK could be swapped for someone
+// else's build; it is for testing only, and without the flag release packaging fails.
 val keystoreProperties: Properties? = rootProject.file("keystore.properties")
     .takeIf { it.exists() }
     ?.let { file -> Properties().apply { file.inputStream().use { load(it) } } }
 
+val allowDebugSigning: Boolean = providers.gradleProperty("otium.allowDebugSigning")
+    .map { it.toBoolean() }
+    .getOrElse(false)
+
 fun Properties.required(key: String): String = getProperty(key)?.takeIf { it.isNotBlank() }
     ?: throw GradleException("keystore.properties is missing '$key'")
+
+// The version lives in gradle.properties (otium.versionName). versionCode follows from it, so the
+// two never disagree and every later version gets a higher code, as Play requires:
+// major * 1,000,000 + minor * 10,000 + patch * 100 + stage, where the stage is ALPHA n = n,
+// BETA n = 30 + n, RC n = 60 + n and a stable release 99. 1.0.0 is 1000099; 1.2.0-RC1 is 1020061.
+// See docs/RELEASING.md.
+val appVersionName: String = providers.gradleProperty("otium.versionName").get()
+
+val appVersionCode: Int = run {
+    val semVer = Regex("""(\d+)\.(\d+)\.(\d+)(?:-(ALPHA|BETA|RC)([1-9]\d?))?""")
+    val match = semVer.matchEntire(appVersionName)
+        ?: throw GradleException(
+            "otium.versionName '$appVersionName' is not MAJOR.MINOR.PATCH[-ALPHA|BETA|RCn]",
+        )
+    val (major, minor, patch, stage, stageNumber) = match.destructured
+    val stageNumberTooHigh = stageNumber.toIntOrNull()?.let { it > 29 } == true
+    if (minor.toInt() > 99 || patch.toInt() > 99 || stageNumberTooHigh) {
+        throw GradleException(
+            "otium.versionName '$appVersionName' is outside the versionCode scheme",
+        )
+    }
+    val stageBase = mapOf("ALPHA" to 0, "BETA" to 30, "RC" to 60)
+    val stageCode = if (stage.isEmpty()) 99 else stageBase.getValue(stage) + stageNumber.toInt()
+    major.toInt() * 1_000_000 + minor.toInt() * 10_000 + patch.toInt() * 100 + stageCode
+}
 
 android {
     namespace = "app.otium"
@@ -43,11 +79,12 @@ android {
         applicationId = "app.otium"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
-        buildConfigField("String", "BOOKS_API_KEY", "\"$booksApiKey\"")
-        buildConfigField("String", "OPEN_LIBRARY_CONTACT", "\"$openLibraryContact\"")
+        fun String.escape() = replace("\\", "\\\\").replace("\"", "\\\"")
+        buildConfigField("String", "BOOKS_API_KEY", "\"${booksApiKey.escape()}\"")
+        buildConfigField("String", "OPEN_LIBRARY_CONTACT", "\"${openLibraryContact.escape()}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -65,7 +102,7 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.findByName("release")
-                ?: signingConfigs.getByName("debug").also {
+                ?: signingConfigs.getByName("debug").takeIf { allowDebugSigning }?.also {
                     logger.warn("No keystore.properties: release is signed with the debug key")
                 }
             isMinifyEnabled = true
@@ -112,6 +149,22 @@ android {
         getByName("debug").assets.directories.add("$projectDir/schemas")
         // The benchmark build reuses the debug seeder to fill the library with 5,000 books.
         getByName("benchmark").kotlin.directories.add("src/debug/kotlin")
+    }
+}
+
+// Without a key and without the opt-in, release has no signing config. Packaging fails here
+// instead of leaving an unsigned APK or bundle that looks like a finished build. Lint, tests and
+// the debug and benchmark builds are not affected.
+if (keystoreProperties == null && !allowDebugSigning) {
+    tasks.configureEach {
+        if (name == "packageRelease" || name == "bundleRelease") {
+            doFirst {
+                throw GradleException(
+                    "Release needs keystore.properties (see keystore.properties.example), or " +
+                        "-Potium.allowDebugSigning=true for a test build signed with the debug key",
+                )
+            }
+        }
     }
 }
 
@@ -162,6 +215,9 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     // Identity Services authorization for the Drive app data scope (no sign-in screen of ours).
     implementation(libs.play.services.auth)
+    // Encrypted backups: Tink's streaming AES-256-GCM, and Bouncy Castle's Argon2id (pure Java).
+    implementation(libs.tink.android)
+    implementation(libs.bouncycastle.bcprov)
     implementation(libs.okhttp)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)

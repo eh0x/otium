@@ -151,26 +151,54 @@ internal class GoogleDriveBackupClient(
         }
     }
 
-    /** Runs [block] with the token, turning everything it throws into a typed failure. */
+    /**
+     * Runs [block] with a token, turning everything it throws into a typed failure.
+     *
+     * Google can hand back a cached token that was revoked since. When Drive refuses the token,
+     * it is dropped and [block] runs once more with a fresh one; every call in [block] is safe to
+     * repeat, as an interrupted upload is cleared up by [settledLayout]. A fresh token refused
+     * too means the grant is gone, which the token provider records so the screen offers to
+     * connect again.
+     */
     private suspend fun <T> drive(block: suspend (auth: String) -> T): Try<T> {
         val token = when (val result = tokens.accessToken()) {
             is Try.Failure -> return result
             is Try.Success -> result.value
         }
-        return try {
+        return attempt(token, block) ?: withFreshToken(token, block)
+    }
+
+    /** Drops [refused] and runs [block] once more with a fresh token. */
+    private suspend fun <T> withFreshToken(
+        refused: String,
+        block: suspend (auth: String) -> T,
+    ): Try<T> {
+        tokens.discard(refused)
+        val fresh = when (val result = tokens.accessToken()) {
+            is Try.Failure -> return result
+            is Try.Success -> result.value
+        }
+        return attempt(fresh, block) ?: run {
+            tokens.revoked()
+            Try.Failure(AppError.AuthExpired)
+        }
+    }
+
+    /** The outcome of [block] run with [token], or null when Drive refused the token itself. */
+    private suspend fun <T> attempt(token: String, block: suspend (auth: String) -> T): Try<T>? =
+        try {
             Try.Success(block("Bearer $token"))
         } catch (error: CancellationException) {
             throw error
         } catch (failure: DriveFailure) {
             Try.Failure(failure.error)
         } catch (error: HttpException) {
-            Try.Failure(error.toDriveError())
+            if (error.isRefusedToken()) null else Try.Failure(error.toDriveError())
         } catch (error: IOException) {
             Try.Failure(error.toAppError())
         } catch (error: SerializationException) {
             Try.Failure(error.toAppError())
         }
-    }
 
     /** Asks again, a little later each time, while Drive answers busy or with a server error. */
     private suspend fun <T> retrying(call: suspend () -> T): T {

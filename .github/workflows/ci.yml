@@ -9,12 +9,19 @@ on:
 permissions:
   contents: read
 
+# Cancel in-progress runs when a new commit is pushed to a PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  static-checks:
+    name: Static Analysis & Docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # uploads the Detekt findings to code scanning
     steps:
-      # Actions are pinned to a commit SHA, because a tag can be moved. Dependabot keeps the SHAs
-      # and the version comments current (.github/dependabot.yml).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -27,21 +34,255 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
-      # Needs Node.js, which the runner image provides. Rules: docs/MARKDOWN_GUIDE.md.
       - name: Markdown lint
         run: scripts/lint-markdown.sh
 
-      # assembleRelease runs R8 over the real release build, so a missing keep rule or a class R8
-      # cannot resolve fails here, not on a user's device. With no keystore.properties in CI it is
-      # signed with the debug key.
-      - name: Style, static analysis, docs, lint, unit tests, assemble
-        run: ./gradlew spotlessCheck detekt checkDocs lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease
+      - name: Spotless, Detekt, CheckDocs
+        run: ./gradlew spotlessCheck detekt checkDocs --build-cache --parallel
 
-      # Warns (does not fail) when build, setup or tooling files changed without a docs update.
+      - name: Upload Detekt Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: detekt-reports
+          path: '**/build/reports/detekt/'
+          retention-days: 7
+
+      # Shows Detekt findings under Security > Code scanning and on the pull request. Pull requests
+      # from forks get a read-only token, so they keep the artifact and the failing check only.
+      - name: Upload Detekt findings to code scanning
+        if: >-
+          always() && hashFiles('build/reports/detekt/detekt.sarif') != '' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: build/reports/detekt/detekt.sarif
+          category: detekt
+
       - name: Documentation impact
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            scripts/docs-impact.sh "origin/${{ github.base_ref }}" HEAD
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            scripts/docs-impact.sh "origin/$BASE_REF" HEAD
           else
-            scripts/docs-impact.sh "${{ github.event.before }}" HEAD
+            scripts/docs-impact.sh "$BEFORE" HEAD
           fi
+
+  secrets:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    env:
+      # Keep in step with GITLEAKS_VERSION in scripts/scan-secrets.sh.
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pinned release binary, verified by checksum, instead of a third-party action.
+      - name: Install gitleaks
+        run: |
+          archive="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -fsSL -o "$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" gitleaks
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Scan history for secrets
+        run: scripts/scan-secrets.sh --sarif "$RUNNER_TEMP/gitleaks.sarif"
+
+      # Only on findings. Secrets are redacted in the report, so the artifact is safe to keep.
+      - name: Upload gitleaks report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: gitleaks-report
+          path: ${{ runner.temp }}/gitleaks.sarif
+          if-no-files-found: ignore
+          retention-days: 7
+
+  workflows:
+    name: Workflow Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # uploads the zizmor findings to code scanning
+    env:
+      # Keep in step with ACTIONLINT_VERSION and ZIZMOR_VERSION in scripts/lint-workflows.sh.
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+      ZIZMOR_VERSION: 1.30.1
+      ZIZMOR_SHA256: e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Pinned release binaries, verified by checksum, instead of third-party actions. shellcheck,
+      # which actionlint uses for `run:` steps, comes with the runner image.
+      - name: Install actionlint and zizmor
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tar.gz" | sha256sum --check --strict
+          curl -fsSL -o zizmor.tar.gz \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${ZIZMOR_SHA256}  zizmor.tar.gz" | sha256sum --check --strict
+          mkdir -p bin
+          tar -xzf actionlint.tar.gz -C bin actionlint
+          tar -xzf zizmor.tar.gz -C bin zizmor
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      # With a token, zizmor also checks for actions with known vulnerabilities and for pins that
+      # do not belong to the action.
+      - name: Lint workflows with actionlint and zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/reports
+          scripts/lint-workflows.sh --sarif build/reports/zizmor.sarif
+
+      # Pull requests from forks get a read-only token, so they keep the failing check only.
+      - name: Upload zizmor findings to code scanning
+        if: >-
+          always() && hashFiles('build/reports/zizmor.sarif') != '' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: build/reports/zizmor.sarif
+          category: zizmor
+
+  dependencies:
+    name: Dependency Scan
+    runs-on: ubuntu-latest
+    env:
+      # Keep in step with OSV_SCANNER_VERSION in scripts/scan-dependencies.sh.
+      OSV_SCANNER_VERSION: 2.6.0
+      OSV_SCANNER_SHA256: ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # Pinned release binary, verified by checksum, instead of a third-party action.
+      - name: Install OSV-Scanner
+        run: |
+          binary="$RUNNER_TEMP/osv-scanner"
+          curl -fsSL -o "$binary" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  ${binary}" | sha256sum --check --strict
+          chmod +x "$binary"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Build the SBOM
+        run: ./gradlew cyclonedxBom --build-cache
+
+      - name: Scan dependencies for known vulnerabilities
+        run: scripts/scan-dependencies.sh --sarif "$RUNNER_TEMP/osv-scanner.sarif"
+
+      - name: Upload OSV-Scanner report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: osv-scanner-report
+          path: ${{ runner.temp }}/osv-scanner.sarif
+          if-no-files-found: ignore
+          retention-days: 7
+
+  lint:
+    name: Android Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Android Lint
+        run: ./gradlew lint --build-cache --parallel
+
+      - name: Upload Lint Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: lint-reports
+          path: '**/build/reports/lint-results*.html'
+          retention-days: 7
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Unit Tests & Coverage
+        run: ./gradlew testDebugUnitTest :domain:test koverVerifyCoverage --build-cache --parallel
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: test-reports
+          path: '**/build/reports/tests/'
+          retention-days: 7
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: kover-coverage-reports
+          path: '**/build/reports/kover/'
+          retention-days: 7
+
+  build:
+    name: Assemble
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Assemble Debug & Release
+        # CI holds no signing key; the release is debug-signed, for testing only (S16).
+        run: ./gradlew assembleDebug assembleRelease -Potium.allowDebugSigning=true --build-cache --parallel

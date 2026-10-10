@@ -1,6 +1,10 @@
 package app.otium.ui.add.confirm
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.testing.invoke
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.FakeBookRepository
@@ -52,8 +56,17 @@ class ConfirmViewModelTest {
         source = BookSource.GOOGLE,
     )
 
+    /** What the screen handed over for deleting when it went. */
+    private val discarded = mutableListOf<String>()
+
     private fun viewModel(route: ConfirmRoute = ConfirmRoute.from(found)) =
-        ConfirmViewModel(SavedStateHandle(route = route), repo, saveBook)
+        ConfirmViewModel(SavedStateHandle(route = route), repo, saveBook) { discarded += it }
+
+    /** A view model owned by [store], so clearing the store ends it as leaving the screen does. */
+    private fun ownedBy(store: ViewModelStore): ConfirmViewModel =
+        ViewModelProvider.create(store, viewModelFactory { initializer { viewModel() } })[
+            ConfirmViewModel::class,
+        ]
 
     private fun TestScope.screenOpen(vm: ConfirmViewModel) {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
@@ -162,6 +175,21 @@ class ConfirmViewModelTest {
 
         assertEquals(listOf("content://photos/7"), covers.pickedUris)
         assertEquals(covers.stored.single(), repo.all.single().coverPath)
+    }
+
+    @Test
+    fun `every photo picked is handed over for deleting once the screen goes`() = runTest {
+        val store = ViewModelStore()
+        val vm = ownedBy(store)
+
+        vm.onCoverSelected(CoverChoice.Picked("content://photos/1"))
+        vm.onCoverSelected(CoverChoice.Picked("content://photos/2"))
+        vm.onCoverSelected(CoverChoice.None)
+        assertTrue("nothing goes while the screen is open", discarded.isEmpty())
+
+        store.clear()
+
+        assertEquals(listOf("content://photos/1", "content://photos/2"), discarded)
     }
 
     @Test

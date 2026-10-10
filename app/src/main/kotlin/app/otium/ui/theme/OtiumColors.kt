@@ -9,26 +9,57 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * Tokens that Material 3 has no slot for. Read them with `MaterialTheme.otiumColors`.
- * Status is never conveyed by color alone: pair these with a label or icon.
+ * Status is never conveyed by color alone: pair these with a label or glyph.
  */
 @Immutable
 class OtiumColors(
-    val statusNotStarted: Color,
-    val statusInProgress: Color,
-    val statusRead: Color,
-    val shelfLine: Color,
-    val shelfShadow: Color,
-    /** Tint of the paper grain; drawn at very low alpha. */
-    val paperTint: Color,
+    /** Strokes, rules, glyphs, icons and type of 24 sp or more. Small text uses `primary`. */
+    val accent: Color,
+    /** Quiet secondary text and inactive icons. */
+    val muted: Color,
+    /** 1 dp hairlines. */
+    val divider: Color,
+    /** Fill of sheets, dialogs and menus. */
+    val sheet: Color,
+    val scrim: Color,
+    val cover: CoverColors,
+) {
+    val statusNotStarted: Color get() = muted
+    val statusInProgress: Color get() = accent
+    val statusRead: Color get() = accent
+}
+
+/** Colors of book covers, real and generated. */
+@Immutable
+class CoverColors(
+    /** The soft shadow under every cover. */
+    val shadow: Color,
+    /** Title and author on generated covers. */
+    val text: Color,
+    /** The small gold ornament on generated covers. */
+    val ornament: Color,
+    /** Board colors for generated covers; pick one by a stable hash of the title. */
+    val boards: List<Color>,
+    /** Horizontal gradient stops that shade the spine of a generated cover. */
+    val spine: List<Color>,
+    /** Vertical gradient stops for the sheen over a generated cover. */
+    val sheen: List<Color>,
 )
 
 internal fun OtiumPaletteSpec.toOtiumColors() = OtiumColors(
-    statusNotStarted = Color(mutedInk),
-    statusInProgress = Color(secondary),
-    statusRead = Color(primary),
-    shelfLine = Color(shelfLine),
-    shelfShadow = Color(shelfShadow),
-    paperTint = Color(onBackground),
+    accent = Color(accent),
+    muted = Color(muted),
+    divider = Color(divider),
+    sheet = Color(sheet),
+    scrim = Color(scrim),
+    cover = CoverColors(
+        shadow = Color(coverShadow),
+        text = Color(COVER_TEXT),
+        ornament = Color(COVER_ORNAMENT),
+        boards = CoverBoards.map(::Color),
+        spine = CoverSpine.map(::Color),
+        sheen = CoverSheen.map(::Color),
+    ),
 )
 
 val LocalOtiumColors = staticCompositionLocalOf<OtiumColors> {

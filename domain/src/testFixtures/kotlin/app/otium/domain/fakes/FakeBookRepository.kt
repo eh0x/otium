@@ -58,6 +58,8 @@ class FakeBookRepository : BookRepository {
                         currentPage = it.currentPage,
                         totalPages = it.totalPages,
                         status = DeriveStatus(it.currentPage, it.totalPages),
+                        shelf = it.categories.firstOrNull(),
+                        updatedAt = it.updatedAt,
                     )
                 }
         }

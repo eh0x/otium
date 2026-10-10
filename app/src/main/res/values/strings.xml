@@ -3,17 +3,27 @@
     <string name="app_name">Otium</string>
 
     <!-- Status and progress -->
-    <string name="status_not_started">Not started</string>
-    <string name="status_in_progress">In progress</string>
+    <string name="status_not_started">Unread</string>
+    <string name="status_in_progress">Reading</string>
     <string name="status_read">Read</string>
     <string name="progress_percent">%1$d%%</string>
     <string name="progress_page_of">Page %1$d of %2$d</string>
     <string name="progress_total_unknown">Total pages not set</string>
     <string name="progress_set_total">Set total pages</string>
-    <string name="progress_update">Update progress</string>
     <string name="progress_mark_finished">Mark as finished</string>
-    <string name="progress_dialog_title">Current page</string>
-    <string name="progress_page_label">Page</string>
+    <string name="progress_current_page">Current page</string>
+    <plurals name="progress_of_pages">
+        <item quantity="one">of %1$d page</item>
+        <item quantity="other">of %1$d pages</item>
+    </plurals>
+    <string name="progress_back_10">−10</string>
+    <string name="progress_back_1">−1</string>
+    <string name="progress_forward_1">+1</string>
+    <string name="progress_forward_10">+10</string>
+    <string name="progress_back_10_description">Back 10 pages</string>
+    <string name="progress_back_1_description">Back 1 page</string>
+    <string name="progress_forward_1_description">Forward 1 page</string>
+    <string name="progress_forward_10_description">Forward 10 pages</string>
     <string name="progress_total_dialog_title">Total pages</string>
     <string name="progress_total_label">Number of pages</string>
 
@@ -24,70 +34,87 @@
 
     <!-- Library -->
     <string name="library_title">Library</string>
-    <string name="library_search_hint">Search title or author</string>
+    <string name="library_subtitle">Leisure for the learned</string>
+    <string name="library_search_label">Search</string>
+    <string name="library_search_hint">Search the catalogue</string>
     <string name="library_search_clear">Clear search</string>
-    <string name="library_add_book">Add book</string>
-    <string name="library_sort">Sort</string>
-    <string name="library_filters">Filters</string>
-    <string name="library_filters_active">Filters (%1$d)</string>
-    <string name="library_view_shelf">Shelf</string>
-    <string name="library_view_list">List</string>
+    <string name="library_change_layout">Change layout</string>
+    <string name="library_arrange">Filter and sort</string>
     <string name="library_more_options">More options</string>
     <string name="library_debug_seed">Seed 5,000 test books</string>
     <string name="library_debug_catalog">Theme catalog</string>
     <plurals name="library_book_count">
-        <item quantity="one">%1$d book</item>
-        <item quantity="other">%1$d books</item>
+        <item quantity="one">%1$d volume</item>
+        <item quantity="other">%1$d volumes</item>
     </plurals>
+    <!-- Two parts joined by a middle dot, as in "3 volumes · Reading" or "Reading · p. 12/300". -->
+    <string name="dot_joined">%1$s · %2$s</string>
+    <string name="library_desk">On the desk</string>
+    <plurals name="library_desk_count">
+        <item quantity="one">%1$d open</item>
+        <item quantity="other">%1$d open</item>
+    </plurals>
+    <string name="library_unshelved">Unshelved</string>
+    <!-- A book's place in the list, as in a library accession number: "001". -->
+    <string name="library_accession">%1$03d</string>
+    <string name="library_page_short">p. %1$d/%2$d</string>
     <string name="library_empty_title">Your shelves are empty</string>
     <string name="library_empty_message">Add your first book to start your library.</string>
     <string name="library_empty_action">Add a book</string>
-    <string name="library_no_results_title">No books match</string>
-    <string name="library_no_results_message">Try a different search, or clear the filters.</string>
+    <string name="library_no_results_title">No volumes match</string>
+    <string name="library_no_results_message">Try different words, or clear the filters.</string>
 
     <string name="sort_title">Title</string>
     <string name="sort_author">Author</string>
-    <string name="sort_recently_added">Recently added</string>
     <string name="sort_last_updated">Recently updated</string>
     <string name="sort_progress">Progress</string>
+    <string name="sort_by_title">By title</string>
+    <string name="sort_by_author">By author</string>
+    <string name="sort_by_recently_added">By recently added</string>
+    <string name="sort_by_last_updated">By recently updated</string>
+    <string name="sort_by_progress">By progress</string>
 
     <string name="filter_status_all">All</string>
     <string name="filter_clear">Clear filters</string>
-    <string name="filter_categories">Categories</string>
-    <string name="filter_tags">Tags</string>
-    <string name="filter_none_available">Categories and tags appear here once your books have them.</string>
     <string name="filter_done">Done</string>
+    <string name="arrange_title">Arrange</string>
+    <string name="arrange_status">Status</string>
+    <string name="arrange_sort">Sort by</string>
 
     <!-- Book detail -->
     <string name="detail_back">Back</string>
     <string name="detail_more_options">More options</string>
-    <string name="detail_edit">Edit book</string>
+    <string name="detail_edit">Edit details</string>
     <string name="detail_delete">Delete book</string>
     <string name="detail_delete_title">Delete this book?</string>
-    <string name="detail_delete_message">\"%1$s\" will be removed from your library. This cannot be undone.</string>
+    <string name="detail_delete_message">“%1$s” will be removed from your library. This cannot be undone.</string>
     <string name="detail_not_found">This book is no longer in your library.</string>
     <string name="detail_progress">Progress</string>
-    <string name="detail_description">Description</string>
-    <string name="detail_show_more">Show more</string>
+    <string name="detail_about">About</string>
+    <string name="detail_show_more">Read more</string>
     <string name="detail_show_less">Show less</string>
+    <string name="detail_collection">Collection</string>
     <string name="detail_publisher">Publisher</string>
     <string name="detail_published">Published</string>
+    <string name="detail_pages">Pages</string>
     <string name="detail_language">Language</string>
+    <string name="detail_tags">Tags</string>
     <string name="detail_isbn">ISBN-13</string>
 
     <!-- Add book -->
     <string name="add_book_title">Add a book</string>
-    <string name="add_method_scan">Scan barcode</string>
-    <string name="add_method_scan_hint">Point the camera at the barcode on the back cover</string>
-    <string name="add_method_isbn">Enter ISBN</string>
+    <string name="add_kicker">Acquisition</string>
+    <string name="add_method_scan">Scan the barcode</string>
+    <string name="add_method_scan_hint">Point the camera at the back cover</string>
+    <string name="add_method_isbn">Enter an ISBN</string>
     <string name="add_method_isbn_hint">Type the 10 or 13 digit number</string>
     <string name="add_method_search">Search by title</string>
     <string name="add_method_search_hint">Find the edition by title or author</string>
 
     <!-- Scan barcode -->
-    <string name="scan_title">Scan barcode</string>
+    <string name="scan_title">Scan the barcode</string>
     <string name="scan_hint">Hold the barcode on the back cover inside the frame</string>
-    <string name="scan_looking_up">Looking up %1$s</string>
+    <string name="scan_looking_up">Consulting the catalogue for %1$s…</string>
     <string name="scan_again">Scan again</string>
     <string name="scan_enter_isbn">Enter the ISBN instead</string>
     <string name="scan_camera_rationale">Otium uses the camera only to read the barcode on a book. Nothing is recorded or sent anywhere.</string>
@@ -97,13 +124,14 @@
     <string name="scan_no_camera">This device has no camera. You can still add books by ISBN or title.</string>
 
     <!-- Enter ISBN -->
-    <string name="isbn_title">Enter ISBN</string>
+    <string name="isbn_title">Enter an ISBN</string>
     <string name="isbn_field">ISBN</string>
     <string name="isbn_hint">The 10 or 13 digits above the barcode</string>
     <string name="isbn_look_up">Look up</string>
     <string name="isbn_try_again">Try again</string>
     <string name="isbn_save_for_later">Save the ISBN, fill in details later</string>
     <string name="isbn_save_for_later_hint">Otium looks it up once you are back online.</string>
+    <string name="add_consulting">Consulting the catalogue…</string>
     <string name="add_enter_manually">Type the details yourself</string>
 
     <!-- Search by title -->
@@ -116,6 +144,11 @@
     <!-- Confirm and edit -->
     <string name="confirm_title_new">Check the details</string>
     <string name="confirm_title_edit">Edit book</string>
+    <string name="confirm_hint_new">Online data is often wrong. Correct anything before it joins your shelves.</string>
+    <string name="confirm_hint_edit">Change anything. The cover is generated until you add a photo.</string>
+    <string name="confirm_save_new">Add to library</string>
+    <string name="confirm_save_edit">Save changes</string>
+    <string name="confirm_close">Close</string>
     <string name="confirm_not_found">This book is no longer in your library.</string>
     <string name="confirm_field_title">Title</string>
     <string name="confirm_field_title_required">A title is needed to save the book</string>
@@ -131,6 +164,9 @@
     <string name="confirm_field_categories">Categories</string>
     <string name="confirm_field_description">Description</string>
     <string name="confirm_tags">Tags</string>
+    <string name="confirm_shelf">Shelf</string>
+    <string name="confirm_more_details">More details</string>
+    <string name="confirm_fewer_details">Fewer details</string>
     <string name="confirm_tag_add">Add a tag</string>
     <string name="confirm_tag_remove">Remove tag %1$s</string>
     <string name="confirm_cover_option">Cover option %1$d</string>
@@ -160,32 +196,70 @@
     <string name="error_incompatible_backup">That backup was made by a newer version of Otium.</string>
     <string name="error_corrupt_backup">That backup is damaged and could not be read.</string>
     <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
+    <string name="error_passphrase_required">This phone no longer holds your backup key. Set your passphrase again under Encrypt backups.</string>
+    <string name="error_wrong_passphrase">That passphrase does not open this backup.</string>
     <string name="error_storage">Something went wrong saving your library. Please try again.</string>
     <string name="error_unexpected">Something went wrong. Please try again.</string>
 
     <!-- Backup and restore -->
-    <string name="library_backup">Backup and restore</string>
-    <string name="backup_title">Backup</string>
-    <string name="backup_back">Back</string>
+    <string name="backup_title">Backup &amp; restore</string>
     <string name="backup_drive_heading">Google Drive</string>
     <string name="backup_drive_signed_out">Not connected. Your library is only on this phone.</string>
     <string name="backup_drive_signed_in">Connected as %1$s</string>
     <string name="backup_drive_signed_in_unknown">Connected</string>
     <string name="backup_drive_expired">Your Google sign-in expired.</string>
-    <string name="backup_connect">Connect Google Drive</string>
+    <string name="backup_connect">Connect</string>
     <string name="backup_reconnect">Sign in again</string>
     <string name="backup_disconnect">Disconnect</string>
-    <string name="backup_drive_note">Backups go to a private folder in your Drive that only Otium can see.</string>
+    <string name="backup_drive_note">Your library lives on this phone. Copies go to a private folder in your Drive that only Otium can read.</string>
     <string name="backup_now">Back up now</string>
     <string name="backup_in_progress">Backing up…</string>
     <string name="backup_done">Backup saved to Google Drive.</string>
     <string name="backup_never">No backup yet</string>
-    <string name="backup_last">Last backup %1$s · %2$s · %3$s</string>
+    <string name="backup_last_label">Last backup</string>
     <plurals name="backup_book_count">
         <item quantity="one">%1$d book</item>
         <item quantity="other">%1$d books</item>
     </plurals>
+    <string name="backup_encrypted">Encrypted</string>
+    <string name="encryption_heading">Encrypt backups</string>
+    <string name="encryption_off">Off. With a passphrase only you can read your backups, even if someone enters your Google account.</string>
+    <string name="encryption_on">On. New backups are encrypted with your passphrase.</string>
+    <string name="encryption_change">Change passphrase</string>
+    <string name="encryption_working">Protecting your key…</string>
+    <string name="encryption_on_done">New backups will be encrypted.</string>
+    <string name="encryption_off_done">New backups will no longer be encrypted.</string>
+    <string name="encryption_off_title">Turn off encryption?</string>
+    <string name="encryption_off_message">New backups will not be encrypted. Backups already in Drive stay encrypted and still need your passphrase.</string>
+    <string name="encryption_off_action">Turn off</string>
+    <string name="passphrase_set_title">Set a backup passphrase</string>
+    <string name="passphrase_change_title">Change the backup passphrase</string>
+    <string name="passphrase_label">Passphrase</string>
+    <string name="passphrase_confirm_label">Type it again</string>
+    <plurals name="passphrase_hint">
+        <item quantity="one">At least %1$d character. A few unrelated words are easy to remember and hard to guess.</item>
+        <item quantity="other">At least %1$d characters. A few unrelated words are easy to remember and hard to guess.</item>
+    </plurals>
+    <string name="passphrase_warning">If you forget this passphrase, your encrypted backups cannot be restored. Otium does not keep it and cannot recover it.</string>
+    <string name="passphrase_acknowledge">I understand that a forgotten passphrase cannot be recovered</string>
+    <string name="passphrase_change_note">Backups made before the change still need the old passphrase.</string>
+    <plurals name="passphrase_too_short">
+        <item quantity="one">Use at least %1$d character.</item>
+        <item quantity="other">Use at least %1$d characters.</item>
+    </plurals>
+    <string name="passphrase_good">Good.</string>
+    <string name="passphrase_mismatch">The two passphrases do not match.</string>
+    <string name="passphrase_show">Show</string>
+    <string name="passphrase_hide">Hide</string>
+    <string name="passphrase_show_description">Show passphrase</string>
+    <string name="passphrase_hide_description">Hide passphrase</string>
+    <string name="passphrase_turn_on_action">Turn on encryption</string>
+    <string name="passphrase_change_action">Change passphrase</string>
+    <string name="passphrase_restore_title">Enter the backup passphrase</string>
+    <string name="passphrase_restore_message">This backup is encrypted. Enter the passphrase it was made with.</string>
+    <string name="passphrase_restore_action">Unlock</string>
     <string name="restore_heading">Restore</string>
+    <string name="restore_note">Replaces your current library with the latest copy in Drive.</string>
     <string name="restore_action">Restore from Drive</string>
     <string name="restore_previous_action">Restore the previous backup</string>
     <string name="restore_in_progress">Restoring…</string>
@@ -195,7 +269,6 @@
     <string name="restore_confirm_action">Replace library</string>
     <string name="restore_cancel">Cancel</string>
     <string name="auto_backup_heading">Automatic backup</string>
-    <string name="auto_backup_toggle">Back up automatically</string>
     <string name="auto_backup_daily">Daily</string>
     <string name="auto_backup_weekly">Weekly</string>
     <string name="auto_backup_wifi_only">Only on Wi-Fi</string>
@@ -204,4 +277,15 @@
     <string name="backup_channel_name">Backups</string>
     <string name="backup_channel_description">Tells you when automatic backups keep failing.</string>
     <string name="backup_failed_title">Backup did not run</string>
+
+    <!-- App shell: bottom navigation and the Reading tab -->
+    <string name="settings_title">Settings</string>
+    <string name="reading_title">Reading</string>
+    <string name="reading_kicker">On the desk</string>
+    <string name="reading_empty">Nothing open at the moment. Begin a book from your library.</string>
+    <string name="reading_finished">Recently finished</string>
+    <string name="reading_add_pages">+10 pages</string>
+    <string name="reading_add_pages_description">Add 10 pages to %1$s</string>
+    <string name="reading_open">Open</string>
+    <string name="reading_open_description">Open %1$s</string>
 </resources>

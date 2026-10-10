@@ -1,0 +1,112 @@
+name: Bug report
+description: Something in Otium does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. A clear report with steps to reproduce is the
+        fastest way to a fix.
+
+        **Found a security problem?** Do not open an issue. Report it privately, as described in
+        [SECURITY.md](https://github.com/eh0x/otium/blob/main/SECURITY.md).
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/eh0x/otium/issues?q=is%3Aissue) and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem in a sentence or two.
+      placeholder: The progress bar stays at 0% after I set the current page.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest list of steps that shows the problem.
+      placeholder: |
+        1. Open a book from the library.
+        2. Set the current page to 120 of 300.
+        3. Go back to the library.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: The book shows 40% on the shelf.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Otium version or commit
+      description: |
+        Android shows the version under Settings > Apps > Otium. If you built from source, give
+        the commit (`git rev-parse --short HEAD`).
+      placeholder: 1.0.0 or 7d517e6
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build
+      options:
+        - Debug build from source
+        - Release build from source
+        - Other (say below)
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Pixel 8, Android 15
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Where in the app does it happen? Pick the closest.
+      options:
+        - Library, search and filters
+        - Book detail and reading progress
+        - Adding books (scan, ISBN, title search)
+        - Backup and restore
+        - Appearance (theme, text size, accessibility)
+        - Building or running from source
+        - Something else
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Optional. Relevant `adb logcat` output, for example a crash stack trace. Remove anything
+        personal (email addresses, book titles you would rather keep private, tokens) first.
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots and anything else
+      description: Optional. Drag images or screen recordings here, or add any other context.

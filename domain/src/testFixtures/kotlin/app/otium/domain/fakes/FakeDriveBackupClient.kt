@@ -33,6 +33,9 @@ class FakeDriveBackupClient : DriveBackupClient {
 
     fun infoIn(slot: BackupSlot): BackupInfo? = stored[slot]?.first
 
+    /** What was uploaded to [slot], as the file's text. */
+    fun contentIn(slot: BackupSlot): String? = stored[slot]?.second
+
     override suspend fun freeSpace(): Try<Long?> =
         failure?.let { Try.Failure(it) } ?: Try.Success(free)
 

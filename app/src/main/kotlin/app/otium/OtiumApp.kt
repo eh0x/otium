@@ -3,6 +3,7 @@ package app.otium
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import app.otium.data.cover.CameraPhotoFiles
 import app.otium.domain.port.LookupScheduler
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -28,11 +29,16 @@ class OtiumApp :
     @Inject
     lateinit var lookupScheduler: LookupScheduler
 
+    @Inject
+    lateinit var cameraPhotos: CameraPhotoFiles
+
     override fun onCreate() {
         super.onCreate()
         // Books saved offline wait for a lookup; a run left over from an earlier session (or
         // given up after its last attempt) is planned again. Without such books it does nothing.
         lookupScheduler.schedule()
+        // Cover photos a process that died never got to delete.
+        cameraPhotos.purgeStale()
     }
 
     /** Workers get their dependencies from Hilt; the default initializer is off in the manifest. */

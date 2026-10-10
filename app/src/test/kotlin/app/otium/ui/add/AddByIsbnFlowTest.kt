@@ -23,6 +23,7 @@ import app.otium.domain.fakes.book
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
 import app.otium.domain.port.BackupScheduler
+import app.otium.domain.port.CapturedPhotos
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
 import app.otium.domain.port.LookupScheduler
@@ -85,6 +86,9 @@ class AddByIsbnFlowTest {
     @BindValue @JvmField
     val clock: Clock = FixedClock()
 
+    @BindValue @JvmField
+    val capturedPhotos: CapturedPhotos = CapturedPhotos {}
+
     private var lookupsPlanned = 0
 
     @BindValue @JvmField
@@ -98,8 +102,8 @@ class AddByIsbnFlowTest {
     }
 
     private fun openIsbnEntry() {
-        rule.onNodeWithContentDescription("Add book").performClick()
-        rule.onNodeWithText("Enter ISBN").performClick()
+        rule.onNodeWithContentDescription("Add a book").performClick()
+        rule.onNodeWithText("Enter an ISBN").performClick()
         waitFor("Look up")
     }
 
@@ -118,7 +122,7 @@ class AddByIsbnFlowTest {
 
         waitFor("Check the details")
         rule.onNodeWithText("Dune").assertIsDisplayed()
-        rule.onNodeWithText("Save").performClick()
+        rule.onNodeWithText("Add to library").performClick()
 
         rule.waitUntil(TIMEOUT) { library.all.isNotEmpty() }
         val saved = library.all.single()
@@ -165,11 +169,11 @@ class AddByIsbnFlowTest {
         }
         rule.onNodeWithContentDescription("Dune by Some Author").performClick()
         rule.onNodeWithContentDescription("More options").performClick()
-        rule.onNodeWithText("Edit book").performClick()
+        rule.onNodeWithText("Edit details").performClick()
 
-        waitFor("Save")
+        waitFor("Save changes")
         rule.onNodeWithText("Dune").performTextReplacement("Dune Messiah")
-        rule.onNodeWithText("Save").performClick()
+        rule.onNodeWithText("Save changes").performClick()
 
         rule.waitUntil(TIMEOUT) { library.all.single().title == "Dune Messiah" }
         assertTrue(library.all.single().userEdited)

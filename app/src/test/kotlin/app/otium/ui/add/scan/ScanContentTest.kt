@@ -64,7 +64,7 @@ class ScanContentTest {
         show(ScanUiState(phase = ScanPhase.LOOKING_UP, reads = 1, isbn13 = "9780441013593"))
 
         rule.onNodeWithContentDescription("camera analyzing=false").assertExists()
-        rule.onNodeWithText("Looking up 9780441013593").assertIsDisplayed()
+        rule.onNodeWithText("Consulting the catalogue for 9780441013593…").assertIsDisplayed()
     }
 
     @Test

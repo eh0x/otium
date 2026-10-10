@@ -25,17 +25,28 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.otium.domain.model.BookStatus
 import app.otium.ui.components.BookCover
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumChip
 import app.otium.ui.components.OtiumProgressBar
+import app.otium.ui.components.OtiumSwitch
 import app.otium.ui.components.OtiumTopBar
 import app.otium.ui.components.OtiumWordmark
+import app.otium.ui.components.PlatedCover
 import app.otium.ui.components.ShelfRow
-import app.otium.ui.components.StatusChip
+import app.otium.ui.components.StatusGlyph
 import app.otium.ui.theme.OtiumTheme
 import app.otium.ui.theme.PaperBackground
 import app.otium.ui.theme.otiumColors
 
 private const val SWATCHES_PER_ROW = 3
-private val SHELF_TITLES = listOf("The Hobbit", "Dune", "Cien años de soledad", "Middlemarch")
+private const val PLATE_FRACTION = 0.3f
+private val SHELF_TITLES = listOf(
+    "The Hobbit" to "J. R. R. Tolkien",
+    "Dune" to "Frank Herbert",
+    "Cien años de soledad" to "Gabriel García Márquez",
+    "Middlemarch" to "George Eliot",
+)
 private val PROGRESS_SAMPLES = listOf(0f, 0.42f, 1f)
 
 /**
@@ -60,6 +71,19 @@ fun ThemeCatalogScreen(modifier: Modifier = Modifier) {
             Section("Typography") { TypeSamples() }
             Section("Status") { StatusSamples() }
             Section("Progress") { ProgressSamples() }
+            Section("Controls") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OtiumButton("Primary", {})
+                    OtiumButton("Secondary", {}, style = OtiumButtonStyle.Secondary)
+                    OtiumButton("Ghost", {}, style = OtiumButtonStyle.Ghost)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OtiumChip(label = "Reading", selected = true, onClick = {})
+                    OtiumChip(label = "Read", selected = false, onClick = {})
+                    OtiumSwitch(checked = true, onCheckedChange = {})
+                    OtiumSwitch(checked = false, onCheckedChange = {})
+                }
+            }
             ShelfSample()
         }
     }
@@ -83,16 +107,16 @@ private fun ColorSwatches() {
     val swatches = listOf(
         "background" to scheme.background,
         "surface" to scheme.surface,
-        "primary (Sage)" to scheme.primary,
-        "secondary (Terra)" to scheme.secondary,
-        "onBackground (Ink)" to scheme.onBackground,
-        "muted ink" to otium.statusNotStarted,
+        "sheet" to otium.sheet,
+        "ink" to scheme.onBackground,
+        "muted" to otium.muted,
+        "divider" to otium.divider,
+        "accent" to otium.accent,
+        "primary (gold)" to scheme.primary,
         "primaryContainer" to scheme.primaryContainer,
-        "secondaryContainer" to scheme.secondaryContainer,
-        "surfaceVariant" to scheme.surfaceVariant,
-        "outline" to scheme.outline,
-        "shelf line" to otium.shelfLine,
         "error" to scheme.error,
+        "cover text" to otium.cover.text,
+        "cover board" to otium.cover.boards.first(),
     )
     swatches.chunked(SWATCHES_PER_ROW).forEach { row ->
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -126,6 +150,7 @@ private fun TypeSamples() {
         "headlineSmall" to type.headlineSmall,
         "titleLarge" to type.titleLarge,
         "titleMedium" to type.titleMedium,
+        "titleSmall" to type.titleSmall,
         "bodyLarge" to type.bodyLarge,
         "bodyMedium" to type.bodyMedium,
         "labelLarge" to type.labelLarge,
@@ -139,20 +164,35 @@ private fun TypeSamples() {
 @Composable
 private fun StatusSamples() {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        BookStatus.entries.forEach { StatusChip(status = it) }
+        BookStatus.entries.forEach { StatusGlyph(status = it) }
     }
 }
 
 @Composable
 private fun ProgressSamples() {
     PROGRESS_SAMPLES.forEach { OtiumProgressBar(progress = it) }
+    OtiumProgressBar(
+        progress = PROGRESS_SAMPLES[1],
+        thickness = 3.dp,
+        ribbon = true,
+        modifier = Modifier.padding(vertical = 12.dp),
+    )
 }
 
 @Composable
 private fun ShelfSample() {
     ShelfRow {
-        SHELF_TITLES.forEach { title -> BookCover(title = title, modifier = Modifier.weight(1f)) }
+        SHELF_TITLES.forEach { (title, author) ->
+            BookCover(title = title, authors = author, modifier = Modifier.weight(1f))
+        }
     }
+    PlatedCover(
+        title = SHELF_TITLES.first().first,
+        authors = SHELF_TITLES.first().second,
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth(PLATE_FRACTION),
+    )
 }
 
 @Preview(name = "Light", widthDp = 411, heightDp = 1800)

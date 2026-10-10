@@ -10,6 +10,8 @@ ktlint = "1.8.0"
 detekt = "1.23.8"
 # Code coverage for the JVM and Android unit tests, merged into one report.
 kover = "0.9.11"
+# SBOM of the shipped dependencies, scanned by OSV-Scanner (scripts/scan-dependencies.sh).
+cyclonedx = "3.4.1"
 
 # AndroidX
 benchmarkMacro = "1.5.0"
@@ -42,6 +44,10 @@ coil = "3.6.3"
 # Google
 mlkitBarcode = "17.3.0"
 playServicesAuth = "22.0.0"
+
+# Backup encryption: Tink for streaming AES-256-GCM, Bouncy Castle only for Argon2id.
+tink = "1.23.0"
+bouncycastle = "1.86"
 
 # Test
 junit = "4.13.2"
@@ -120,6 +126,8 @@ coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version
 # Google
 mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcode" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+tink-android = { module = "com.google.crypto.tink:tink-android", version.ref = "tink" }
+bouncycastle-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 
 # Test
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -143,3 +151,4 @@ room = { id = "androidx.room", version.ref = "room" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+cyclonedx = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }

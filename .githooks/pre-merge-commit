@@ -1,0 +1,6 @@
+#!/bin/sh
+# Blocks merge commits on main: main only changes through a pull request on GitHub.
+# Emergency bypass: git merge --no-verify (the repository ruleset still refuses the push)
+. "$(dirname "$0")/lib.sh"
+
+refuse_on_protected_branch pre-merge-commit

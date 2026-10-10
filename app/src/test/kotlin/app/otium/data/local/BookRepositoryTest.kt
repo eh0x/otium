@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.ReceiveTurbine
 import app.cash.turbine.test
+import app.otium.data.cover.CoverFiles
 import app.otium.data.repo.RoomBookRepository
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
@@ -12,6 +13,7 @@ import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.SortOrder
 import app.otium.domain.usecase.DeriveStatus
+import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -35,7 +37,7 @@ class BookRepositoryTest {
             ApplicationProvider.getApplicationContext(),
             OtiumDatabase::class.java,
         ).allowMainThreadQueries().build()
-        repo = RoomBookRepository(db.bookDao())
+        repo = RoomBookRepository(db.bookDao(), CoverFiles(COVERS))
     }
 
     @After
@@ -53,6 +55,30 @@ class BookRepositoryTest {
             val item = awaitItem()
             if (predicate(item)) return item
         }
+    }
+
+    // --- covers ---
+
+    @Test
+    fun `the database keeps a cover's file name and the book gets its full path`() = runTest {
+        val id = add(testBook().copy(coverPath = File(COVERS, "a.jpg").path))
+
+        assertEquals("a.jpg", db.bookDao().getBookEntity(id)?.coverPath)
+        assertEquals(File(COVERS, "a.jpg").path, (repo.getBook(id) as Try.Success).value.coverPath)
+        assertEquals(
+            File(COVERS, "a.jpg").path,
+            repo.observeLibrary(LibraryFilter()).first()[0].coverPath,
+        )
+    }
+
+    @Test
+    fun `a row from before names were stored resolves into the covers directory`() = runTest {
+        val id = add(testBook())
+        db.openHelper.writableDatabase.execSQL(
+            "UPDATE book SET coverPath = '/data/old/install/files/covers/a.jpg' WHERE id = $id",
+        )
+
+        assertEquals(File(COVERS, "a.jpg").path, (repo.getBook(id) as Try.Success).value.coverPath)
     }
 
     // --- CRUD ---
@@ -483,6 +509,48 @@ class BookRepositoryTest {
     }
 
     @Test
+    fun `sort by title files titles without their leading article`() = runTest {
+        add(testBook(title = "The Odyssey"))
+        add(testBook(title = "Beowulf"))
+        add(testBook(title = "A Clockwork Orange"))
+
+        assertEquals(
+            listOf("Beowulf", "A Clockwork Orange", "The Odyssey"),
+            titles(LibraryFilter(sort = SortOrder.TITLE)),
+        )
+    }
+
+    @Test
+    fun `sort by author files authors by surname`() = runTest {
+        add(testBook(title = "Dune", authors = listOf("Frank Herbert")))
+        add(testBook(title = "Meditations", authors = listOf("Marcus Aurelius")))
+        add(testBook(title = "Emma", authors = listOf("Jane Austen")))
+
+        assertEquals(
+            listOf("Meditations", "Emma", "Dune"),
+            titles(LibraryFilter(sort = SortOrder.AUTHOR)),
+        )
+    }
+
+    @Test
+    fun `a summary carries its first category as its shelf and its update time`() = runTest {
+        add(
+            testBook(
+                title = "Ethics",
+                categories = listOf("Philosophy", "Classics"),
+                updatedAt = 42,
+            ),
+        )
+        add(testBook(title = "Loose", categories = emptyList()))
+
+        val summaries = repo.observeLibrary(LibraryFilter()).first().associateBy { it.title }
+
+        assertEquals("Philosophy", summaries.getValue("Ethics").shelf)
+        assertEquals(42L, summaries.getValue("Ethics").updatedAt)
+        assertEquals(null, summaries.getValue("Loose").shelf)
+    }
+
+    @Test
     fun `sort by recently added and last updated are newest first`() = runTest {
         seedSortLibrary()
         assertEquals(
@@ -578,5 +646,9 @@ class BookRepositoryTest {
     @Test
     fun `observeBook for an unknown id emits null`() = runTest {
         assertNull(repo.observeBook(123L).first())
+    }
+
+    private companion object {
+        val COVERS = File("/data/app/files/covers")
     }
 }

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Placeholder mark: an arch over an open book, in Ink. -->
+<!--
+  "Ribbon O": a ring with the progress bookmark hanging inside its top rim, the ribbon of the
+  detail progress rule. Inside the central 66 dp safe zone. Colour is the dark accent.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,15 +10,10 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#00000000"
-        android:pathData="M34,62 L34,46 A20,20 0 0 1 74,46 L74,62"
-        android:strokeColor="#1F2433"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="4" />
+        android:pathData="M54,32 a22,22 0 1,1 0,44 a22,22 0 1,1 0,-44z"
+        android:strokeColor="#D9A85A"
+        android:strokeWidth="3.4" />
     <path
-        android:fillColor="#00000000"
-        android:pathData="M30,66 C40,62 48,62 54,68 C60,62 68,62 78,66 L78,78 C68,74 60,74 54,80 C48,74 40,74 30,78 Z"
-        android:strokeColor="#1F2433"
-        android:strokeLineJoin="round"
-        android:strokeWidth="3" />
+        android:fillColor="#D9A85A"
+        android:pathData="M49,32 h10 v28 l-5,-5 l-5,5 z" />
 </vector>

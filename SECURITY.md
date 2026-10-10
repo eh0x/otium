@@ -5,8 +5,9 @@ that data, or the keys and accounts around it, are welcome.
 
 ## Supported versions
 
-Otium has no stable release yet. Only the latest commit on `main` receives security fixes. Once
-releases are published, this section will list the supported versions.
+Only the latest release receives security fixes; older versions do not. Releases are published
+on [GitHub Releases](https://github.com/eh0x/otium/releases).
+How releases are made and supported is described in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Reporting a vulnerability
 
@@ -55,8 +56,9 @@ Out of scope:
 
 ## Keys and secrets
 
-API keys belong in `local.properties` or the environment and are never committed. If you find a
-secret in the repository or its history, report it the same way, as a vulnerability.
+API keys belong in `local.properties` or the environment and are never committed. gitleaks scans
+staged changes on commit and the full history on push and in CI (`scripts/scan-secrets.sh`). If
+you find a secret in the repository or its history, report it the same way, as a vulnerability.
 
 The Google Books key (`books.api.key`) is compiled into the app, so anyone can extract it from the
 APK. It is treated as public, and it is limited so that misuse costs only quota:
@@ -71,3 +73,19 @@ APK. It is treated as public, and it is limited so that misuse costs only quota:
 Drive access needs no key in the app. It uses an OAuth client bound to the package name and the
 signing certificate's SHA-1, and only the `drive.appdata` scope. Release signing keys live outside
 the repository and are read from `keystore.properties`, which git ignores.
+
+## Backup encryption
+
+Backups go to the user's own Drive `appDataFolder`. Without a passphrase they are plain zips:
+hidden from the Drive UI and other apps, but readable by anyone with access to the Google account.
+With a passphrase set on the backup screen, only ciphertext leaves the phone:
+
+- The key is derived from the passphrase with Argon2id (64 MiB, 3 passes, random 16-byte salt).
+- The file is encrypted with Tink's streaming AES-256-GCM. The header (format version, Argon2id
+  settings, salt, key id) is authenticated, so any change to the file makes it fail to open.
+- The key id is an HMAC of the key, so it reveals nothing about the key or the passphrase.
+- The derived key is stored on the phone wrapped by a non-exportable Android Keystore key, in a
+  DataStore file of its own that Android backup and device transfer exclude. The passphrase is
+  never stored. If the Keystore key is lost, backups stop and ask for the passphrase; they never
+  fall back to plain uploads.
+- A forgotten passphrase cannot be recovered, by the user or by anyone else.

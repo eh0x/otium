@@ -3,6 +3,8 @@ package app.otium.ui.add.confirm
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -50,13 +52,17 @@ class ConfirmContentTest {
     private fun show(state: ConfirmUiState) =
         rule.setContent { OtiumTheme(darkTheme = false) { ConfirmContent(state, actions) } }
 
+    private fun openMoreDetails() {
+        rule.onNodeWithText("More details").performScrollTo().performClick()
+    }
+
     @Test
     fun `shows the details to check and saves them`() {
         show(dune)
 
         rule.onNodeWithText("Check the details").assertIsDisplayed()
         rule.onNodeWithText("Dune").assertIsDisplayed()
-        rule.onNodeWithText("Save").assertIsEnabled().performClick()
+        rule.onNodeWithText("Add to library").assertIsEnabled().performClick()
 
         assertEquals(1, saves)
     }
@@ -65,7 +71,7 @@ class ConfirmContentTest {
     fun `a missing title blocks saving and says why`() {
         show(dune.copy(form = BookForm()))
 
-        rule.onNodeWithText("Save").assertIsNotEnabled()
+        rule.onNodeWithText("Add to library").assertIsNotEnabled()
         rule.onNodeWithText("A title is needed to save the book").assertIsDisplayed()
     }
 
@@ -104,8 +110,9 @@ class ConfirmContentTest {
     fun `a typed tag is added`() {
         show(dune)
 
-        rule.onNodeWithText("Add a tag").performScrollTo().performTextInput("gift")
-        rule.onNodeWithText("Add a tag").performImeAction()
+        openMoreDetails()
+        rule.onNodeWithText("ADD A TAG").performScrollTo().performTextInput("gift")
+        rule.onNodeWithText("ADD A TAG").performImeAction()
 
         assertEquals(listOf("gift"), forms.last().tags)
     }
@@ -114,7 +121,8 @@ class ConfirmContentTest {
     fun `a known tag is suggested while typing`() {
         show(dune.copy(knownTags = listOf("classic", "scifi")))
 
-        rule.onNodeWithText("Add a tag").performScrollTo().performTextInput("cl")
+        openMoreDetails()
+        rule.onNodeWithText("ADD A TAG").performScrollTo().performTextInput("cl")
         rule.onNodeWithText("classic").performScrollTo().performClick()
 
         assertEquals(listOf("classic"), forms.last().tags)
@@ -124,9 +132,35 @@ class ConfirmContentTest {
     fun `a tag can be removed`() {
         show(dune.copy(form = dune.form.copy(tags = listOf("gift", "scifi"))))
 
+        openMoreDetails()
         rule.onNodeWithContentDescription("Remove tag gift").performScrollTo().performClick()
 
         assertEquals(listOf("scifi"), forms.last().tags)
+    }
+
+    @Test
+    fun `the shelf is chosen from the library's categories`() {
+        show(
+            dune.copy(
+                form = dune.form.copy(categories = "Fiction"),
+                knownCategories = listOf("Philosophy"),
+            ),
+        )
+
+        rule.onNodeWithText("Fiction").performScrollTo().assertIsSelected()
+        rule.onNodeWithText("Philosophy").performScrollTo().assertIsNotSelected().performClick()
+
+        assertEquals("Philosophy, Fiction", forms.last().categories)
+    }
+
+    @Test
+    fun `the rarer fields wait under more details`() {
+        show(dune)
+
+        rule.onNodeWithText("ISBN").assertDoesNotExist()
+        openMoreDetails()
+
+        rule.onNodeWithText("ISBN").performScrollTo().assertIsDisplayed()
     }
 
     @Test

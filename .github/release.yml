@@ -1,0 +1,30 @@
+# Groups the pull requests that GitHub lists in generated release notes, by label. The release
+# workflow appends them below the CHANGELOG.md section (docs/RELEASING.md).
+changelog:
+  exclude:
+    labels:
+      - duplicate
+      - invalid
+      - wontfix
+  categories:
+    - title: Security
+      labels:
+        - security
+    - title: Features
+      labels:
+        - enhancement
+    - title: Fixes
+      labels:
+        - bug
+    - title: Accessibility
+      labels:
+        - accessibility
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Dependencies
+      labels:
+        - dependencies
+    - title: Other changes
+      labels:
+        - "*"

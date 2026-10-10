@@ -60,6 +60,8 @@ Status: Validated through brainstorming, ready for implementation planning
 | D20 | Typed `Try<T>` / `AppError` returned from repositories and use cases | Exceptions; `kotlin.Result` | The failure cases in 4.3 and 4.4 (offline, 429, duplicate, expired auth, incompatible backup) are expected outcomes the UI handles differently. A sealed type makes each one explicit and testable |
 | D21 | Use cases only where logic exists; ViewModels call repositories directly for plain reads | A use case per repository call | Avoids pass-through classes while keeping business rules out of ViewModels |
 | D22 | Domain interfaces for scanner, Drive client, cover store, backup archiver and restorer, and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
+| D23 | Optional passphrase encryption of the backup file (Argon2id, then Tink streaming AES-256-GCM), key kept wrapped by the Android Keystore for scheduled runs | SQLCipher for the database; no encryption; a key held only in the Keystore | The backup is the only copy that leaves the phone. A Keystore-only key would be lost with the phone; a passphrase lets a new phone restore (review S4) |
+| D24 | Direction B "Catalogue" redesign: the single-accent Classical palette, Cormorant Garamond and Lora, a bottom bar (Library, Reading, Add, Settings) and shelves by first category | Keep Earth & Ink with EB Garamond and Source Sans 3; Direction A "Plates" | Warmer and more academic while staying modern; one accent reads calmer than two hues; Backup becomes a destination instead of a menu item. Spec: the design handoff (2026-10) |
 
 ## 4. Final Design
 
@@ -199,7 +201,8 @@ Tables:
 
 - `book`: `id`, `isbn13` (unique, nullable), `isbn10`, `title`, `subtitle`, `authors` (display
   string), `publisher`, `publishedYear`, `language`, `description`, `totalPages`, `currentPage`
-  (default 0), `coverPath`, `coverSourceUrl`, `source` (google/openlibrary/manual), `addedAt`,
+  (default 0), `coverPath` (the cover's file name in the covers directory), `coverSourceUrl`,
+  `source` (google/openlibrary/manual), `addedAt`,
   `updatedAt`, `userEdited`, `needsLookup`.
 - `author`, `book_author`; `category`, `book_category`; `tag`, `book_tag`.
 - `book_fts`: FTS4 over title, subtitle, authors.
@@ -290,11 +293,21 @@ Drive backup:
   as the latest file and keep the one it replaces as the previous copy. The file lands under a
   temporary name and is renamed in only once its checksum matches, so a failed upload never
   touches an earlier backup. An empty library is never uploaded.
+- Encryption (optional, D23): with a passphrase set, the zip is encrypted before upload and only
+  the encrypted file leaves the phone. The file starts with a plain header (`OTIUMENC`, format
+  version, Argon2id settings, salt, key id) that is bound to the data as associated data. The key
+  is derived with Argon2id (64 MiB, 3 passes) and stored wrapped by an Android Keystore key in its
+  own DataStore file (`backup_key`), never with the passphrase, so scheduled backups run without
+  the user. If that key can no longer be unwrapped, backups stop with `PassphraseRequired` rather
+  than upload in the clear. Drive records the key id, so a restore on a phone without the key
+  asks for the passphrase before downloading. Plain backups made before stay readable; the zip
+  inside and its manifest format are unchanged.
 - Restore: two steps. `PrepareRestore` downloads, verifies the checksum and the manifest, and
   refuses a schema newer than the app's (before and after the download). The confirm dialog
   ("replaces current library") shows what will be restored. `RestoreBackup` then imports the
-  books in one transaction, copies the covers and rewrites their paths, since the database holds
-  absolute paths that differ between installs.
+  books in one transaction and copies the covers in under their own names. The database names a
+  cover by its file name only, resolved against this install's covers directory when a book is
+  read, so restored rows need no rewriting.
 - Auto backup: `PeriodicWorkRequest` using the user's constraints. Failures retry with backoff; a
   notification appears only after repeated failures.
 - Failure cases: expired auth (prompt re-sign-in), no space, network drop (retry next run). Local
@@ -303,69 +316,68 @@ Drive backup:
 ### 4.7 Visual identity
 
 Reference: a bridge between the analog and digital worlds. Otium should feel like a quiet room at
-the end of a long day, a "digital study", not a transactional utility. No cold tech gradients, no
-gamified pop colors. Natural textures, quiet layouts, soft shadows, warm low-contrast lighting that
-evokes book pages, linen covers and wooden desks.
+the end of a long day, a "digital study", not a transactional utility: a library catalogue rather
+than an app store. Direction B "Catalogue" (D24) replaced the first identity, Earth & Ink.
 
-**Palette: Earth & Ink.** Final light values below. Sage and Terra were darkened from the first
-proposal (`#6F8062` and `#B5573A`) after the WCAG check: as text on Parchment they reached only
-3.6:1 and 4.0:1, short of the 4.5:1 this design requires. `PaletteContrastTest` now guards every
-text and graphic pair in both themes. Real-device tuning is still a Phase 7 task.
+**Palette: Classical.** Cool neutral paper, warm ink and one gold accent, in a light theme and a
+warm "lamplight" dark. Values live only in `ui/theme/Color.kt`; `PaletteContrastTest` guards every
+text and graphic pair in both themes, and the contrast of cover text on every generated board.
 
-| Token | Role | Proposed light value |
-|-------|------|----------------------|
-| Parchment | App background, cards slightly darker or lighter | `#F4EBD9` |
-| Tiber Sage | Primary (muted green): calm actions, "read" status | `#566A4B` |
-| Terra | Accent (rust terracotta): reading progress, active filters, milestones | `#A24A2D` |
-| Ink | Text and icons (deep indigo / dark gray) | `#1F2433` |
+| Role | Light | Dark |
+|------|-------|------|
+| Background | `#F3F2F2` | `#161513` |
+| Surface (plate, mat) | `#EAE9E9` | `#242220` |
+| Sheet and dialog | `#FAF9F8` | `#1D1B19` |
+| Ink | `#201F1D` | `#ECE5D6` |
+| Muted | `#676665` | `#A39E94` |
+| Divider (hairlines) | `#D1D0D0` | `#383632` |
+| Accent (strokes, rules, glyphs, large type) | `#B68235` | `#D9A85A` |
+| Gold (small accent-family text, M3 `primary`) | `#7D5411` | `#E1AD66` |
 
-- **Status colors:** not started = muted ink outline, in progress = Terra, read = Sage. Status is
-  never conveyed by color alone (label or icon too).
-- **Dark theme:** a warm dark, "lamp-lit study" rather than pure black. Background around `#1B1A17`,
-  text in parchment tones, Sage and Terra lightened to keep contrast.
-- **Accessibility constraint:** "low-contrast lighting" applies to surfaces and shadows only. Body
-  text and controls must still meet WCAG AA (4.5:1 text, 3:1 UI). Verify Ink on Parchment, Terra on
-  Parchment, and the dark equivalents before locking values.
+- The accent is about 3:1 on the background, so it is used for graphics and for type of 24 sp and
+  more, on the background or sheet only. Small text in the accent family uses gold.
+- Muted is a shade darker than the handoff's `#6C6B6A`, which was 4.39:1 on the surface.
+- **Status:** unread = hollow ring, reading = half-filled, read = filled, always with a label.
 
 #### Typography
 
-- Headlines and screen titles: **EB Garamond**, a high-contrast Roman-style serif that stays legible
-  at title sizes. The wordmark placeholder uses **Cinzel**. Both are open-licensed (SIL OFL) and
-  safe for Play Store.
-- Interface text: **Source Sans 3**, a quiet humanist sans for lists, filters and forms (chosen over
-  Inter for its smaller file size and warmer feel next to Garamond).
-- Fonts are bundled as variable font files (one file per family, all weights), with their licenses
-  in `third_party/fonts`. No runtime font download.
+- **Cormorant Garamond** for display, titles, tabs, buttons and chips; **Lora** (with its italic)
+  for running text, authors and hints; **Cinzel** for the wordmark only. All SIL OFL, bundled as
+  variable fonts with their licenses in `third_party/fonts`. No runtime font download.
+- Cormorant is thin when small, so its regular weight is used only at 28 sp and above. Every
+  Cormorant style uses lining figures; numerals add tabular figures.
+
+#### Shell and screens
+
+- A bottom bar holds Library, Reading, a raised Add action and Settings. Detail, Edit and the add
+  flow are pushed full screen and hide it.
+- **Library:** a masthead ("Leisure for the learned"), a search row, status tabs and a meta line.
+  Shelves show "On the desk" (books in progress) and then one shelf per first category; the index
+  lists books under letters. Status and sort live in an Arrange sheet.
+- **Book detail:** the cover in a plate, inline progress (slider, steppers, a rule with a ribbon
+  bookmark) and an About tab with a ruled facts table.
+- **Reading:** the books in progress with a one-tap "+10 pages", and the recently finished.
+- Books without a cover get a generated typographic cover: a deep board picked by the title, the
+  title and the author's surname.
+- Hairlines carry structure; shadows only on covers, the Add action and menus. Buttons are never
+  filled (primary = accent outline with a gold label).
+- **Progress:** one thin accent rule and a calm number, no streaks, badges or confetti (D18).
+- Motion: short fades between screens and a settling slide for sheets. With "remove animations"
+  on, movement stops and fades remain.
 
 #### Wordmark and logo
 
-- "OTIUM" in a Roman-inspired serif, with a stylized "O" containing a classical arch over an open
-  book.
-- The final mark is a design asset, not a coding task. v1 development uses a typeset placeholder
-  wordmark and a simple arch-over-book vector icon, swappable later without code changes.
-
-#### Screen treatment
-
-- Backgrounds use a very subtle paper texture, a 64 by 64 grain tile generated once in code (no
-  image asset) and repeated, over a flat Parchment background that is already correct on its own.
-  Soft, low-elevation shadows. No heavy imagery.
-- **Library ("the vault"):** default view renders books as spines/covers on shelf rows, with a
-  subtle shelf line and shadow per row, built on a `LazyVerticalGrid` so it stays fast. A secondary
-  list mode (cover, title, author, progress) is kept for dense browsing. Empty state is an empty
-  shelf with a scan prompt.
-- **Book detail:** cover on a soft shadow like a book resting on a desk, serif title, quiet Terra
-  progress bar and "Page X of Y".
-- **Progress:** one thin Terra bar and a calm number, no streaks, badges or confetti (D18).
-- Motion: slow, minimal fades and gentle shelf-to-detail transitions. Respect the system "remove
-  animations" setting.
+- The mark is the "Ribbon O": a ring with the progress bookmark hanging inside its top rim, the
+  ribbon of the detail progress rule. It is the adaptive launcher icon (gold on `#1B1A18`, with a
+  monochrome layer) and, as `OtiumMark`, sits above the wordmark in the library masthead.
+- "OTIUM" in Cinzel, widely spaced in gold, under the mark.
 
 #### Theme implementation
 
 - One `OtiumTheme` composable owning the `ColorScheme`, `Typography` and `Shapes`, with a small
-  `OtiumColors` extension (`MaterialTheme.otiumColors`) for status colors, shelf and texture tokens.
-  All screens consume tokens only, never raw hex values; `ArchitectureTest` enforces that.
-  `PaperBackground` provides the textured surface and the matching content color, the way `Surface`
-  does.
+  `OtiumColors` extension (`MaterialTheme.otiumColors`) for the accent, muted, divider, sheet,
+  status and cover tokens. All screens consume tokens only, never raw hex values;
+  `ArchitectureTest` enforces that. Shared components live in `ui/components`.
 
 ### 4.5 Testing strategy
 

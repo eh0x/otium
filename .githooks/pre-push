@@ -1,7 +1,23 @@
 #!/bin/sh
-# Runs static analysis and unit tests before pushing. CI runs the same checks.
+# Refuses pushes to main, then runs static analysis and unit tests. CI runs the same checks.
 # Emergency bypass: git push --no-verify
 . "$(dirname "$0")/lib.sh"
+
+# Git passes "<local ref> <local sha> <remote ref> <remote sha>" per ref on stdin.
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+    if is_protected_branch "${remote_ref#refs/heads/}"; then
+        echo "pre-push: '${remote_ref#refs/heads/}' only changes through a pull request." >&2
+        echo "pre-push: push a branch and open a pull request instead." >&2
+        exit 1
+    fi
+done
+
+# Secret scan of the whole history, which also catches commits made with --no-verify.
+if ! "$(dirname "$0")/../scripts/scan-secrets.sh"; then
+    echo >&2
+    echo "pre-push: possible secret in history. Remove it from the unpushed commits and rotate it." >&2
+    exit 1
+fi
 
 if ! run_gradle spotlessCheck detekt checkDocs testDebugUnitTest :domain:test; then
     echo >&2

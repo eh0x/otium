@@ -39,3 +39,25 @@ run_gradle() {
     fi
     ./gradlew --quiet "$@"
 }
+
+# Branches that change only through a reviewed pull request on GitHub. The repository ruleset
+# enforces this on the server; the hooks stop the mistake before it reaches the remote.
+PROTECTED_BRANCHES="main"
+
+# Succeeds when the given branch name (without refs/heads/) is protected.
+is_protected_branch() {
+    for protected in $PROTECTED_BRANCHES; do
+        [ "$1" = "$protected" ] && return 0
+    done
+    return 1
+}
+
+# Stops a commit or merge made on a protected branch, with a way out.
+refuse_on_protected_branch() {
+    branch=$(git symbolic-ref --short -q HEAD) || return 0
+    if is_protected_branch "$branch"; then
+        echo "$1: '$branch' only changes through a pull request. Move this work to a branch:" >&2
+        echo "  git switch -c <type>/<short-description>" >&2
+        exit 1
+    fi
+}

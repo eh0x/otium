@@ -1,0 +1,72 @@
+name: CodeQL
+
+# Code scanning for security problems in the Kotlin sources and in these workflows. Results appear
+# under Security > Code scanning and as annotations on pull requests.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    # Weekly, so new queries also run against code that has not changed.
+    - cron: "18 19 * * 5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # uploads the CodeQL results to code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+          # Kotlin needs a real compilation that CodeQL can watch, so the build is manual.
+          - language: java-kotlin
+            build-mode: manual
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+
+      - if: matrix.build-mode == 'manual'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - if: matrix.build-mode == 'manual'
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # A cached build would skip compilation and leave CodeQL nothing to extract.
+          cache-disabled: true
+
+      - name: Compile Kotlin
+        if: matrix.build-mode == 'manual'
+        # The compiler runs inside Gradle, without the build cache or the Kotlin daemon, so CodeQL
+        # sees every source file being compiled.
+        run: >-
+          ./gradlew :domain:compileKotlin :app:compileDebugKotlin
+          --no-build-cache --no-configuration-cache --no-daemon --rerun-tasks
+          -Pkotlin.compiler.execution.strategy=in-process
+
+      - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: /language:${{ matrix.language }}

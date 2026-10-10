@@ -51,6 +51,9 @@ internal fun Throwable.toDriveError(): AppError = when (this) {
     else -> toAppError()
 }
 
+/** True when Drive refused the token itself, as opposed to refusing what it was asked to do. */
+internal fun HttpException.isRefusedToken(): Boolean = code() == HTTP_UNAUTHORIZED
+
 /** True for the answers worth asking again: too many requests, or the service failing. */
 internal fun HttpException.isTransient(): Boolean =
     code() == HTTP_TOO_MANY_REQUESTS || code() in HTTP_SERVER_ERROR..HTTP_GATEWAY_TIMEOUT

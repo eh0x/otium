@@ -8,6 +8,7 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.error.map
 import app.otium.domain.model.CoverChoice
+import app.otium.domain.port.CapturedPhotos
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.usecase.SaveBook
 import app.otium.ui.navigation.ConfirmRoute
@@ -32,6 +33,7 @@ class ConfirmViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: BookRepository,
     private val saveBook: SaveBook,
+    private val capturedPhotos: CapturedPhotos,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ConfirmRoute>()
@@ -52,21 +54,38 @@ class ConfirmViewModel @Inject constructor(
     )
 
     val uiState: StateFlow<ConfirmUiState> =
-        combine(state, repository.observeTags()) { current, tags ->
-            current.copy(knownTags = tags)
+        combine(state, repository.observeTags(), repository.observeCategories()) {
+                current,
+                tags,
+                categories,
+            ->
+            current.copy(knownTags = tags, knownCategories = categories)
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
             initialValue = state.value,
         )
 
+    /**
+     * Every photo picked on this screen, retakes included. A saved book has its own copy by the
+     * time the screen goes, so the camera's photos are deleted then, saved or not.
+     */
+    private val pickedPhotos = mutableSetOf<String>()
+
     init {
         if (route.isEdit) loadBook()
     }
 
+    override fun onCleared() {
+        capturedPhotos.discard(pickedPhotos.toList())
+    }
+
     fun onFormChange(form: BookForm) = state.update { it.copy(form = form) }
 
-    fun onCoverSelected(cover: CoverChoice) = state.update { it.copy(cover = cover) }
+    fun onCoverSelected(cover: CoverChoice) {
+        if (cover is CoverChoice.Picked) pickedPhotos += cover.uri
+        state.update { it.copy(cover = cover) }
+    }
 
     fun onSave() {
         val current = state.value

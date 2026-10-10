@@ -11,6 +11,7 @@ import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.FakeBackupArchiver
+import app.otium.domain.fakes.FakeBackupEncryption
 import app.otium.domain.fakes.FakeBackupPreferences
 import app.otium.domain.fakes.FakeDriveBackupClient
 import app.otium.domain.fakes.backupInfo
@@ -40,7 +41,8 @@ class BackupWorkerTest {
     private fun preferences(failedRuns: Int = 0) = FakeBackupPreferences(settings, failedRuns)
 
     private fun run(prefs: FakeBackupPreferences, attempt: Int = 0): ListenableWorker.Result {
-        val scheduled = RunScheduledBackup(RunBackup(drive, archiver, prefs, BackupLock()), prefs)
+        val runBackup = RunBackup(drive, archiver, FakeBackupEncryption(), prefs, BackupLock())
+        val scheduled = RunScheduledBackup(runBackup, prefs)
         return runBlocking {
             TestListenableWorkerBuilder<BackupWorker>(application)
                 .setRunAttemptCount(attempt)

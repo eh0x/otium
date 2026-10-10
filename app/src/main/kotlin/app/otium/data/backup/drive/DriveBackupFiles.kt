@@ -43,15 +43,21 @@ private const val SIZE_BYTES = "sizeBytes"
 private const val BOOK_COUNT = "bookCount"
 private const val APP_VERSION = "appVersion"
 private const val SCHEMA_VERSION = "schemaVersion"
+private const val KEY_ID = "keyId"
 
-/** Drive keeps custom properties as strings, so the facts about a backup are written as such. */
-internal fun BackupInfo.toProperties(): Map<String, String> = mapOf(
-    CREATED_AT to createdAt.toString(),
-    SIZE_BYTES to sizeBytes.toString(),
-    BOOK_COUNT to bookCount.toString(),
-    APP_VERSION to appVersion,
-    SCHEMA_VERSION to schemaVersion.toString(),
-)
+/**
+ * Drive keeps custom properties as strings, so the facts about a backup are written as such. An
+ * encrypted backup also records which key opens it, so a restore can ask for the passphrase
+ * before downloading anything.
+ */
+internal fun BackupInfo.toProperties(): Map<String, String> = buildMap {
+    put(CREATED_AT, createdAt.toString())
+    put(SIZE_BYTES, sizeBytes.toString())
+    put(BOOK_COUNT, bookCount.toString())
+    put(APP_VERSION, appVersion)
+    put(SCHEMA_VERSION, schemaVersion.toString())
+    keyId?.let { put(KEY_ID, it) }
+}
 
 /** The facts in [this], or null when any is missing or not a number (not a file Otium wrote). */
 internal fun Map<String, String>.toBackupInfo(): BackupInfo? {
@@ -63,7 +69,7 @@ internal fun Map<String, String>.toBackupInfo(): BackupInfo? {
     val complete = createdAt != null && sizeBytes != null && bookCount != null &&
         appVersion != null && schemaVersion != null
     return if (complete) {
-        BackupInfo(createdAt, sizeBytes, bookCount, appVersion, schemaVersion)
+        BackupInfo(createdAt, sizeBytes, bookCount, appVersion, schemaVersion, this[KEY_ID])
     } else {
         null
     }

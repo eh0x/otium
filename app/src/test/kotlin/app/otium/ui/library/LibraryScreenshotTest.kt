@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onRoot
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryViewMode
+import app.otium.domain.model.SortKeys
 import app.otium.domain.usecase.DeriveStatus
 import app.otium.ui.theme.OtiumTheme
 import java.io.File
@@ -52,8 +53,10 @@ class LibraryScreenshotTest {
             currentPage = current,
             totalPages = total,
             status = DeriveStatus(current, total),
+            shelf = listOf("Fiction", "Fantasy", "Classics", "Fantasy", "Fiction", null)[index],
+            updatedAt = index.toLong(),
         )
-    }
+    }.sortedWith(SortKeys.byTitle) // As the repository returns them.
 
     private fun render(name: String, dark: Boolean, state: LibraryUiState) {
         rule.setContent { OtiumTheme(darkTheme = dark) { LibraryContent(state, LibraryActions()) } }

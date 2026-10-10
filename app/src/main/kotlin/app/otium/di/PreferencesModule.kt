@@ -5,8 +5,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
+import app.otium.data.backup.crypto.BackupKeyStore
+import app.otium.data.prefs.BackupStateStore
 import app.otium.data.prefs.DataStoreBackupPreferences
 import app.otium.data.prefs.DataStoreLibraryPreferences
+import app.otium.data.prefs.MovePreferences
+import app.otium.data.prefs.isBackupState
 import app.otium.domain.port.BackupPreferences
 import app.otium.domain.port.LibraryPreferences
 import dagger.Binds
@@ -34,5 +38,27 @@ abstract class PreferencesModule {
         @Singleton
         fun provideLibraryDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
             PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("library") }
+
+        /**
+         * The Drive connection and backup bookkeeping, in a file of its own: see
+         * [BackupStateStore]. Installs that kept them with the library settings have them moved
+         * here on first read.
+         */
+        @Provides
+        @Singleton
+        @BackupStateStore
+        fun provideBackupStateStore(
+            @ApplicationContext context: Context,
+            library: DataStore<Preferences>,
+        ): DataStore<Preferences> = PreferenceDataStoreFactory.create(
+            migrations = listOf(MovePreferences(library, ::isBackupState)),
+        ) { context.preferencesDataStoreFile("backup_state") }
+
+        /** The wrapped backup key, in a file of its own: see [BackupKeyStore]. */
+        @Provides
+        @Singleton
+        @BackupKeyStore
+        fun provideBackupKeyStore(@ApplicationContext context: Context): DataStore<Preferences> =
+            PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("backup_key") }
     }
 }

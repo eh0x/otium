@@ -17,14 +17,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -34,15 +32,19 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import app.otium.R
 import app.otium.domain.model.CoverChoice
 import app.otium.ui.components.BookCover
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.theme.otiumColors
 import coil3.compose.rememberAsyncImagePainter
 import java.io.File
 
-private val PREVIEW_WIDTH = 140.dp
+private val PREVIEW_WIDTH = 92.dp
 private val OPTION_WIDTH = 64.dp
 private const val CAMERA_DIRECTORY = "camera"
 
@@ -52,7 +54,7 @@ private const val CAMERA_DIRECTORY = "camera"
  */
 @Composable
 internal fun CoverSection(
-    title: String,
+    hint: String,
     state: ConfirmUiState,
     onCoverSelected: (CoverChoice) -> Unit,
     onCameraDenied: () -> Unit,
@@ -62,32 +64,41 @@ internal fun CoverSection(
         onPicked = { onCoverSelected(CoverChoice.Picked(it)) },
         onCameraDenied = onCameraDenied,
     )
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        val model = state.cover.previewModel(state.currentCoverPath)
-        BookCover(
-            title = title,
-            painter = model?.let { rememberAsyncImagePainter(it) },
-            modifier = Modifier.width(PREVIEW_WIDTH),
-        )
+    val title = state.form.title
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            val model = state.cover.previewModel(state.currentCoverPath)
+            BookCover(
+                title = title,
+                authors = state.form.authors,
+                painter = model?.let { rememberAsyncImagePainter(it) },
+                modifier = Modifier.width(PREVIEW_WIDTH),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = hint,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                    color = MaterialTheme.otiumColors.muted,
+                )
+                CoverAction(R.string.confirm_cover_gallery, pickers.pickFromGallery)
+                CoverAction(R.string.confirm_cover_camera, pickers.takePhoto)
+                CoverAction(R.string.confirm_cover_remove) { onCoverSelected(CoverChoice.None) }
+            }
+        }
         if (state.remoteCovers.size > 1) {
             RemoteCoverOptions(state.remoteCovers, state.cover, title, onCoverSelected)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            TextButton(onClick = pickers.pickFromGallery) {
-                Text(stringResource(R.string.confirm_cover_gallery))
-            }
-            TextButton(onClick = pickers.takePhoto) {
-                Text(stringResource(R.string.confirm_cover_camera))
-            }
-            TextButton(onClick = { onCoverSelected(CoverChoice.None) }) {
-                Text(stringResource(R.string.confirm_cover_remove))
-            }
-        }
     }
+}
+
+@Composable
+private fun CoverAction(label: Int, onClick: () -> Unit) {
+    OtiumButton(
+        text = stringResource(label),
+        onClick = onClick,
+        style = OtiumButtonStyle.Ghost,
+        compact = true,
+    )
 }
 
 @Composable
@@ -102,7 +113,7 @@ private fun RemoteCoverOptions(
             val choice = CoverChoice.Remote(url)
             val isSelected = choice == selected
             val label = stringResource(R.string.confirm_cover_option, index + 1)
-            val outline = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+            val outline = if (isSelected) MaterialTheme.otiumColors.accent else Color.Transparent
             BookCover(
                 title = title,
                 painter = rememberAsyncImagePainter(url),
@@ -172,7 +183,10 @@ private fun rememberCoverPickers(
     )
 }
 
-/** A fresh file in the shared camera folder (see res/xml/file_paths.xml) for the camera app. */
+/**
+ * A fresh file in the shared camera folder (see res/xml/file_paths.xml) for the camera app.
+ * `CameraPhotoFiles` deletes these by folder and name, so keep both in step with it.
+ */
 private fun Context.newPhotoUri() = FileProvider.getUriForFile(
     this,
     "$packageName.covers",

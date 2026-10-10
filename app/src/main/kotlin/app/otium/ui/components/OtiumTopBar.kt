@@ -9,7 +9,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
-/** Screen title in the serif face on the parchment background, with no elevation. */
+/** Screen title in the serif face on the paper background, with no elevation. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtiumTopBar(

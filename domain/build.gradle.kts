@@ -7,6 +7,11 @@ plugins {
     alias(libs.plugins.kover)
 }
 
+// SBOM for the dependency scan (scanDependencies in the root build file): what ships only.
+tasks.named<org.cyclonedx.gradle.CyclonedxDirectTask>("cyclonedxDirectBom") {
+    includeConfigs = listOf("runtimeClasspath")
+}
+
 // Feeds the merged coverage report in the root build file.
 kover {
     currentProject {

@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteException
 import app.otium.BuildConfig
 import app.otium.data.backup.archive.BackupManifest
 import app.otium.data.backup.archive.BackupZip
+import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
@@ -103,10 +104,11 @@ class ZipBackupArchiver internal constructor(
         }
     }
 
-    /** The cover pictures the books point at that exist in the covers directory, each once. */
+    /** The cover pictures the books name that exist in the covers directory, each once. */
     private fun coverFiles(rows: LibraryRows): List<File> {
+        val covers = CoverFiles(files.covers)
         val directory = files.covers.canonicalFile
-        return rows.books.mapNotNull { it.coverPath }
+        return rows.books.mapNotNull { covers.pathOf(it.coverPath) }
             .map(::File)
             .filter { it.isFile && it.canonicalFile.parentFile == directory }
             .distinct()

@@ -33,8 +33,8 @@ class AddSheetTest {
     fun `offers the three ways to add a book`() {
         show()
 
-        rule.onNodeWithText("Scan barcode").assertIsDisplayed()
-        rule.onNodeWithText("Enter ISBN").assertIsDisplayed()
+        rule.onNodeWithText("Scan the barcode").assertIsDisplayed()
+        rule.onNodeWithText("Enter an ISBN").assertIsDisplayed()
         rule.onNodeWithText("Search by title").assertIsDisplayed()
     }
 
@@ -42,7 +42,7 @@ class AddSheetTest {
     fun `each option reports its method`() {
         show()
 
-        rule.onNodeWithText("Enter ISBN").performClick()
+        rule.onNodeWithText("Enter an ISBN").performClick()
 
         assertEquals(listOf(AddMethod.ISBN), chosen)
     }

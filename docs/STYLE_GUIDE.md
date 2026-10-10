@@ -18,15 +18,21 @@ rules the tools cannot see.
 |------|------|--------|------|
 | Kotlin and Kotlin DSL formatting | Spotless + ktlint (`android_studio` code style) | `.editorconfig`, root `build.gradle.kts` | `pre-commit` hook, CI |
 | XML, Markdown, YAML, TOML, properties, ProGuard whitespace | Spotless | root `build.gradle.kts`, `.editorconfig` | `pre-commit` hook, CI |
-| Design, complexity, bug-prone Kotlin | detekt | `config/detekt/detekt.yml` | `pre-push` hook, CI |
+| Design, complexity, bug-prone Kotlin | detekt | `config/detekt/detekt.yml` | `pre-push` hook, CI (findings also in code scanning) |
+| Security flaws in Kotlin and in the workflows | CodeQL (`security-extended`) | `.github/workflows/codeql.yml` | pushes, pull requests, weekly |
 | Compiler warnings | Kotlin `allWarningsAsErrors` | module `build.gradle.kts` | every build |
 | Android correctness, security, resources | Android Lint with `warningsAsErrors` | `app/build.gradle.kts` | CI (`lint`) |
 | Layering (`:domain` stays pure Kotlin) | `DomainPurityTest` | `domain/src/test` | every `:domain:test` |
 | Architecture rules (UI/data boundaries, ViewModels, single activity, naming) | Konsist `ArchitectureTest` | `app/src/test/.../architecture` | every `testDebugUnitTest`, CI |
 | Commit messages | `commit-msg` hook | `.githooks/commit-msg` | every commit |
+| `main` changes only through a pull request | GitHub repository ruleset; local guard in the hooks | repository settings, `.githooks/lib.sh` | server on every push; `pre-commit`, `pre-merge-commit`, `pre-push` |
 | Documentation drift (links, commands, paths, facts) | `checkDocs` | `gradle/docs-check.gradle.kts` | `check`, `pre-push` hook, CI |
 | Docs missing after build, tooling or CI changes | `scripts/docs-impact.sh` (warning) | `scripts/docs-impact.sh` | `pre-push` hook, CI |
 | Markdown style (100 columns, lists, fences, links, headings) | markdownlint | `.markdownlint-cli2.jsonc`, [Markdown guidelines](MARKDOWN_GUIDE.md) | `pre-commit` (staged files), `check` via `lintMarkdown`, `pre-push`, CI |
+| Secrets in commits (API keys, tokens, private keys) | gitleaks via `scripts/scan-secrets.sh` | `.gitleaks.toml` | `pre-commit` (staged changes), `pre-push` and `check` via `scanSecrets` (history), CI |
+| GitHub Actions workflows (syntax, shell in `run:` steps, pinning, permissions, injection) | actionlint and zizmor via `scripts/lint-workflows.sh` | inline `# zizmor: ignore[<audit>]` with a reason | `pre-commit` (staged workflows), `check` via `lintWorkflows`, CI |
+| Known vulnerabilities in shipped dependencies | OSV-Scanner on a CycloneDX SBOM via `scripts/scan-dependencies.sh` | `osv-scanner.toml` | `scanDependencies`, CI |
+| Vulnerable dependencies, transitive and build tooling included | Dependabot alerts and security updates, fed by `dependency-submission.yml` | `.github/dependabot.yml` | pushes to `main` and `develop` that change the build files |
 | Everything else in this guide | Code review | this file | pull requests |
 
 ### Daily commands
@@ -42,11 +48,13 @@ rules the tools cannot see.
 ### One-time setup
 
 ```bash
-./gradlew installGitHooks    # points git at .githooks (pre-commit, commit-msg, pre-push)
+./gradlew installGitHooks    # points git at .githooks (pre-commit, pre-merge-commit, commit-msg, pre-push)
 ```
 
-The hooks look for a JDK in the usual places. If none is found they skip the local run and CI
-becomes the gate. Bypassing a hook with `--no-verify` is for emergencies only; CI will still fail.
+The hooks look for a JDK, gitleaks, actionlint and zizmor (`brew install gitleaks actionlint
+zizmor`) in the usual places. If one is missing they skip that local check and CI becomes the
+gate. Bypassing a hook with `--no-verify`
+is for emergencies only; CI will still fail.
 
 ### Suppression policy
 
@@ -366,15 +374,18 @@ describes, and is checked by the build.
 
 | Document | Describes | Update it when |
 |----------|-----------|----------------|
-| `README.md` | What Otium is, requirements, setup, everyday commands, module layout | requirements, build tasks, modules or app id change |
+| `README.md` | What Otium is, requirements, setup, architecture overview, module layout | requirements, setup, modules or app id change |
+| `CONTRIBUTING.md` | Contributor setup, workflow, everyday commands, tests | build or verification tasks, hooks or the workflow change |
 | `docs/STYLE_GUIDE.md` | Rules and how they are enforced | a rule, a tool or its configuration changes |
 | `docs/design/*.md` | Decisions and the reasons behind them (decision log) | a design decision is made or reversed |
 | `docs/plans/*.md` | The implementation plan and phase status | a phase starts or finishes, or scope changes |
 | `docs/MARKDOWN_GUIDE.md` | How Markdown is written and linted | a Markdown rule or its lint config changes |
+| `docs/RELEASING.md` | Versioning, release steps and supported versions | the release workflow, signing or version scheme changes |
+| `CHANGELOG.md` | User-visible changes per release | a change users can see is merged, or a release is cut |
 | `CLAUDE.md` | Instructions for the coding assistant | workflow rules change |
 
-README, the guide and `CLAUDE.md` describe the present and must always be true. The design and
-plan documents also describe intent, so they are only checked for broken links.
+README, `CONTRIBUTING.md`, the guides and `CLAUDE.md` describe the present and must always be true.
+The design and plan documents also describe intent, so they are only checked for broken links.
 
 ### Writing rules
 

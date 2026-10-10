@@ -55,8 +55,10 @@ private fun ImageLinksDto.best(): String? =
     }
 
 /** Google serves covers over http with a page-curl effect baked in; both are fixed here. */
-private fun secureCover(url: String): String =
-    url.replaceFirst("http://", "https://").replace("&edge=curl", "")
+private fun secureCover(url: String): String? {
+    val httpsUrl = url.replaceFirst("http://", "https://").replace("&edge=curl", "")
+    return httpsUrl.takeIf { it.startsWith("https://") }
+}
 
 /** Google descriptions carry HTML. The app shows plain text, so tags and entities are removed. */
 private fun plainText(html: String): String = html

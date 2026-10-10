@@ -22,6 +22,7 @@ import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
 import app.otium.domain.port.BackupScheduler
 import app.otium.domain.port.BarcodeScanner
+import app.otium.domain.port.CapturedPhotos
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
 import app.otium.domain.port.LookupScheduler
@@ -83,6 +84,9 @@ class AddByScanFlowTest {
     val clock: Clock = FixedClock()
 
     @BindValue @JvmField
+    val capturedPhotos: CapturedPhotos = CapturedPhotos {}
+
+    @BindValue @JvmField
     val scheduler: LookupScheduler = LookupScheduler {}
 
     @BindValue @JvmField
@@ -101,22 +105,22 @@ class AddByScanFlowTest {
 
     @Test
     fun `a scanned barcode is looked up, confirmed and saved`() {
-        rule.onNodeWithContentDescription("Add book").performClick()
-        rule.onNodeWithText("Scan barcode").performClick()
+        rule.onNodeWithContentDescription("Add a book").performClick()
+        rule.onNodeWithText("Scan the barcode").performClick()
         waitFor("Enter the ISBN instead")
 
         camera.read(DUNE)
 
         waitFor("Check the details")
-        rule.onNodeWithText("Save").performClick()
+        rule.onNodeWithText("Add to library").performClick()
         rule.waitUntil(TIMEOUT) { library.all.isNotEmpty() }
         assertEquals("Dune", library.all.single().title)
     }
 
     @Test
     fun `the isbn can be typed instead of scanned`() {
-        rule.onNodeWithContentDescription("Add book").performClick()
-        rule.onNodeWithText("Scan barcode").performClick()
+        rule.onNodeWithContentDescription("Add a book").performClick()
+        rule.onNodeWithText("Scan the barcode").performClick()
         waitFor("Enter the ISBN instead")
 
         rule.onNodeWithText("Enter the ISBN instead").performClick()

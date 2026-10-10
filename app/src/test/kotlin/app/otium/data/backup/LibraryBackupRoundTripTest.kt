@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.otium.data.backup.archive.BackupManifest
 import app.otium.data.backup.archive.BackupZip
+import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.local.testBook
 import app.otium.data.repo.RoomBookRepository
@@ -59,8 +60,8 @@ class LibraryBackupRoundTripTest {
         targetCovers = temp.newFolder("target-covers")
         source = database()
         target = database()
-        sourceBooks = RoomBookRepository(source.bookDao())
-        targetBooks = RoomBookRepository(target.bookDao())
+        sourceBooks = RoomBookRepository(source.bookDao(), CoverFiles(sourceCovers))
+        targetBooks = RoomBookRepository(target.bookDao(), CoverFiles(targetCovers))
     }
 
     @After
@@ -218,6 +219,29 @@ class LibraryBackupRoundTripTest {
         assertEquals(Try.Failure(AppError.CorruptBackup), result)
         assertEquals(listOf("Keep Me"), titles(targetBooks))
         assertEquals(listOf("keep.jpg"), targetCovers.list().orEmpty().toList())
+    }
+
+    @Test
+    fun `a backup with schema objects the app never creates is refused`() = runBlocking {
+        addKeeper()
+        val extras = listOf(
+            "CREATE TRIGGER wipe AFTER INSERT ON book BEGIN DELETE FROM tag; END",
+            "CREATE VIEW everything AS SELECT * FROM book",
+            "CREATE TABLE stowaway (payload TEXT)",
+            "CREATE INDEX extra ON book (title)",
+        )
+        // One real two-book library, so the book count always matches and only the schema differs.
+        val original = realDatabaseFile()
+        for (statement in extras) {
+            val databaseFile = original.copyTo(File(temp.newFolder(), "library.db"))
+            SQLiteDatabase.openDatabase(databaseFile.path, null, SQLiteDatabase.OPEN_READWRITE)
+                .use { it.execSQL(statement) }
+
+            val result = restorer().restore(craftedBackup(databaseFile))
+
+            assertEquals(statement, Try.Failure(AppError.CorruptBackup), result)
+            assertEquals(listOf("Keep Me"), titles(targetBooks))
+        }
     }
 
     @Test

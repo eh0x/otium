@@ -1,12 +1,20 @@
 // Documentation drift check. Applied from the root build.gradle.kts.
 //
-// Fails when the live docs (README.md, CLAUDE.md, docs/STYLE_GUIDE.md) disagree with the
+// Fails when the live docs (README.md, CONTRIBUTING.md, CLAUDE.md, the guides) disagree with the
 // repository: broken relative links, Gradle tasks that do not exist, file paths that do not
 // exist, or key facts (application id, minSdk, JDK, modules) that differ from the build files.
 // Design and plan documents describe the future as well as the present, so they only get the
 // link check. See docs/STYLE_GUIDE.md, "Documentation".
 
-val liveDocs = listOf("README.md", "CLAUDE.md", "docs/STYLE_GUIDE.md", "docs/MARKDOWN_GUIDE.md")
+val liveDocs = listOf(
+    "README.md",
+    "CONTRIBUTING.md",
+    "CLAUDE.md",
+    "CHANGELOG.md",
+    "docs/STYLE_GUIDE.md",
+    "docs/MARKDOWN_GUIDE.md",
+    "docs/RELEASING.md",
+)
 
 // Markdown that git tracks or has staged. Untracked scratch files are not part of the docs.
 fun versionedMarkdown(root: File): List<String> = runCatching {

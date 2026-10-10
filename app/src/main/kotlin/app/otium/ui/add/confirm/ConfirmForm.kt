@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -13,9 +14,9 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,19 +31,29 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.otium.R
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumChip
+import app.otium.ui.components.otiumUnderlinedFieldColors
+import app.otium.ui.theme.otiumColors
 
 private const val MAX_TAG_SUGGESTIONS = 5
 private const val DESCRIPTION_MIN_LINES = 3
 
-/** Every editable field of the book. Each change reports the whole new form. */
+/**
+ * Every editable field of the book. The essentials and the shelf come first; the rest sit under
+ * "More details". Each change reports the whole new form.
+ */
 @Composable
 internal fun ConfirmForm(
     form: BookForm,
     pagesUnknown: Boolean,
     knownTags: List<String>,
+    knownCategories: List<String>,
     onFormChange: (BookForm) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var moreDetails by rememberSaveable { mutableStateOf(false) }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FormField(
             value = form.title,
@@ -50,11 +61,6 @@ internal fun ConfirmForm(
             label = R.string.confirm_field_title,
             supporting = R.string.confirm_field_title_required.takeIf { form.title.isBlank() },
             isError = form.title.isBlank(),
-        )
-        FormField(
-            value = form.subtitle,
-            onValueChange = { onFormChange(form.copy(subtitle = it)) },
-            label = R.string.confirm_field_subtitle,
         )
         FormField(
             value = form.authors,
@@ -71,38 +77,78 @@ internal fun ConfirmForm(
             keyboardType = KeyboardType.Number,
         )
         FormField(
-            value = form.isbn,
-            onValueChange = { onFormChange(form.copy(isbn = it)) },
-            label = R.string.confirm_field_isbn,
-            keyboardType = KeyboardType.Number,
-        )
-        PublicationFields(form, onFormChange)
-        TagEditor(
-            tags = form.tags,
-            knownTags = knownTags,
-            onTagsChange = { onFormChange(form.copy(tags = it)) },
+            value = form.publisher,
+            onValueChange = { onFormChange(form.copy(publisher = it)) },
+            label = R.string.confirm_field_publisher,
         )
         FormField(
-            value = form.description,
-            onValueChange = { onFormChange(form.copy(description = it)) },
-            label = R.string.confirm_field_description,
-            singleLine = false,
+            value = form.publishedYear,
+            onValueChange = { onFormChange(form.copy(publishedYear = it.filter(Char::isDigit))) },
+            label = R.string.confirm_field_year,
+            keyboardType = KeyboardType.Number,
         )
+        ShelfChips(form, knownCategories, onFormChange)
+        OtiumButton(
+            text = stringResource(
+                if (moreDetails) R.string.confirm_fewer_details else R.string.confirm_more_details,
+            ),
+            onClick = { moreDetails = !moreDetails },
+            style = OtiumButtonStyle.Ghost,
+            compact = true,
+        )
+        if (moreDetails) MoreDetails(form, knownTags, onFormChange)
     }
 }
 
-/** Where and when the book was published, and how it is classified. */
+/**
+ * The shelf as chips: the library's categories plus the book's own first one. Choosing one makes
+ * it the book's first category; the other categories are kept.
+ */
 @Composable
-private fun PublicationFields(form: BookForm, onFormChange: (BookForm) -> Unit) {
+private fun ShelfChips(
+    form: BookForm,
+    knownCategories: List<String>,
+    onFormChange: (BookForm) -> Unit,
+) {
+    val current = form.shelf
+    val shelves = (knownCategories + listOfNotNull(current))
+        .distinctBy { it.lowercase() }
+        .sortedBy { it.lowercase() }
+    if (shelves.isEmpty()) return
+    Text(
+        text = stringResource(R.string.confirm_shelf).uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.otiumColors.muted,
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .semantics { heading() },
+    )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        shelves.forEach { name ->
+            OtiumChip(
+                label = name,
+                selected = name.equals(current, ignoreCase = true),
+                onClick = { onFormChange(form.withShelf(name)) },
+            )
+        }
+    }
+}
+
+/** The fields most books do not need to change: subtitle, ISBN, language, categories, tags. */
+@Composable
+private fun MoreDetails(form: BookForm, knownTags: List<String>, onFormChange: (BookForm) -> Unit) {
     FormField(
-        value = form.publisher,
-        onValueChange = { onFormChange(form.copy(publisher = it)) },
-        label = R.string.confirm_field_publisher,
+        value = form.subtitle,
+        onValueChange = { onFormChange(form.copy(subtitle = it)) },
+        label = R.string.confirm_field_subtitle,
     )
     FormField(
-        value = form.publishedYear,
-        onValueChange = { onFormChange(form.copy(publishedYear = it.filter(Char::isDigit))) },
-        label = R.string.confirm_field_year,
+        value = form.isbn,
+        onValueChange = { onFormChange(form.copy(isbn = it)) },
+        label = R.string.confirm_field_isbn,
         keyboardType = KeyboardType.Number,
     )
     FormField(
@@ -115,6 +161,17 @@ private fun PublicationFields(form: BookForm, onFormChange: (BookForm) -> Unit) 
         onValueChange = { onFormChange(form.copy(categories = it)) },
         label = R.string.confirm_field_categories,
         supporting = R.string.confirm_field_list_hint,
+    )
+    TagEditor(
+        tags = form.tags,
+        knownTags = knownTags,
+        onTagsChange = { onFormChange(form.copy(tags = it)) },
+    )
+    FormField(
+        value = form.description,
+        onValueChange = { onFormChange(form.copy(description = it)) },
+        label = R.string.confirm_field_description,
+        singleLine = false,
     )
 }
 
@@ -129,11 +186,19 @@ private fun FormField(
     capitalization: KeyboardCapitalization = KeyboardCapitalization.Sentences,
     singleLine: Boolean = true,
 ) {
-    OutlinedTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(label)) },
+        label = {
+            Text(stringResource(label).uppercase(), style = MaterialTheme.typography.labelSmall)
+        },
+        textStyle = if (singleLine) {
+            MaterialTheme.typography.titleLarge
+        } else {
+            MaterialTheme.typography.bodyLarge
+        },
+        colors = otiumUnderlinedFieldColors(),
         supportingText = supporting?.let { { Text(stringResource(it)) } },
         isError = isError,
         singleLine = singleLine,
@@ -164,8 +229,9 @@ private fun TagEditor(
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = stringResource(R.string.confirm_tags),
-            style = MaterialTheme.typography.titleSmall,
+            text = stringResource(R.string.confirm_tags).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.otiumColors.muted,
             modifier = Modifier.semantics { heading() },
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -179,11 +245,17 @@ private fun TagEditor(
                 )
             }
         }
-        OutlinedTextField(
+        TextField(
             value = input,
             onValueChange = { input = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(stringResource(R.string.confirm_tag_add)) },
+            label = {
+                Text(
+                    stringResource(R.string.confirm_tag_add).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            },
+            colors = otiumUnderlinedFieldColors(),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { add(input) }),

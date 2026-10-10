@@ -1,0 +1,11 @@
+# OSV-Scanner configuration, used by scripts/scan-dependencies.sh (`scanDependencies`, CI).
+# Reference: https://google.github.io/osv-scanner/configuration/
+#
+# Fix a finding by upgrading the dependency. Ignore one only when no fix exists yet or the
+# vulnerable code is unreachable in Otium, and always with a reason and an expiry, so the decision
+# comes back for review:
+#
+# [[IgnoredVulns]]
+# id = "GHSA-xxxx-xxxx-xxxx"
+# ignoreUntil = 2026-12-31
+# reason = "No fixed release yet; Otium never calls the affected API."

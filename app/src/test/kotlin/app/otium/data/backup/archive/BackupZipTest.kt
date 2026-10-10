@@ -177,6 +177,16 @@ class BackupZipTest {
     }
 
     @Test
+    fun `an oversized manifest is refused without reading it whole`() {
+        // Valid JSON, so only the size can be the reason it is refused.
+        val padded = manifestJson(""","note":"${"x".repeat(20_000)}"""").toByteArray()
+        val archive = zipOf("manifest.json" to padded, "library.db" to byteArrayOf(1))
+
+        assertEquals(Try.Failure(AppError.CorruptBackup), zip.readManifest(archive))
+        assertEquals(Try.Failure(AppError.CorruptBackup), extractTo(archive).first)
+    }
+
+    @Test
     fun `a file that is not a zip is refused`() {
         val notZip = file("plain.zip", "just some text".toByteArray())
 

@@ -1,0 +1,67 @@
+name: Feature request
+description: Suggest an idea or an improvement for Otium.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Otium is a quiet, private, offline-first library app, maintained in
+        spare time, so not every good idea fits. Describing the problem first helps most.
+
+        Still a rough idea? Start in [Ideas](https://github.com/eh0x/otium/discussions/categories/ideas)
+        instead, and open a request once it takes shape.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [existing issues](https://github.com/eh0x/otium/issues?q=is%3Aissue) and this has not been suggested.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Who needs it, and what is hard or impossible today?
+      placeholder: When I lend a book to a friend, I lose track of who has it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+      description: Describe the change as you picture it. Sketches and mockups are welcome.
+      placeholder: A "Lent to" field on the book, shown on the shelf as a small marker.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Optional. Workarounds you use today, or other ways to solve it.
+
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Fit with Otium
+      description: Otium's design keeps these promises. Tick the ones your idea keeps; it is fine to leave one unticked and explain why.
+      options:
+        - label: Works without an account or a server, with data kept on the device.
+        - label: Adds no tracking, analytics or ads.
+        - label: Stays calm, with no streaks, badges or nagging notifications.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Optional. Links, examples from other apps, or any other context.
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to work on this myself (see [CONTRIBUTING.md](https://github.com/eh0x/otium/blob/main/CONTRIBUTING.md)).

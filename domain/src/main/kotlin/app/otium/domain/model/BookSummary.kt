@@ -11,4 +11,8 @@ data class BookSummary(
     val currentPage: Int,
     val totalPages: Int,
     val status: BookStatus,
+    /** The shelf the book stands on: its first category, or null when it has none. */
+    val shelf: String? = null,
+    /** Epoch milliseconds of the last change, such as progress. */
+    val updatedAt: Long = 0L,
 )

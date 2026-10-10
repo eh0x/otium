@@ -5,9 +5,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * WCAG 2.x contrast guard for the Earth & Ink palette. The design asks for low-contrast
- * surfaces and shadows only: text and controls must still reach AA (4.5:1 for text, 3:1 for
- * UI components and graphics). Fails with every offending pair listed.
+ * WCAG 2.x contrast guard for the Classical palette. Hairlines and surfaces are deliberately
+ * low-contrast; text and controls must still reach AA (4.5:1 for text, 3:1 for graphics such as
+ * the accent strokes and glyphs). Fails with every offending pair listed.
  */
 class PaletteContrastTest {
 
@@ -37,27 +37,26 @@ class PaletteContrastTest {
     )
 
     private fun requirements(p: OtiumPaletteSpec) = listOf(
-        Requirement("body text on background", p.onBackground, p.background, TEXT_AAA),
-        Requirement("body text on surface", p.onSurface, p.surface, TEXT_AAA),
-        Requirement("body text on raised surface", p.onSurface, p.surfaceContainerHighest, TEXT_AA),
-        Requirement("text on variant surface", p.onSurfaceVariant, p.surfaceVariant, TEXT_AA),
-        Requirement("on primary (Sage)", p.onPrimary, p.primary, TEXT_AA),
-        Requirement("Sage as text on background", p.primary, p.background, TEXT_AA),
-        Requirement("Sage as graphic on surface", p.primary, p.surface, GRAPHIC),
-        Requirement("on primary container", p.onPrimaryContainer, p.primaryContainer, TEXT_AA),
-        Requirement("on secondary (Terra)", p.onSecondary, p.secondary, TEXT_AA),
-        Requirement("Terra as text on background", p.secondary, p.background, TEXT_AA),
-        Requirement("Terra as graphic on surface", p.secondary, p.surface, GRAPHIC),
+        Requirement("ink on background", p.onBackground, p.background, TEXT_AAA),
+        Requirement("ink on surface", p.onSurface, p.surface, TEXT_AAA),
+        Requirement("ink on sheet", p.onSurface, p.sheet, TEXT_AAA),
+        Requirement("muted on background", p.muted, p.background, TEXT_AA),
+        Requirement("muted on surface", p.muted, p.surface, TEXT_AA),
+        Requirement("muted on sheet", p.muted, p.sheet, TEXT_AA),
+        Requirement("gold text on background", p.primary, p.background, TEXT_AA),
+        Requirement("gold text on surface", p.primary, p.surface, TEXT_AA),
+        Requirement("gold text on sheet", p.primary, p.sheet, TEXT_AA),
         Requirement(
-            "on secondary container",
-            p.onSecondaryContainer,
-            p.secondaryContainer,
+            "gold text on selected chip",
+            p.onPrimaryContainer,
+            p.primaryContainer,
             TEXT_AA,
         ),
-        Requirement("on tertiary", p.onTertiary, p.tertiary, TEXT_AA),
-        Requirement("muted ink as text on background", p.mutedInk, p.background, TEXT_AA),
-        Requirement("muted ink as text on surface", p.mutedInk, p.surface, TEXT_AA),
-        Requirement("outline on background", p.outline, p.background, GRAPHIC),
+        Requirement("on primary", p.onPrimary, p.primary, TEXT_AA),
+        Requirement("accent graphic on background", p.accent, p.background, GRAPHIC),
+        Requirement("accent graphic on sheet", p.accent, p.sheet, GRAPHIC),
+        Requirement("muted graphic on background", p.muted, p.background, GRAPHIC),
+        Requirement("toast text (background on ink)", p.background, p.onBackground, TEXT_AA),
         Requirement("error on background", p.error, p.background, TEXT_AA),
         Requirement("on error", p.onError, p.error, TEXT_AA),
     )
@@ -80,6 +79,16 @@ class PaletteContrastTest {
 
     @Test
     fun `dark palette meets WCAG AA`() = verify("dark", DarkPalette)
+
+    @Test
+    fun `cover text is readable on every generated board`() {
+        val failures = CoverBoards.mapNotNull { board ->
+            val ratio = contrast(COVER_TEXT, board)
+            if (ratio < TEXT_AA) "board %08X: %.2f:1".format(board, ratio) else null
+        }
+
+        assertTrue("cover boards fail WCAG:\n${failures.joinToString("\n")}", failures.isEmpty())
+    }
 
     @Test
     fun `dark theme is a warm dark rather than pure black`() {

@@ -4,28 +4,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -39,8 +31,14 @@ import app.otium.R
 import app.otium.domain.error.AppError
 import app.otium.ui.add.AddDestination
 import app.otium.ui.common.messageRes
-import app.otium.ui.components.OtiumTopBar
+import app.otium.ui.components.OtiumButton
+import app.otium.ui.components.OtiumButtonStyle
+import app.otium.ui.components.OtiumIndeterminateRule
+import app.otium.ui.components.OtiumScreenHeader
+import app.otium.ui.components.otiumUnderlinedFieldColors
 import app.otium.ui.theme.PaperBackground
+import app.otium.ui.theme.TABULAR_FIGURES
+import app.otium.ui.theme.otiumColors
 
 /** Connects the ISBN entry screen to its ViewModel and hands each destination to [onDestination]. */
 @Composable
@@ -78,35 +76,16 @@ fun IsbnEntryContent(
     modifier: Modifier = Modifier,
 ) {
     PaperBackground(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                OtiumTopBar(
-                    title = stringResource(R.string.isbn_title),
-                    navigationIcon = {
-                        IconButton(onClick = actions.onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.detail_back),
-                            )
-                        }
-                    },
-                )
-            },
-        ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            OtiumScreenHeader(title = stringResource(R.string.isbn_title), onBack = actions.onBack)
             Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .padding(16.dp),
+                modifier = Modifier.padding(horizontal = 22.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 IsbnField(state, actions)
-                if (state.isLooking) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                if (state.isLooking) Consulting()
                 state.lookupError?.let { LookupFailure(it, state.canSaveForLater, actions) }
-                    ?: TextButton(onClick = actions.onEnterManually) {
-                        Text(stringResource(R.string.add_enter_manually))
-                    }
+                    ?: EnterManually(actions.onEnterManually)
             }
         }
     }
@@ -114,11 +93,18 @@ fun IsbnEntryContent(
 
 @Composable
 private fun IsbnField(state: IsbnEntryUiState, actions: IsbnEntryActions) {
-    OutlinedTextField(
+    TextField(
         value = state.input,
         onValueChange = actions.onInputChange,
         modifier = Modifier.fillMaxWidth(),
-        label = { Text(stringResource(R.string.isbn_field)) },
+        label = {
+            Text(
+                stringResource(R.string.isbn_field).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        },
+        textStyle = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
+        colors = otiumUnderlinedFieldColors(),
         supportingText = {
             Text(stringResource(state.inputError?.messageRes() ?: R.string.isbn_hint))
         },
@@ -130,13 +116,12 @@ private fun IsbnField(state: IsbnEntryUiState, actions: IsbnEntryActions) {
         ),
         keyboardActions = KeyboardActions(onSearch = { actions.onLookUp() }),
     )
-    Button(
+    OtiumButton(
+        text = stringResource(R.string.isbn_look_up),
         onClick = actions.onLookUp,
         enabled = state.canLookUp,
         modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(stringResource(R.string.isbn_look_up))
-    }
+    )
 }
 
 /** Why the lookup failed, in plain words, and what can be done instead. */
@@ -149,21 +134,48 @@ private fun LookupFailure(error: AppError, canSaveForLater: Boolean, actions: Is
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
-        OutlinedButton(onClick = actions.onLookUp, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.isbn_try_again))
-        }
+        OtiumButton(
+            text = stringResource(R.string.isbn_try_again),
+            onClick = actions.onLookUp,
+            modifier = Modifier.fillMaxWidth(),
+        )
         if (canSaveForLater) {
-            OutlinedButton(onClick = actions.onSaveForLater, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.isbn_save_for_later))
-            }
+            OtiumButton(
+                text = stringResource(R.string.isbn_save_for_later),
+                onClick = actions.onSaveForLater,
+                style = OtiumButtonStyle.Secondary,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Text(
                 text = stringResource(R.string.isbn_save_for_later_hint),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.otiumColors.muted,
             )
         }
-        TextButton(onClick = actions.onEnterManually) {
-            Text(stringResource(R.string.add_enter_manually))
-        }
+        EnterManually(actions.onEnterManually)
     }
+}
+
+/** The lookup under way: the indeterminate rule over "Consulting the catalogue…". */
+@Composable
+private fun Consulting() {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        OtiumIndeterminateRule()
+        Text(
+            text = stringResource(R.string.add_consulting),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.otiumColors.muted,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        )
+    }
+}
+
+@Composable
+private fun EnterManually(onClick: () -> Unit) {
+    OtiumButton(
+        text = stringResource(R.string.add_enter_manually),
+        onClick = onClick,
+        style = OtiumButtonStyle.Ghost,
+        compact = true,
+    )
 }

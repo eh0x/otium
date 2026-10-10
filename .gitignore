@@ -28,6 +28,11 @@ output.json
 .idea/
 *.iml
 .vscode/
+# Eclipse and VS Code (Buildship, Kotlin language server) build output
+bin/
+.project
+.classpath
+.settings/
 
 # OS
 .DS_Store
@@ -43,3 +48,5 @@ lint-results*.xml
 
 # Graphify
 graphify-out/
+
+docs/design/
