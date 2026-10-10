@@ -42,7 +42,7 @@ if git log --format=%B "$base..$head" 2>/dev/null | grep -qE '^Docs:[[:space:]]*
     exit 0
 fi
 
-docs_changed=$(printf '%s\n' "$changed" | grep -E '^(README\.md|CLAUDE\.md|docs/)' || true)
+docs_changed=$(printf '%s\n' "$changed" | grep -E '^(README\.md|CONTRIBUTING\.md|CLAUDE\.md|docs/)' || true)
 [ -n "$docs_changed" ] && exit 0
 
 report=""

@@ -370,15 +370,16 @@ describes, and is checked by the build.
 
 | Document | Describes | Update it when |
 |----------|-----------|----------------|
-| `README.md` | What Otium is, requirements, setup, everyday commands, module layout | requirements, build tasks, modules or app id change |
+| `README.md` | What Otium is, requirements, setup, architecture overview, module layout | requirements, setup, modules or app id change |
+| `CONTRIBUTING.md` | Contributor setup, workflow, everyday commands, tests | build or verification tasks, hooks or the workflow change |
 | `docs/STYLE_GUIDE.md` | Rules and how they are enforced | a rule, a tool or its configuration changes |
 | `docs/design/*.md` | Decisions and the reasons behind them (decision log) | a design decision is made or reversed |
 | `docs/plans/*.md` | The implementation plan and phase status | a phase starts or finishes, or scope changes |
 | `docs/MARKDOWN_GUIDE.md` | How Markdown is written and linted | a Markdown rule or its lint config changes |
 | `CLAUDE.md` | Instructions for the coding assistant | workflow rules change |
 
-README, the guide and `CLAUDE.md` describe the present and must always be true. The design and
-plan documents also describe intent, so they are only checked for broken links.
+README, `CONTRIBUTING.md`, the guides and `CLAUDE.md` describe the present and must always be true.
+The design and plan documents also describe intent, so they are only checked for broken links.
 
 ### Writing rules
 
