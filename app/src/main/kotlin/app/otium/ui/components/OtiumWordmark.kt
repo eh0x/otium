@@ -1,7 +1,9 @@
 package app.otium.ui.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,6 +18,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.otium.R
@@ -30,8 +33,7 @@ private val WORDMARK_SIZE = 17.sp
 /**
  * "OTIUM" in Cinzel, a Roman inscription face, widely spaced in gold. Tracking adds space after
  * the last letter too, so the same space goes before the first to keep the word optically
- * centred. The final mark is a design asset and can replace this composable without touching
- * its callers.
+ * centred. The masthead pairs it with [OtiumMark].
  */
 @Composable
 fun OtiumWordmark(modifier: Modifier = Modifier) {
@@ -52,7 +54,7 @@ fun OtiumWordmark(modifier: Modifier = Modifier) {
     )
 }
 
-/** The library masthead: the wordmark over its subtitle, centred. */
+/** The library masthead: the mark over the wordmark and its subtitle, centred. */
 @Composable
 fun OtiumMasthead(modifier: Modifier = Modifier) {
     Column(
@@ -61,6 +63,8 @@ fun OtiumMasthead(modifier: Modifier = Modifier) {
             .semantics(mergeDescendants = true) { heading() },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        OtiumMark()
+        Spacer(Modifier.height(6.dp))
         OtiumWordmark()
         Text(
             text = stringResource(R.string.library_subtitle).uppercase(),

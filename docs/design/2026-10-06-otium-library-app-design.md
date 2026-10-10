@@ -367,8 +367,10 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 
 #### Wordmark and logo
 
-- "OTIUM" in Cinzel, widely spaced in gold. The final mark is a design asset, not a coding task,
-  and can replace the typeset placeholder without code changes.
+- The mark is the "Ribbon O": a ring with the progress bookmark hanging inside its top rim, the
+  ribbon of the detail progress rule. It is the adaptive launcher icon (gold on `#1B1A18`, with a
+  monochrome layer) and, as `OtiumMark`, sits above the wordmark in the library masthead.
+- "OTIUM" in Cinzel, widely spaced in gold, under the mark.
 
 #### Theme implementation
 

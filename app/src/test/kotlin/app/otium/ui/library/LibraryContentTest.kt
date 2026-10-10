@@ -118,12 +118,12 @@ class LibraryContentTest {
         rule.onNodeWithText("On the desk").assertIsDisplayed()
         rule.onNodeWithText("1 open").assertIsDisplayed()
         rule.onNodeWithText("Fiction").assertIsDisplayed()
-        // The shelves scroll vertically; each shelf's row scrolls sideways.
-        rule.onAllNodes(hasScrollToNodeAction()).onFirst().performScrollToNode(hasText("Unshelved"))
-        rule.onNodeWithText("Unshelved").assertIsDisplayed()
         // Dune is on the desk and on its shelf.
         rule.onAllNodesWithContentDescription("Dune by Frank Herbert").assertCountEquals(2)
         rule.onAllNodesWithContentDescription("Dune by Frank Herbert").onFirst().performClick()
+        // The shelves scroll vertically; each shelf's row scrolls sideways.
+        rule.onAllNodes(hasScrollToNodeAction()).onFirst().performScrollToNode(hasText("Unshelved"))
+        rule.onNodeWithText("Unshelved").assertIsDisplayed()
 
         assertEquals(1L, opened)
     }

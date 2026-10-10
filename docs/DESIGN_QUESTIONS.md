@@ -53,4 +53,6 @@ Items the owner already settled during implementation are listed at the end for 
   catalogue…".
 - Surnames keep their particles ("Le Guin", "van Gogh"), for the author sort and the covers.
 - Tags are listed in the detail facts table.
-- The launcher icon and the README screenshots use the Classical palette.
+- The launcher icon is the handoff's "Ribbon O" (a gold ring and ribbon on a dark ground), with a
+  monochrome layer for themed icons; the library masthead shows the same mark above the
+  wordmark. The README screenshots use the Classical palette.
