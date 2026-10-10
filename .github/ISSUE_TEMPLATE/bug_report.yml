@@ -57,7 +57,7 @@ body:
       description: |
         Android shows the version under Settings > Apps > Otium. If you built from source, give
         the commit (`git rev-parse --short HEAD`).
-      placeholder: 0.1.0 or 7d517e6
+      placeholder: 1.0.0 or 7d517e6
     validations:
       required: true
 

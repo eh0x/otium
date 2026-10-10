@@ -5,8 +5,9 @@ that data, or the keys and accounts around it, are welcome.
 
 ## Supported versions
 
-Otium has no stable release yet. Only the latest commit on `main` receives security fixes. Once
-releases are published, this section will list the supported versions.
+Only the latest release receives security fixes; older versions do not. Releases are published
+on [GitHub Releases](https://github.com/eh0x/otium/releases).
+How releases are made and supported is described in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Reporting a vulnerability
 

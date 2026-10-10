@@ -27,12 +27,13 @@ is private and offline-first, built to feel like a quiet study.
 
 ## Current phase
 
-- Version 1 features are built and tested on the JVM (phases 0 to 6). No release yet; version
-  0.1.0.
+- Version 1 features are built and tested on the JVM (phases 0 to 6). The first release, v1.0.0,
+  is on GitHub Releases, not on Play yet.
 - Open: device checks for phases 3 to 6, the Google Cloud and OAuth setup for Drive, and Phase 7
   (accessibility on device, licences and privacy policy, Play listing, baseline profile, release
   cleanup).
-- Open: a repeatable release process (tag-based versioning, release workflow, changelog).
+- Release process in place (`docs/RELEASING.md`): the version in `gradle.properties`, a
+  tag-triggered signed build with provenance, and `CHANGELOG.md`. Open: automated Play upload.
 - Public repository on GitHub, maintained by one person in spare time. Work happens on `develop`;
   `main` changes only through a pull request with green CI.
 

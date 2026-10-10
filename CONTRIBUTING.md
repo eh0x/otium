@@ -69,6 +69,8 @@ push to it, and the repository ruleset on GitHub refuses the push even when the 
    the reason.
 6. Open a pull request against `develop` and complete the checklist in the template. Link the
    issue it closes, and add screenshots for UI changes.
+7. Add a line for user-visible changes under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md),
+   Security first. Releases are cut as described in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Everyday commands
 

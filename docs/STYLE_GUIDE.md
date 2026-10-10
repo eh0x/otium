@@ -378,6 +378,8 @@ describes, and is checked by the build.
 | `docs/design/*.md` | Decisions and the reasons behind them (decision log) | a design decision is made or reversed |
 | `docs/plans/*.md` | The implementation plan and phase status | a phase starts or finishes, or scope changes |
 | `docs/MARKDOWN_GUIDE.md` | How Markdown is written and linted | a Markdown rule or its lint config changes |
+| `docs/RELEASING.md` | Versioning, release steps and supported versions | the release workflow, signing or version scheme changes |
+| `CHANGELOG.md` | User-visible changes per release | a change users can see is merged, or a release is cut |
 | `CLAUDE.md` | Instructions for the coding assistant | workflow rules change |
 
 README, `CONTRIBUTING.md`, the guides and `CLAUDE.md` describe the present and must always be true.
