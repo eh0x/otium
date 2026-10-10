@@ -1,39 +1,50 @@
-## 🎫 Linear Issue
-<!-- Link the Linear issue(s) associated with this PR -->
-Fixes / Relates to: [Issue-XXX](https://linear.app/your-org/issue/XXX)
-
-## 📝 Description
 <!--
-Provide a clear and concise summary of your changes.
-Explain **WHAT** was changed and **WHY**.
-Include any relevant technical context or design decisions.
+Thanks for contributing to Otium. Before you open this pull request:
+- Target the `develop` branch.
+- Keep it to one change. Open it as a draft if it is not ready for review.
+- For anything larger than a small fix, link the issue where the approach was agreed.
+Delete any section that does not apply.
 -->
 
-## 🚀 Type of Change
-<!-- Check all that apply -->
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] ✨ New feature (non-breaking change which adds functionality)
-- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] ♻️ Code Refactoring (no new functionality or bug fixes)
-- [ ] 📝 Documentation update
-- [ ] 🔧 Build / CI / Tooling change
+## Summary
 
-## 🧪 Testing & Verification
+<!-- What does this change, and why? Two or three sentences; the commits hold the detail. -->
+
+## Related issue
+
+<!-- Write "Closes #123" to close the issue on merge, or "Part of #123". -->
+
+## Type of change
+
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactoring (no change in behaviour)
+- [ ] Documentation
+- [ ] Build, CI or tooling
+- [ ] Breaking change (data, backup format or behaviour users rely on)
+
+## How it was tested
+
 <!--
-Describe the testing performed to verify your changes.
-Include instructions for reviewers to reproduce the changes locally if necessary.
+Tests added or changed, and anything checked by hand: device or emulator, Android version,
+light and dark themes, 200% text, TalkBack.
 -->
-- [ ] Tested locally
-- [ ] Added / updated automated tests
-- [ ] Tested in staging (if applicable)
 
-## ✅ Checklist
-<!-- Make sure all the following steps are completed before requesting a review -->
-- [ ] I have performed a self-review of my code
-- [ ] `./gradlew spotlessCheck detekt lint testDebugUnitTest :domain:test checkDocs lintMarkdown` passes
-- [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (use a `Docs: n/a - <reason>` trailer when docs are skipped on purpose)
-- [ ] Documentation updated in this PR, or not needed because: <!-- reason -->
-  - [ ] `README.md` (requirements, setup, commands, module layout)
-  - [ ] `docs/STYLE_GUIDE.md` (rules or tooling changed)
-  - [ ] Design doc or plan (decisions or phase status changed)
-- [ ] No sensitive information (secrets, passwords, API keys) is exposed
+## Screenshots
+
+<!-- For UI changes: before and after, in the light and dark themes. -->
+
+| Before | After |
+|--------|-------|
+|        |       |
+
+## Checklist
+
+- [ ] I reviewed my own diff and the commits follow [Conventional Commits](https://www.conventionalcommits.org/).
+- [ ] `./gradlew check` passes locally.
+- [ ] New or changed logic, queries and parsers have tests.
+- [ ] UI changes work in both themes, at 200% text, and with TalkBack (content descriptions, touch targets of at least 44 dp).
+- [ ] No new permission, network call, tracking or data leaving the device, or it is explained above.
+- [ ] Database changes bump the Room version, export the schema and add a migration test.
+- [ ] Docs are updated (README, CONTRIBUTING, style guide, design doc or plan), or a commit has a `Docs: n/a - <reason>` trailer.
+- [ ] No secrets, API keys or personal data are included.
