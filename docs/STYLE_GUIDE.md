@@ -30,6 +30,7 @@ rules the tools cannot see.
 | Docs missing after build, tooling or CI changes | `scripts/docs-impact.sh` (warning) | `scripts/docs-impact.sh` | `pre-push` hook, CI |
 | Markdown style (100 columns, lists, fences, links, headings) | markdownlint | `.markdownlint-cli2.jsonc`, [Markdown guidelines](MARKDOWN_GUIDE.md) | `pre-commit` (staged files), `check` via `lintMarkdown`, `pre-push`, CI |
 | Secrets in commits (API keys, tokens, private keys) | gitleaks via `scripts/scan-secrets.sh` | `.gitleaks.toml` | `pre-commit` (staged changes), `pre-push` and `check` via `scanSecrets` (history), CI |
+| GitHub Actions workflows (syntax, shell in `run:` steps, pinning, permissions, injection) | actionlint and zizmor via `scripts/lint-workflows.sh` | inline `# zizmor: ignore[<audit>]` with a reason | `pre-commit` (staged workflows), `check` via `lintWorkflows`, CI |
 | Known vulnerabilities in shipped dependencies | OSV-Scanner on a CycloneDX SBOM via `scripts/scan-dependencies.sh` | `osv-scanner.toml` | `scanDependencies`, CI |
 | Vulnerable dependencies, transitive and build tooling included | Dependabot alerts and security updates, fed by `dependency-submission.yml` | `.github/dependabot.yml` | pushes to `main` and `develop` that change the build files |
 | Everything else in this guide | Code review | this file | pull requests |
@@ -50,8 +51,9 @@ rules the tools cannot see.
 ./gradlew installGitHooks    # points git at .githooks (pre-commit, pre-merge-commit, commit-msg, pre-push)
 ```
 
-The hooks look for a JDK, and for gitleaks (`brew install gitleaks`), in the usual places. If one
-is missing they skip that local check and CI becomes the gate. Bypassing a hook with `--no-verify`
+The hooks look for a JDK, gitleaks, actionlint and zizmor (`brew install gitleaks actionlint
+zizmor`) in the usual places. If one is missing they skip that local check and CI becomes the
+gate. Bypassing a hook with `--no-verify`
 is for emergencies only; CI will still fail.
 
 ### Suppression policy
@@ -378,6 +380,8 @@ describes, and is checked by the build.
 | `docs/design/*.md` | Decisions and the reasons behind them (decision log) | a design decision is made or reversed |
 | `docs/plans/*.md` | The implementation plan and phase status | a phase starts or finishes, or scope changes |
 | `docs/MARKDOWN_GUIDE.md` | How Markdown is written and linted | a Markdown rule or its lint config changes |
+| `docs/RELEASING.md` | Versioning, release steps and supported versions | the release workflow, signing or version scheme changes |
+| `CHANGELOG.md` | User-visible changes per release | a change users can see is merged, or a release is cut |
 | `CLAUDE.md` | Instructions for the coding assistant | workflow rules change |
 
 README, `CONTRIBUTING.md`, the guides and `CLAUDE.md` describe the present and must always be true.

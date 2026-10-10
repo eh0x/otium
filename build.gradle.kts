@@ -133,6 +133,14 @@ tasks.register<Exec>("scanSecrets") {
 }
 tasks.matching { it.name == "check" }.configureEach { dependsOn("scanSecrets") }
 
+// GitHub Actions workflows: actionlint and zizmor (scripts/lint-workflows.sh). Part of `check`.
+tasks.register<Exec>("lintWorkflows") {
+    group = "verification"
+    description = "Lints the GitHub Actions workflows with actionlint and zizmor."
+    commandLine("sh", "scripts/lint-workflows.sh")
+}
+tasks.matching { it.name == "check" }.configureEach { dependsOn("lintWorkflows") }
+
 // Known vulnerabilities in the shipped dependencies: OSV-Scanner on the CycloneDX SBOM that
 // `cyclonedxBom` builds from each module's runtime classpath (scripts/scan-dependencies.sh). Not
 // part of `check`: it needs the network. CI runs it on every pull request and push.

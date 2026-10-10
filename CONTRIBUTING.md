@@ -36,6 +36,8 @@ also uses:
 
 - gitleaks (`brew install gitleaks`), for the secret scan in the git hooks. Without it the hooks
   skip the scan with a notice; CI runs it either way.
+- actionlint and zizmor (`brew install actionlint zizmor`), for the workflow lint in the git
+  hooks when a change touches `.github/workflows`. Without them the hooks skip it with a notice.
 - OSV-Scanner, optional (`brew install osv-scanner`). Only `./gradlew scanDependencies` needs it.
 - Node.js, optional. Only the Markdown lint needs it, and it is skipped when Node.js is missing.
 
@@ -45,10 +47,10 @@ Then enable the git hooks:
 ./gradlew installGitHooks
 ```
 
-This points git at the hooks in `.githooks`: a gitleaks secret scan, formatting and Markdown checks
-on commit, a Conventional Commits check on the message, and a history secret scan and the test
-suite on push. The hooks look for a JDK in the usual places and skip the local run when none is
-found. They are a convenience; CI is the gate.
+This points git at the hooks in `.githooks`: a gitleaks secret scan, formatting, Markdown and
+workflow checks on commit, a Conventional Commits check on the message, and a history secret scan
+and the test suite on push. The hooks look for a JDK in the usual places and skip the local run
+when none is found. They are a convenience; CI is the gate.
 
 `main` changes only through a pull request. The hooks refuse a commit or merge on `main` and a
 push to it, and the repository ruleset on GitHub refuses the push even when the hooks are skipped.
@@ -69,6 +71,8 @@ push to it, and the repository ruleset on GitHub refuses the push even when the 
    the reason.
 6. Open a pull request against `develop` and complete the checklist in the template. Link the
    issue it closes, and add screenshots for UI changes.
+7. Add a line for user-visible changes under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md),
+   Security first. Releases are cut as described in [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Everyday commands
 
@@ -83,13 +87,14 @@ push to it, and the repository ruleset on GitHub refuses the push even when the 
 | `./gradlew spotlessCheck detekt lint` | Check formatting, static analysis and Android Lint |
 | `./gradlew checkDocs lintMarkdown` | Check that docs match the repository, and lint Markdown |
 | `./gradlew scanSecrets` | Scan the git history for secrets with gitleaks |
+| `./gradlew lintWorkflows` | Lint the GitHub Actions workflows with actionlint and zizmor |
 | `./gradlew scanDependencies` | Scan the shipped dependencies for known vulnerabilities (OSV-Scanner) |
 | `./gradlew check` | Run every verification task |
 
 CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run locally:
 
 ```bash
-./gradlew spotlessCheck detekt checkDocs lintMarkdown scanSecrets scanDependencies lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease -Potium.allowDebugSigning=true
+./gradlew spotlessCheck detekt checkDocs lintMarkdown scanSecrets lintWorkflows scanDependencies lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease -Potium.allowDebugSigning=true
 ```
 
 `.github/workflows/dependency-submission.yml` also sends the resolved Gradle dependency tree to

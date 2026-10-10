@@ -10,8 +10,10 @@ val liveDocs = listOf(
     "README.md",
     "CONTRIBUTING.md",
     "CLAUDE.md",
+    "CHANGELOG.md",
     "docs/STYLE_GUIDE.md",
     "docs/MARKDOWN_GUIDE.md",
+    "docs/RELEASING.md",
 )
 
 // Markdown that git tracks or has staged. Untracked scratch files are not part of the docs.

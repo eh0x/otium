@@ -14,9 +14,11 @@ fetch the details, keep your place by page, and find any book in your library in
 built to feel like a quiet study rather than a utility, and it keeps your data on your device.
 
 > [!NOTE]
-> Otium is in active development and has no release yet. The version 1 features are built and
+> Otium is in active development and not on Google Play yet. The version 1 features are built and
 > tested on the JVM; device checks, the Google Drive setup, and the accessibility and Play Store
-> polish are still to do. See [Status](#status). You can build and run it from source today.
+> polish are still to do. See [Status](#status). Releases are on
+> [GitHub Releases](https://github.com/eh0x/otium/releases), with the changes in
+> [CHANGELOG.md](CHANGELOG.md); you can also build it from source.
 
 ## Contents
 
@@ -145,6 +147,9 @@ it, the build fails unless you pass `-Potium.allowDebugSigning=true`, which sign
 key. That is enough for testing the shrunk build, but not for Play or for sharing: anyone can sign
 an APK with the debug key.
 
+Published releases are built and signed by CI from a version tag; see
+[docs/RELEASING.md](docs/RELEASING.md).
+
 ## Architecture
 
 [![Architecture diagram](https://gitdiagram.com/diagram-badge.svg)](https://gitdiagram.com/eh0x/otium?utm_source=readme&utm_medium=badge)
@@ -185,8 +190,8 @@ The reasoning behind each choice, with the alternatives, is in
   for a connection.
 - **Backup:** Google Play services auth and the Drive REST API; Tink and Bouncy Castle (Argon2id)
   for encryption.
-- **Quality:** Spotless with ktlint, detekt, Android Lint, markdownlint, gitleaks, OSV-Scanner, and
-  architecture rules written as tests (Konsist).
+- **Quality:** Spotless with ktlint, detekt, Android Lint, markdownlint, gitleaks, OSV-Scanner,
+  actionlint and zizmor for the CI workflows, and architecture rules written as tests (Konsist).
 - **Tests:** JUnit, Turbine, Robolectric, Kover for coverage, Macrobenchmark.
 
 Library versions are pinned in [`gradle/libs.versions.toml`](gradle/libs.versions.toml).

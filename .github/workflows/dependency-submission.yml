@@ -31,8 +31,7 @@ jobs:
     name: Submit Gradle dependencies
     runs-on: ubuntu-latest
     permissions:
-      # The dependency submission API needs write access; nothing else in this job writes.
-      contents: write
+      contents: write # the dependency submission API needs it; nothing else in this job writes
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -44,6 +44,31 @@ val allowDebugSigning: Boolean = providers.gradleProperty("otium.allowDebugSigni
 fun Properties.required(key: String): String = getProperty(key)?.takeIf { it.isNotBlank() }
     ?: throw GradleException("keystore.properties is missing '$key'")
 
+// The version lives in gradle.properties (otium.versionName). versionCode follows from it, so the
+// two never disagree and every later version gets a higher code, as Play requires:
+// major * 1,000,000 + minor * 10,000 + patch * 100 + stage, where the stage is ALPHA n = n,
+// BETA n = 30 + n, RC n = 60 + n and a stable release 99. 1.0.0 is 1000099; 1.2.0-RC1 is 1020061.
+// See docs/RELEASING.md.
+val appVersionName: String = providers.gradleProperty("otium.versionName").get()
+
+val appVersionCode: Int = run {
+    val semVer = Regex("""(\d+)\.(\d+)\.(\d+)(?:-(ALPHA|BETA|RC)([1-9]\d?))?""")
+    val match = semVer.matchEntire(appVersionName)
+        ?: throw GradleException(
+            "otium.versionName '$appVersionName' is not MAJOR.MINOR.PATCH[-ALPHA|BETA|RCn]",
+        )
+    val (major, minor, patch, stage, stageNumber) = match.destructured
+    val stageNumberTooHigh = stageNumber.toIntOrNull()?.let { it > 29 } == true
+    if (minor.toInt() > 99 || patch.toInt() > 99 || stageNumberTooHigh) {
+        throw GradleException(
+            "otium.versionName '$appVersionName' is outside the versionCode scheme",
+        )
+    }
+    val stageBase = mapOf("ALPHA" to 0, "BETA" to 30, "RC" to 60)
+    val stageCode = if (stage.isEmpty()) 99 else stageBase.getValue(stage) + stageNumber.toInt()
+    major.toInt() * 1_000_000 + minor.toInt() * 10_000 + patch.toInt() * 100 + stageCode
+}
+
 android {
     namespace = "app.otium"
     // Latest AndroidX releases require compiling against API 37. Greenfield app, so it
@@ -54,8 +79,8 @@ android {
         applicationId = "app.otium"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         fun String.escape() = replace("\\", "\\\\").replace("\"", "\\\"")
         buildConfigField("String", "BOOKS_API_KEY", "\"${booksApiKey.escape()}\"")
