@@ -109,6 +109,8 @@ detekt {
     config.setFrom(files("config/detekt/detekt.yml"))
     source.setFrom(files("app/src", "domain/src"))
     parallel = true
+    // Report paths relative to the repository, so CI's SARIF upload maps findings to files.
+    basePath = rootDir.absolutePath
 }
 
 // Documentation drift check (see gradle/docs-check.gradle.kts). Part of `check`.

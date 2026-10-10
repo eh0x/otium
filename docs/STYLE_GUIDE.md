@@ -18,7 +18,8 @@ rules the tools cannot see.
 |------|------|--------|------|
 | Kotlin and Kotlin DSL formatting | Spotless + ktlint (`android_studio` code style) | `.editorconfig`, root `build.gradle.kts` | `pre-commit` hook, CI |
 | XML, Markdown, YAML, TOML, properties, ProGuard whitespace | Spotless | root `build.gradle.kts`, `.editorconfig` | `pre-commit` hook, CI |
-| Design, complexity, bug-prone Kotlin | detekt | `config/detekt/detekt.yml` | `pre-push` hook, CI |
+| Design, complexity, bug-prone Kotlin | detekt | `config/detekt/detekt.yml` | `pre-push` hook, CI (findings also in code scanning) |
+| Security flaws in Kotlin and in the workflows | CodeQL (`security-extended`) | `.github/workflows/codeql.yml` | pushes, pull requests, weekly |
 | Compiler warnings | Kotlin `allWarningsAsErrors` | module `build.gradle.kts` | every build |
 | Android correctness, security, resources | Android Lint with `warningsAsErrors` | `app/build.gradle.kts` | CI (`lint`) |
 | Layering (`:domain` stays pure Kotlin) | `DomainPurityTest` | `domain/src/test` | every `:domain:test` |

@@ -18,6 +18,10 @@ jobs:
   static-checks:
     name: Static Analysis & Docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Uploads the Detekt findings to code scanning.
+      security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,6 +48,18 @@ jobs:
           name: detekt-reports
           path: '**/build/reports/detekt/'
           retention-days: 7
+
+      # Shows Detekt findings under Security > Code scanning and on the pull request. Pull requests
+      # from forks get a read-only token, so they keep the artifact and the failing check only.
+      - name: Upload Detekt findings to code scanning
+        if: >-
+          always() && hashFiles('build/reports/detekt/detekt.sarif') != '' &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: build/reports/detekt/detekt.sarif
+          category: detekt
 
       - name: Documentation impact
         env:
