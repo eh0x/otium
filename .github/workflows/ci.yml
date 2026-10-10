@@ -20,8 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # Uploads the Detekt findings to code scanning.
-      security-events: write
+      security-events: write # uploads the Detekt findings to code scanning
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
