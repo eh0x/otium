@@ -7,10 +7,17 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-11
+
+Security fixes. Known issues are as in 1.0.0: not on Google Play yet, and Drive backup works only
+once the Drive OAuth client for the release signing key is set up.
+
 ### Security
 
 - Backups sent to and fetched from Drive are checked against SHA-256 instead of MD5.
 - Restoring a backup checks once more that every file it unpacks stays inside the restore folder.
+- The build uses patched versions of libraries that its tools bring in (Android Gradle Plugin,
+  Android Lint, Kover, CycloneDX, androidx.benchmark). None of them ships in the app.
 
 ## [1.0.0] - 2026-10-10
 
@@ -44,5 +51,6 @@ Drive OAuth client for the release signing key is set up.
   text at 200%.
 - The Ribbon O launcher icon.
 
-[Unreleased]: https://github.com/eh0x/otium/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/eh0x/otium/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/eh0x/otium/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/eh0x/otium/releases/tag/v1.0.0
