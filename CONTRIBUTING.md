@@ -101,6 +101,12 @@ CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run 
 GitHub on pushes to `main` and `develop` that change the build files, so Dependabot alerts cover
 transitive dependencies.
 
+Dependabot cannot update a transitive dependency itself, so its security update for one fails.
+When an alert names a library that a plugin, Android Lint or a test library brings in, add a
+constraint with the patched version: in `gradle/libs.versions.toml` under "Build classpath only",
+applied in the root `build.gradle.kts`, or for `:benchmark` in its own build file. Remove the
+constraint once the plugin or library ships the fix.
+
 ## Testing
 
 Almost everything runs on the JVM, so no device or emulator is needed:
