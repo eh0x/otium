@@ -201,7 +201,18 @@ Done once per repository by an admin, before the first tag:
    | `UPLOAD_KEY_ALIAS` | The key alias, for example `upload` |
    | `UPLOAD_KEY_PASSWORD` | The key password |
 
-   The passwords go into a properties file, so avoid backslashes in them.
+   Set them from files, never by pasting at the prompt: macOS cuts terminal input at 1024
+   characters, which truncates the keystore. Copying the values from a `keystore.properties` that
+   signs locally also keeps backslashes and spaces the same:
+
+   ```bash
+   base64 < upload.jks | gh secret set UPLOAD_KEYSTORE_BASE64 --env release
+   sed -n 's/^storePassword=//p' keystore.properties | tr -d '\r\n' |
+     gh secret set UPLOAD_STORE_PASSWORD --env release
+   ```
+
+   The same `sed` line, with `keyAlias` and `keyPassword`, sets the other two. The workflow opens
+   the keystore and the key with them before it builds, so a wrong value fails in seconds.
 
 4. **Tag ruleset.** In Settings, Rules, add a tag ruleset for `refs/tags/v*` that restricts
    creation, update and deletion to admins, so only a maintainer can start a release and no

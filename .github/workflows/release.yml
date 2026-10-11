@@ -92,7 +92,23 @@ jobs:
           done
           umask 077
           keystore="$RUNNER_TEMP/upload.jks"
-          printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          if ! printf '%s' "$UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$keystore"; then
+            echo "::error::UPLOAD_KEYSTORE_BASE64 is not valid base64; set it from the file, not a prompt"
+            exit 1
+          fi
+          # Open the keystore and read the key now, so a wrong secret fails in seconds with a
+          # clear message instead of at the end of the build. Exporting a certificate request
+          # needs the private key, which checks the key password too.
+          if ! keytool -list -keystore "$keystore" -storepass:env UPLOAD_STORE_PASSWORD \
+              -alias "$UPLOAD_KEY_ALIAS" > /dev/null; then
+            echo "::error::The keystore does not open with UPLOAD_STORE_PASSWORD, or has no key UPLOAD_KEY_ALIAS"
+            exit 1
+          fi
+          if ! keytool -certreq -keystore "$keystore" -storepass:env UPLOAD_STORE_PASSWORD \
+              -alias "$UPLOAD_KEY_ALIAS" -keypass:env UPLOAD_KEY_PASSWORD -file /dev/null; then
+            echo "::error::UPLOAD_KEY_PASSWORD does not unlock the key UPLOAD_KEY_ALIAS"
+            exit 1
+          fi
           {
             echo "storeFile=$keystore"
             echo "storePassword=$UPLOAD_STORE_PASSWORD"
