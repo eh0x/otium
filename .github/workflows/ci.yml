@@ -165,7 +165,7 @@ jobs:
     name: Dependency Scan
     runs-on: ubuntu-latest
     env:
-      # Keep in step with OSV_SCANNER_VERSION in scripts/scan-dependencies.sh.
+      # Keep in step with OSV_SCANNER_VERSION in scripts/scan-dependencies.sh and osv-scanner.yml.
       OSV_SCANNER_VERSION: 2.6.0
       OSV_SCANNER_SHA256: ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
     steps:
