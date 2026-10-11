@@ -124,6 +124,12 @@ class BackupZipTest {
             "covers/..\\evil.jpg",
             "covers/sub/evil.jpg",
             "other/library.db",
+            "covers/..",
+            "covers/sub/../evil.jpg",
+            "./library.db",
+            "covers//evil.jpg",
+            "C:\\evil.db",
+            "covers/evil.jpg\u0000.png",
         )
         for (name in names) {
             val archive = zipOf(

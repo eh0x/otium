@@ -20,7 +20,7 @@ internal const val DRIVE_BASE_URL = "https://www.googleapis.com/"
 /** The only Drive space Otium touches: a folder only this app can see, with the `drive.appdata` scope. */
 internal const val APP_DATA_FOLDER = "appDataFolder"
 
-private const val FILE_FIELDS = "id,name,md5Checksum,appProperties"
+private const val FILE_FIELDS = "id,name,sha256Checksum,appProperties"
 private const val LIST_FIELDS = "files($FILE_FIELDS)"
 private const val PAGE_SIZE = 100
 

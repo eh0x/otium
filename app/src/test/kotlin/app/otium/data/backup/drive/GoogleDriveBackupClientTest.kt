@@ -169,7 +169,7 @@ class GoogleDriveBackupClientTest {
         private fun fileJson(stored: Stored) = buildJsonObject {
             put("id", stored.id)
             put("name", stored.name)
-            put("md5Checksum", if (corruptChecksums) "0".repeat(32) else md5(stored.bytes))
+            put("sha256Checksum", if (corruptChecksums) "0".repeat(64) else sha256(stored.bytes))
             put("appProperties", buildJsonObject { stored.props.forEach { (k, v) -> put(k, v) } })
         }
 
@@ -189,7 +189,7 @@ class GoogleDriveBackupClientTest {
         private fun json(body: kotlinx.serialization.json.JsonElement) =
             MockResponse().addHeader("Content-Type", "application/json").setBody(body.toString())
 
-        private fun md5(bytes: ByteArray) = MessageDigest.getInstance("MD5").digest(bytes)
+        private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes)
             .joinToString("") { "%02x".format(it) }
     }
 

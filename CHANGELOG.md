@@ -7,6 +7,11 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
 
 ## [Unreleased]
 
+### Security
+
+- Backups sent to and fetched from Drive are checked against SHA-256 instead of MD5.
+- Restoring a backup checks once more that every file it unpacks stays inside the restore folder.
+
 ## [1.0.0] - 2026-10-10
 
 The first release, with the version 1 features, published on GitHub only.

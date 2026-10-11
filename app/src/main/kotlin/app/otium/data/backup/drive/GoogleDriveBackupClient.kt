@@ -31,6 +31,9 @@ private const val MAX_TRIES = 3
 private const val RETRY_DELAY_MILLIS = 1_000L
 private const val BUFFER_BYTES = 64 * 1024
 
+/** How a transfer is checked: against the SHA-256 that Drive reports (`sha256Checksum`). */
+private const val CHECKSUM_ALGORITHM = "SHA-256"
+
 /**
  * Keeps the user's backups in their Drive app data folder over the REST API. It holds at most two:
  * the latest and the previous one.
@@ -120,8 +123,9 @@ internal class GoogleDriveBackupClient(
         val content = file.asRequestBody(ZIP_TYPE.toMediaType())
         val sent = api.uploadContent(session.toString(), auth, content)
         val stored = retrying { api.getFile(sent.id, auth) }
-        val expected = withContext(dispatchers.io) { md5Of(file) }
-        if (stored.md5Checksum != null && !stored.md5Checksum.equals(expected, ignoreCase = true)) {
+        val expected = withContext(dispatchers.io) { sha256Of(file) }
+        val reported = stored.sha256Checksum
+        if (reported != null && !reported.equals(expected, ignoreCase = true)) {
             retrying { api.deleteFile(sent.id, auth) }
             throw DriveFailure(AppError.Unexpected("Drive stored a different file"))
         }
@@ -140,11 +144,11 @@ internal class GoogleDriveBackupClient(
     private suspend fun fetch(remote: DriveFile, target: File, auth: String) {
         val body = retrying { api.download(remote.id, auth) }
         withContext(dispatchers.io) {
-            val digest = MessageDigest.getInstance("MD5")
+            val digest = MessageDigest.getInstance(CHECKSUM_ALGORITHM)
             body.use { source ->
                 target.outputStream().use { out -> copyDigesting(source.byteStream(), out, digest) }
             }
-            val expected = remote.md5Checksum
+            val expected = remote.sha256Checksum
             if (expected != null && !digest.hex().equals(expected, ignoreCase = true)) {
                 throw DriveFailure(AppError.CorruptBackup)
             }
@@ -221,8 +225,8 @@ internal class GoogleDriveBackupClient(
 private fun Response<*>.requireSuccess(): Response<*> =
     if (isSuccessful) this else throw HttpException(this)
 
-private fun md5Of(file: File): String {
-    val digest = MessageDigest.getInstance("MD5")
+private fun sha256Of(file: File): String {
+    val digest = MessageDigest.getInstance(CHECKSUM_ALGORITHM)
     file.inputStream().use { input ->
         val buffer = ByteArray(BUFFER_BYTES)
         var count = input.read(buffer)
