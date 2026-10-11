@@ -291,8 +291,9 @@ Re-run this audit when Google updates the page, and at the end of Phases 3, 5 an
 - Write the failing test first for domain logic, queries and parsers.
 - Names are sentences in backticks that state the behavior: `` `duplicate isbn reports the existing
   book` ``.
-- Prefer fakes over mocks for owned interfaces (`FakeBookRepository`). Use MockK only at
-  boundaries you do not own.
+- Use fakes, not mocks: shared fakes for the domain ports live in `domain/src/testFixtures`
+  (`FakeBookRepository`). Boundaries you do not own run for real where they can (Room under
+  Robolectric, MockWebServer for HTTP). The project has no mocking library.
 - Coroutines: `runTest`. Flows: Turbine, with an explicit wait for the item you expect.
 - Database tests use in-memory Room under Robolectric (`app/src/test`). Keep them
   deterministic: no sleeps, no wall clock, no network (MockWebServer for HTTP).

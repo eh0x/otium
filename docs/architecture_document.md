@@ -23,7 +23,7 @@ data on their device. ([README.md](../README.md))
 | Network | Retrofit & OkHttp | `gradle/libs.versions.toml#L35-L36` |
 | JSON Parsing | kotlinx.serialization | `gradle/libs.versions.toml#L33` |
 | Barcode Scanning | CameraX & ML Kit | `gradle/libs.versions.toml#L26-L29`, `gradle/libs.versions.toml#L40` |
-| Testing | JUnit, Turbine, MockK, Robolectric | `gradle/libs.versions.toml#L48-L54` |
+| Testing | JUnit, Turbine, Robolectric, MockWebServer, Konsist | `gradle/libs.versions.toml#L48-L54` |
 
 ### Entry Points
 
