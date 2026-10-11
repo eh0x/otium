@@ -6,13 +6,11 @@ import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.usecase.AddBookFromIsbn
-import app.otium.domain.usecase.MarkFinished
 import app.otium.domain.usecase.ObserveLibrary
+import app.otium.domain.usecase.ReadingTracker
 import app.otium.domain.usecase.RetryPendingLookups
 import app.otium.domain.usecase.SaveBook
 import app.otium.domain.usecase.SaveIsbnForLater
-import app.otium.domain.usecase.SetTotalPages
-import app.otium.domain.usecase.UpdateProgress
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,16 +25,8 @@ object UseCaseModule {
     fun provideObserveLibrary(repository: BookRepository) = ObserveLibrary(repository)
 
     @Provides
-    fun provideUpdateProgress(repository: BookRepository, clock: Clock) =
-        UpdateProgress(repository, clock)
-
-    @Provides
-    fun provideMarkFinished(repository: BookRepository, updateProgress: UpdateProgress) =
-        MarkFinished(repository, updateProgress)
-
-    @Provides
-    fun provideSetTotalPages(repository: BookRepository, clock: Clock) =
-        SetTotalPages(repository, clock)
+    fun provideReadingTracker(repository: BookRepository, clock: Clock) =
+        ReadingTracker(repository, clock)
 
     @Provides
     fun provideAddBookFromIsbn(books: BookRepository, metadata: MetadataRepository) =
