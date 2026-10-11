@@ -7,7 +7,8 @@ import kotlinx.serialization.Serializable
 internal data class DriveFile(
     val id: String,
     val name: String? = null,
-    val md5Checksum: String? = null,
+    /** SHA-256 of the content, in hex, as Drive computed it. */
+    val sha256Checksum: String? = null,
     val appProperties: Map<String, String> = emptyMap(),
 )
 

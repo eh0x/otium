@@ -110,17 +110,21 @@ internal class BackupZip(
 
     /** Where an entry goes, or null when its name is not one a backup contains. */
     private fun targetOf(name: String, into: File): File? {
-        val file = when {
-            name == DATABASE -> File(into, DATABASE)
+        val relative = when {
+            name == DATABASE -> DATABASE
 
             name.startsWith(COVERS_DIRECTORY) &&
-                SAFE_NAME.matches(name.removePrefix(COVERS_DIRECTORY)) ->
-                File(into, name)
+                SAFE_NAME.matches(name.removePrefix(COVERS_DIRECTORY)) -> name
 
             else -> return null
         }
-        // Defence in depth: the name check already rules out `..`, links and absolute paths.
-        return file.takeIf { it.canonicalPath.startsWith(into.canonicalPath + File.separator) }
+        // Defence in depth: the name check already rules out `..`, links and absolute paths. The
+        // resolved path must still sit inside the target folder (an explicit guard that static
+        // analysis such as CodeQL's zip-slip query recognises).
+        val root = into.canonicalFile.toPath()
+        val target = root.resolve(relative).normalize()
+        if (!target.startsWith(root) || target == root) return null
+        return target.toFile()
     }
 
     /**
