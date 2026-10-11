@@ -62,6 +62,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D22 | Domain interfaces for scanner, Drive client, cover store, backup archiver and restorer, and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
 | D23 | Optional passphrase encryption of the backup file (Argon2id, then Tink streaming AES-256-GCM), key kept wrapped by the Android Keystore for scheduled runs | SQLCipher for the database; no encryption; a key held only in the Keystore | The backup is the only copy that leaves the phone. A Keystore-only key would be lost with the phone; a passphrase lets a new phone restore (review S4) |
 | D24 | Direction B "Catalogue" redesign: the single-accent Classical palette, Cormorant Garamond and Lora, a bottom bar (Library, Reading, Add, Settings) and shelves by first category | Keep Earth & Ink with EB Garamond and Source Sans 3; Direction A "Plates" | Warmer and more academic while staying modern; one accent reads calmer than two hues; Backup becomes a destination instead of a menu item. Spec: the design handoff (2026-10) |
+| D25 | Reading progress has one use case, `ReadingTracker` (set the page, finish, set the total), built on the shared rules `ClampPage` and `DeriveStatus` | Separate `UpdateProgress`, `MarkFinished` and `SetTotalPages` use cases | Refines D21: one module owns the progress rules and fetches the book once per change; ViewModels depend on one interface. The two pure rules stay separate because `Book.status`, the mappers and `SaveBook` use them too (architecture review 2026-10-11) |
 
 ## 4. Final Design
 
@@ -81,7 +82,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
                LibraryRestorer, BackupPreferences, BackupScheduler    (interfaces)
   usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
                ObserveLibrary, AddBookFromIsbn, AddBookManually,
-               UpdateProgress, RunBackup, PrepareRestore, RestoreBackup,
+               ReadingTracker, RunBackup, PrepareRestore, RestoreBackup,
                ConfigureAutoBackup, RunScheduledBackup
 
 :app
@@ -383,7 +384,7 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 
 - **Unit (JUnit, Turbine, MockK):** `DeriveStatus`, ISBN-13 validation, `MergeMetadata` (gap fill,
   placeholder cover rejection), `LibraryFilter` to query, page clamping, and the use cases
-  (`AddBookFromIsbn`, `UpdateProgress`, `RunBackup`, `RestoreBackup`) against fake repositories and
+  (`AddBookFromIsbn`, `ReadingTracker`, `RunBackup`, `RestoreBackup`) against fake repositories and
   ports. `:domain` tests run on the plain JVM with no Android dependencies. ViewModel tests assert
   `AppError` to UI-state mapping.
 - **Data (Room in-memory, instrumented):** FTS search, combined filter and sort, duplicate ISBN

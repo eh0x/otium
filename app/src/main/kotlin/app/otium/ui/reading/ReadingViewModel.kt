@@ -9,7 +9,7 @@ import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.SortOrder
 import app.otium.domain.usecase.ObserveLibrary
-import app.otium.domain.usecase.UpdateProgress
+import app.otium.domain.usecase.ReadingTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +32,7 @@ internal const val QUICK_PAGES = 10
 @HiltViewModel
 class ReadingViewModel @Inject constructor(
     observeLibrary: ObserveLibrary,
-    private val updateProgress: UpdateProgress,
+    private val reading: ReadingTracker,
 ) : ViewModel() {
 
     private val error = MutableStateFlow<AppError?>(null)
@@ -59,7 +59,7 @@ class ReadingViewModel @Inject constructor(
     /** Moves [book] on by [QUICK_PAGES]; the use case keeps it within the page count. */
     fun onAddPages(book: BookSummary) {
         viewModelScope.launch {
-            val result = updateProgress(book.id, book.currentPage + QUICK_PAGES)
+            val result = reading.setPage(book.id, book.currentPage + QUICK_PAGES)
             if (result is Try.Failure) error.value = result.error
         }
     }
