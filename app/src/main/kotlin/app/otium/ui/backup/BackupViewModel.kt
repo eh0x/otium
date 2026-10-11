@@ -12,8 +12,7 @@ import app.otium.domain.model.BackupSlot
 import app.otium.domain.model.RestorePreview
 import app.otium.domain.port.BackupPreferences
 import app.otium.domain.usecase.ConfigureAutoBackup
-import app.otium.domain.usecase.PrepareRestore
-import app.otium.domain.usecase.RestoreBackup
+import app.otium.domain.usecase.LibraryRestore
 import app.otium.domain.usecase.RunBackup
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -41,8 +40,7 @@ class BackupViewModel @Inject constructor(
     private val consent: DriveConsent,
     private val preferences: BackupPreferences,
     private val runBackup: RunBackup,
-    private val prepareRestore: PrepareRestore,
-    private val restoreBackup: RestoreBackup,
+    private val restore: LibraryRestore,
     private val configureAutoBackup: ConfigureAutoBackup,
 ) : ViewModel() {
 
@@ -138,7 +136,7 @@ class BackupViewModel @Inject constructor(
     fun onRestore(slot: BackupSlot, passphrase: CharArray? = null) {
         val started = whenIdle(BackupBusy.PREPARING_RESTORE) {
             try {
-                val result = prepareRestore(slot, passphrase)
+                val result = restore.prepare(slot, passphrase)
                 transient.update { it.prepared(slot, result) }
             } finally {
                 passphrase?.fill(Char.MIN_VALUE)
@@ -148,23 +146,19 @@ class BackupViewModel @Inject constructor(
     }
 
     fun onRestoreConfirmed() {
-        val preview = transient.value.preview ?: return
+        if (transient.value.preview == null) return
         whenIdle(BackupBusy.RESTORING) {
             transient.update { it.copy(preview = null) }
-            when (val result = restoreBackup(preview)) {
+            when (val result = restore.confirm()) {
                 is Try.Success -> transient.update { it.copy(message = BackupMessage.RESTORED) }
-
-                is Try.Failure -> {
-                    preview.discard()
-                    fail(result.error)
-                }
+                is Try.Failure -> fail(result.error)
             }
         }
     }
 
     /** Cancels the restore: drops a downloaded backup, or stops asking for its passphrase. */
     fun onRestoreDismissed() {
-        transient.value.preview?.discard()
+        restore.cancel()
         transient.update { it.copy(preview = null, unlock = null) }
     }
 
@@ -177,7 +171,7 @@ class BackupViewModel @Inject constructor(
     fun onErrorShown() = transient.update { it.copy(error = null) }
 
     override fun onCleared() {
-        transient.value.preview?.discard()
+        restore.cancel()
     }
 
     private fun fail(error: AppError) = transient.update { it.copy(error = error) }

@@ -1,7 +1,5 @@
 package app.otium.domain.model
 
-import java.io.File
-
 /** Where a backup sits in Drive: the newest one, or the one it replaced. */
 enum class BackupSlot { LATEST, PREVIOUS }
 
@@ -10,11 +8,6 @@ data class RemoteBackup(val slot: BackupSlot, val info: BackupInfo)
 
 /**
  * A backup downloaded and checked, waiting for the user to confirm replacing the library with it.
- * [file] stays on the device until the restore succeeds or [discard] is called.
+ * The downloaded file itself stays inside the restore use case (see `LibraryRestore`).
  */
-data class RestorePreview(val slot: BackupSlot, val info: BackupInfo, val file: File) {
-    /** Drops the downloaded file, for when the user decides not to restore. */
-    fun discard() {
-        file.delete()
-    }
-}
+data class RestorePreview(val slot: BackupSlot, val info: BackupInfo)

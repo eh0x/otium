@@ -62,7 +62,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D22 | Domain interfaces for scanner, Drive client, cover store, backup archiver and restorer, and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
 | D23 | Optional passphrase encryption of the backup file (Argon2id, then Tink streaming AES-256-GCM), key kept wrapped by the Android Keystore for scheduled runs | SQLCipher for the database; no encryption; a key held only in the Keystore | The backup is the only copy that leaves the phone. A Keystore-only key would be lost with the phone; a passphrase lets a new phone restore (review S4) |
 | D24 | Direction B "Catalogue" redesign: the single-accent Classical palette, Cormorant Garamond and Lora, a bottom bar (Library, Reading, Add, Settings) and shelves by first category | Keep Earth & Ink with EB Garamond and Source Sans 3; Direction A "Plates" | Warmer and more academic while staying modern; one accent reads calmer than two hues; Backup becomes a destination instead of a menu item. Spec: the design handoff (2026-10) |
-| D25 | Reading progress has one use case, `ReadingTracker` (set the page, finish, set the total), built on the shared rules `ClampPage` and `DeriveStatus` | Separate `UpdateProgress`, `MarkFinished` and `SetTotalPages` use cases | Refines D21: one module owns the progress rules and fetches the book once per change; ViewModels depend on one interface. The two pure rules stay separate because `Book.status`, the mappers and `SaveBook` use them too (architecture review 2026-10-11) |
+| D26 | Restore is one use case, `LibraryRestore` (prepare, confirm, cancel), that keeps the downloaded backup file to itself; `RestorePreview` carries only the slot and what the backup holds | `PrepareRestore` and `RestoreBackup` passing a `RestorePreview` that held the `File`, with the ViewModel deleting it | No file handle reaches UI state; the download is deleted in one place on confirm, cancel or a new prepare. The archiver and restorer ports stay separate: their data-layer implementations are separate and separately tested (architecture review 2026-10-11) |
 
 ## 4. Final Design
 
@@ -82,7 +82,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
                LibraryRestorer, BackupPreferences, BackupScheduler    (interfaces)
   usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
                ObserveLibrary, AddBookFromIsbn, AddBookManually,
-               ReadingTracker, RunBackup, PrepareRestore, RestoreBackup,
+               UpdateProgress, RunBackup, LibraryRestore,
                ConfigureAutoBackup, RunScheduledBackup
 
 :app
@@ -152,7 +152,7 @@ section 3. Rules that can be tested are enforced by `ArchitectureTest`.
   (implemented in `:app/data`) opens the downloaded database in a temporary Room instance, which
   runs any migrations, and imports its books into the live database in one transaction. The change
   is all or nothing, repositories never hold a stale instance, and the screens update on their own
-  because the same database stays open. `:domain` only sees `RunBackup`, `RestoreBackup` and their
+  because the same database stays open. `:domain` only sees `RunBackup`, `LibraryRestore` and their
   `AppError` results.
 - **A damaged backup can look empty.** Room's default error handler deletes a database it finds
   damaged and starts an empty one, so opening a corrupt `library.db` succeeds with no books. The
@@ -303,10 +303,10 @@ Drive backup:
   than upload in the clear. Drive records the key id, so a restore on a phone without the key
   asks for the passphrase before downloading. Plain backups made before stay readable; the zip
   inside and its manifest format are unchanged.
-- Restore: two steps. `PrepareRestore` downloads, verifies the checksum and the manifest, and
-  refuses a schema newer than the app's (before and after the download). The confirm dialog
-  ("replaces current library") shows what will be restored. `RestoreBackup` then imports the
-  books in one transaction and copies the covers in under their own names. The database names a
+- Restore: two steps of `LibraryRestore`. `prepare` downloads, verifies the checksum and the
+  manifest, and refuses a schema newer than the app's (before and after the download). The
+  confirm dialog ("replaces current library") shows what will be restored. `confirm` then imports
+  the books in one transaction and copies the covers in under their own names. The database names a
   cover by its file name only, resolved against this install's covers directory when a book is
   read, so restored rows need no rewriting.
 - Auto backup: `PeriodicWorkRequest` using the user's constraints. Failures retry with backoff; a
@@ -384,7 +384,7 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 
 - **Unit (JUnit, Turbine, MockK):** `DeriveStatus`, ISBN-13 validation, `MergeMetadata` (gap fill,
   placeholder cover rejection), `LibraryFilter` to query, page clamping, and the use cases
-  (`AddBookFromIsbn`, `ReadingTracker`, `RunBackup`, `RestoreBackup`) against fake repositories and
+  (`AddBookFromIsbn`, `UpdateProgress`, `RunBackup`, `LibraryRestore`) against fake repositories and
   ports. `:domain` tests run on the plain JVM with no Android dependencies. ViewModel tests assert
   `AppError` to UI-state mapping.
 - **Data (Room in-memory, instrumented):** FTS search, combined filter and sort, duplicate ISBN

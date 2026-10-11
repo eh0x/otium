@@ -24,8 +24,7 @@ import app.otium.domain.port.LookupScheduler
 import app.otium.domain.usecase.BackupLock
 import app.otium.domain.usecase.ConfigureAutoBackup
 import app.otium.domain.usecase.FindBackups
-import app.otium.domain.usecase.PrepareRestore
-import app.otium.domain.usecase.RestoreBackup
+import app.otium.domain.usecase.LibraryRestore
 import app.otium.domain.usecase.RunBackup
 import app.otium.domain.usecase.RunScheduledBackup
 import app.otium.domain.usecase.SetBackupPassphrase
@@ -100,20 +99,25 @@ internal abstract class BackupModule {
         fun provideRunScheduledBackup(runBackup: RunBackup, preferences: BackupPreferences) =
             RunScheduledBackup(runBackup, preferences)
 
+        /** Not a singleton: each screen holds its own prepared backup. The lock is shared. */
         @Provides
-        fun providePrepareRestore(
+        @Suppress("LongParameterList") // One argument per port LibraryRestore coordinates.
+        fun provideLibraryRestore(
             drive: DriveBackupClient,
             archiver: BackupArchiver,
-            encryption: BackupEncryption,
-        ) = PrepareRestore(drive, archiver, encryption, OtiumDatabase.VERSION)
-
-        @Provides
-        fun provideRestoreBackup(
             restorer: LibraryRestorer,
-            lookups: LookupScheduler,
             encryption: BackupEncryption,
+            lookups: LookupScheduler,
             lock: BackupLock,
-        ) = RestoreBackup(restorer, lookups, encryption, lock)
+        ) = LibraryRestore(
+            drive,
+            archiver,
+            restorer,
+            encryption,
+            lookups,
+            lock,
+            OtiumDatabase.VERSION,
+        )
 
         @Provides
         fun provideSetBackupPassphrase(encryption: BackupEncryption) =
