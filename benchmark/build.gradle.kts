@@ -53,4 +53,8 @@ dependencies {
     implementation(libs.androidx.uiautomator)
     implementation(libs.androidx.test.ext.junit)
     implementation(libs.junit)
+    constraints {
+        // androidx.benchmark brings Wire 6.4.0, which has a known vulnerability. Test code only.
+        implementation(libs.benchmark.wire.runtime)
+    }
 }

@@ -1,6 +1,22 @@
 import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 
 
+// The plugins below share this build classpath. Some bring libraries with known vulnerabilities;
+// these constraints raise them to patched versions (gradle/libs.versions.toml, "Build classpath
+// only"). They change what the build runs on, never what the app ships.
+buildscript {
+    dependencies {
+        classpath(platform(libs.build.jackson.bom))
+        constraints {
+            classpath(libs.build.freemarker)
+            classpath(libs.build.jose4j)
+            classpath(libs.build.jdom2)
+            classpath(libs.build.bcprov)
+            classpath(libs.build.bcpkix)
+        }
+    }
+}
+
 // Root build file: declares plugins once so modules can apply them without versions,
 // and hosts the repository-wide style and static analysis checks (see docs/STYLE_GUIDE.md).
 plugins {
@@ -16,6 +32,18 @@ plugins {
     alias(libs.plugins.detekt)
     alias(libs.plugins.kover)
     alias(libs.plugins.cyclonedx)
+}
+
+// Android Lint runs on a classpath of its own (androidLintTool) in each Android module, with older
+// commons-lang3, httpclient and Bouncy Castle. Same idea as the buildscript constraints: patched
+// versions, for the build only.
+val lintToolConstraints =
+    listOf(libs.build.commons.lang3, libs.build.httpclient, libs.build.bcprov, libs.build.bcpkix)
+subprojects {
+    val moduleDependencies = dependencies
+    configurations.matching { it.name == "androidLintTool" }.configureEach {
+        lintToolConstraints.forEach { moduleDependencies.constraints.add(name, it) }
+    }
 }
 
 // Coverage: one report over :domain's tests and :app's debug unit tests (Robolectric included).
