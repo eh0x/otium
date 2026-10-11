@@ -97,6 +97,10 @@ CI runs the same checks (see `.github/workflows/ci.yml`). To reproduce a CI run 
 ./gradlew spotlessCheck detekt checkDocs lintMarkdown scanSecrets lintWorkflows scanDependencies lint testDebugUnitTest :domain:test koverVerifyCoverage assembleDebug assembleRelease -Potium.allowDebugSigning=true
 ```
 
+`.github/workflows/osv-scanner.yml` runs the same dependency scan on `main` every week, so a
+vulnerability disclosed after a dependency was merged shows up under Security, Code scanning,
+and the alert closes once a later scan no longer finds it.
+
 `.github/workflows/dependency-submission.yml` also sends the resolved Gradle dependency tree to
 GitHub on pushes to `main` and `develop` that change the build files, so Dependabot alerts cover
 transitive dependencies.

@@ -1,0 +1,72 @@
+name: OSV-Scanner
+
+# Finds vulnerabilities disclosed after a dependency was merged. Pull requests and pushes are
+# already gated by the Dependency Scan job in ci.yml; this workflow scans main, the code users run,
+# every week, and reports every finding to code scanning (Security tab), where it stays open until
+# a later scan no longer sees it. Both scan the same thing the same way: the CycloneDX SBOM of the
+# shipped runtime dependencies, with scripts/scan-dependencies.sh and osv-scanner.toml.
+on:
+  schedule:
+    - cron: '34 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Scan dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # uploads the findings to code scanning
+    env:
+      # Keep in step with OSV_SCANNER_VERSION in scripts/scan-dependencies.sh and ci.yml.
+      OSV_SCANNER_VERSION: 2.6.0
+      OSV_SCANNER_SHA256: ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Reads the cache that CI writes and never writes to it: a scheduled run has nothing to add.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-read-only: true
+
+      # Pinned release binary, verified by checksum, instead of a third-party action.
+      - name: Install OSV-Scanner
+        run: |
+          binary="$RUNNER_TEMP/osv-scanner"
+          curl -fsSL -o "$binary" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  ${binary}" | sha256sum --check --strict
+          chmod +x "$binary"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Build the SBOM
+        run: ./gradlew cyclonedxBom
+
+      # Fails the run on findings, so the maintainer gets a notification; the report is still
+      # uploaded below.
+      - name: Scan dependencies for known vulnerabilities
+        run: |
+          mkdir -p build/reports
+          scripts/scan-dependencies.sh --sarif build/reports/osv-scanner.sarif
+
+      - name: Upload findings to code scanning
+        if: always() && hashFiles('build/reports/osv-scanner.sarif') != ''
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: build/reports/osv-scanner.sarif
+          category: osv-scanner

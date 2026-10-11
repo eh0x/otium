@@ -5,7 +5,7 @@
 #
 # usage: scripts/scan-dependencies.sh [--sarif <file>]
 #   no arguments    scan build/reports/cyclonedx/bom.json and print a table
-#   --sarif <file>  on findings, also write them as a SARIF report (CI artifact)
+#   --sarif <file>  also write the findings as a SARIF report (CI artifact, code scanning)
 #
 # A finding is fixed by upgrading the dependency, or its parent when it is transitive. When no fix
 # exists yet, or the vulnerable code is unreachable, add an entry to osv-scanner.toml with a reason
@@ -13,7 +13,7 @@
 # (`brew install osv-scanner`). Without it the script skips locally with a notice, and fails when
 # CI is set, so CI stays the gate.
 
-# Keep in step with OSV_SCANNER_VERSION in .github/workflows/ci.yml.
+# Keep in step with OSV_SCANNER_VERSION in .github/workflows/ci.yml and osv-scanner.yml.
 OSV_SCANNER_VERSION="2.6.0"
 SBOM="build/reports/cyclonedx/bom.json"
 
@@ -69,8 +69,9 @@ fi
 osv-scanner scan --config osv-scanner.toml --lockfile "$SBOM"
 status=$?
 
-# The readable table above is the log; the SARIF report is only worth keeping on findings.
-if [ "$status" -ne 0 ] && [ -n "$sarif" ]; then
+# The readable table above is the log. The SARIF report is written on every run, clean ones too:
+# code scanning closes an alert only when a later report no longer lists it.
+if [ -n "$sarif" ]; then
     osv-scanner scan --config osv-scanner.toml --lockfile "$SBOM" \
         --format sarif --output-file "$sarif" >/dev/null 2>&1
 fi
