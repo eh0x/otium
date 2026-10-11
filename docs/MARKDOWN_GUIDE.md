@@ -190,8 +190,9 @@ One or two paragraphs: what this is, who it is for, what to read first.
 ## 12. HTML
 
 - Prefer Markdown to HTML everywhere. The only HTML allowed is what Markdown has no form for:
-  `<details>`/`<summary>` for collapsible sections, `<b>` inside `<summary>`, and `<br>` in table
-  cells. `[mdl MD033]`
+  `<details>`/`<summary>` for collapsible sections, `<b>` inside `<summary>`, `<br>` in table
+  cells, and `<div align="center">` around the README's title block (logo, name, subtitle and
+  badges), with Markdown inside it. `[mdl MD033]`
 - An HTML comment is fine for a note to the next editor, or to turn off one rule for one line
   with its reason: `<!-- markdownlint-disable-next-line MD013 -- a command cannot wrap -->`.
   `[review]`

@@ -14,8 +14,8 @@
     // The same heading under different parents is fine.
     "MD024": { "siblings_only": true },
     "MD029": { "style": "one_or_ordered" },
-    // The only HTML Markdown has no form for.
-    "MD033": { "allowed_elements": ["details", "summary", "b", "br"] },
+    // The only HTML Markdown has no form for. `div` centres the README's title block.
+    "MD033": { "allowed_elements": ["details", "summary", "b", "br", "div"] },
     "MD046": { "style": "fenced" },
     "MD048": { "style": "backtick" },
     "MD049": { "style": "underscore" },
