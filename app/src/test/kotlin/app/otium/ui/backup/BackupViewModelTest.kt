@@ -21,8 +21,7 @@ import app.otium.domain.model.BackupSlot
 import app.otium.domain.model.DriveAuthState
 import app.otium.domain.usecase.BackupLock
 import app.otium.domain.usecase.ConfigureAutoBackup
-import app.otium.domain.usecase.PrepareRestore
-import app.otium.domain.usecase.RestoreBackup
+import app.otium.domain.usecase.LibraryRestore
 import app.otium.domain.usecase.RunBackup
 import app.otium.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -88,8 +87,15 @@ class BackupViewModelTest {
             consent = consent,
             preferences = prefs,
             runBackup = RunBackup(drive, archiver, encryption, prefs, lock),
-            prepareRestore = PrepareRestore(drive, archiver, encryption, appSchemaVersion = 1),
-            restoreBackup = RestoreBackup(restorer, { lookupsPlanned++ }, encryption, lock),
+            restore = LibraryRestore(
+                drive = drive,
+                archiver = archiver,
+                restorer = restorer,
+                encryption = encryption,
+                lookups = { lookupsPlanned++ },
+                lock = lock,
+                appSchemaVersion = 1,
+            ),
             configureAutoBackup = ConfigureAutoBackup(prefs, scheduler),
         )
     }
@@ -195,7 +201,7 @@ class BackupViewModelTest {
         screenOpen(vm)
         vm.onRestore(BackupSlot.LATEST)
         advanceUntilIdle()
-        val file = vm.uiState.value.restorePreview!!.file
+        val file = drive.downloaded.single()
 
         vm.onRestoreConfirmed()
         advanceUntilIdle()
@@ -214,7 +220,7 @@ class BackupViewModelTest {
         screenOpen(vm)
         vm.onRestore(BackupSlot.LATEST)
         advanceUntilIdle()
-        val file = vm.uiState.value.restorePreview!!.file
+        val file = drive.downloaded.single()
 
         vm.onRestoreDismissed()
         advanceUntilIdle()
@@ -232,7 +238,7 @@ class BackupViewModelTest {
         screenOpen(vm)
         vm.onRestore(BackupSlot.LATEST)
         advanceUntilIdle()
-        val file = vm.uiState.value.restorePreview!!.file
+        val file = drive.downloaded.single()
 
         vm.onRestoreConfirmed()
         advanceUntilIdle()
