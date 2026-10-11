@@ -278,15 +278,110 @@ class LibraryBackupRoundTripTest {
             assertEquals("keep picture", File(kept.coverPath!!).readText())
         }
 
+    @Test
+    fun `a backup in a newer layout is refused and nothing changes`() = runBlocking {
+        addKeeper()
+        val newer = craftedBackup(realDatabaseFile(), format = BackupManifest.FORMAT + 1)
+
+        assertEquals(Try.Failure(AppError.CorruptBackup), archiver().inspect(newer))
+        assertEquals(Try.Failure(AppError.CorruptBackup), restorer().restore(newer))
+        assertEquals(listOf("Keep Me"), titles(targetBooks))
+    }
+
+    @Test
+    fun `a backup holding other books than its manifest counts is refused`() = runBlocking {
+        addKeeper()
+        val miscounted = craftedBackup(realDatabaseFile(), bookCount = 3)
+
+        val result = restorer().restore(miscounted)
+
+        assertEquals(Try.Failure(AppError.CorruptBackup), result)
+        assertEquals(listOf("Keep Me"), titles(targetBooks))
+    }
+
+    @Test
+    fun `a cover already in place is kept as it is`() = runBlocking {
+        val hobbitId = fillSource()
+        cover(targetCovers, "hobbit.jpg", "picture already here")
+
+        val result = restorer().restore(backupOfSource().file)
+
+        assertEquals(Try.Success(Unit), result)
+        val restored = (targetBooks.getBook(hobbitId) as Try.Success).value
+        assertEquals("picture already here", File(restored.coverPath!!).readText())
+    }
+
+    @Test
+    fun `a book whose cover the backup does not carry comes back without one`() = runBlocking {
+        val stray = cover(temp.newFolder("elsewhere"), "stray.jpg", "stray")
+        val added = sourceBooks.add(testBook(title = "Stray").copy(coverPath = stray.path))
+        val strayId = (added as Try.Success).value
+
+        val result = restorer().restore(backupOfSource().file)
+
+        assertEquals(Try.Success(Unit), result)
+        assertEquals(null, (targetBooks.getBook(strayId) as Try.Success).value.coverPath)
+    }
+
+    @Test
+    fun `a restore with nowhere to unpack reports it and changes nothing`() = runBlocking {
+        addKeeper()
+        val backup = backupOfSource().file
+        val blocked = File(temp.root, "blocked").apply { writeText("a file, not a folder") }
+        val restorer = RoomLibraryRestorer(
+            context = context,
+            database = target,
+            files = BackupFiles(blocked, targetCovers),
+            dispatchers = RealDispatchers,
+        )
+
+        val result = restorer.restore(backup)
+
+        assertTrue(result is Try.Failure && result.error is AppError.Storage)
+        assertEquals(listOf("Keep Me"), titles(targetBooks))
+        assertEquals(listOf("keep.jpg"), targetCovers.list().orEmpty().toList())
+    }
+
+    @Test
+    fun `a backup that cannot read the library reports it and leaves no files behind`() =
+        runBlocking {
+            fillSource()
+            source.close()
+
+            val result = archiver().create()
+
+            assertTrue("$result", result is Try.Failure && result.error is AppError.Storage)
+            assertEquals(emptyList<String>(), File(temp.root, "work").list().orEmpty().toList())
+        }
+
+    @Test
+    fun `a backup with nowhere to write reports it`() = runBlocking {
+        fillSource()
+        val blocked = File(temp.root, "blocked").apply { writeText("a file, not a folder") }
+        val archiver = ZipBackupArchiver(
+            context = context,
+            database = source,
+            files = BackupFiles(blocked, sourceCovers),
+            clock = { NOW },
+            appVersion = "0.1.0",
+            dispatchers = RealDispatchers,
+        )
+
+        val result = archiver.create()
+
+        assertTrue(result is Try.Failure && result.error is AppError.Storage)
+    }
+
     /** A backup file built by hand, for contents the archiver would never produce. */
     private fun craftedBackup(
         databaseFile: File,
         vararg covers: File,
         schemaVersion: Int = OtiumDatabase.VERSION,
         bookCount: Int = 2,
+        format: Int = BackupManifest.FORMAT,
     ): File {
         val manifest = BackupManifest(
-            format = BackupManifest.FORMAT,
+            format = format,
             appVersion = "0.1.0",
             schemaVersion = schemaVersion,
             createdAt = NOW,
