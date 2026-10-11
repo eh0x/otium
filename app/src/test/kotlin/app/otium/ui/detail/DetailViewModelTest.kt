@@ -6,9 +6,7 @@ import app.otium.domain.error.AppError
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
-import app.otium.domain.usecase.MarkFinished
-import app.otium.domain.usecase.SetTotalPages
-import app.otium.domain.usecase.UpdateProgress
+import app.otium.domain.usecase.ReadingTracker
 import app.otium.testing.MainDispatcherRule
 import app.otium.ui.navigation.DetailRoute
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,9 +39,7 @@ class DetailViewModelTest {
     private fun viewModel(id: Long) = DetailViewModel(
         savedStateHandle = SavedStateHandle(mapOf("bookId" to id)),
         repository = repo,
-        updateProgress = UpdateProgress(repo, clock),
-        markFinished = MarkFinished(repo, UpdateProgress(repo, clock)),
-        setTotalPages = SetTotalPages(repo, clock),
+        reading = ReadingTracker(repo, clock),
     )
 
     private fun TestScope.screenOpen(vm: DetailViewModel) {
