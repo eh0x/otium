@@ -59,6 +59,18 @@ androidxTestCore = "1.7.0"
 robolectric = "4.17"
 konsist = "0.17.3"
 
+# Build classpath only: patched versions of libraries that Gradle plugins bring in with known
+# vulnerabilities (AGP, Kover, CycloneDX). Applied as constraints in the root build.gradle.kts;
+# Bouncy Castle reuses the version above. Drop an entry once its plugin ships the fix.
+buildJackson = "2.22.3"
+buildFreemarker = "2.3.35"
+buildJose4j = "0.9.6"
+buildJdom2 = "2.0.6.1"
+# Android Lint's own runtime (androidLintTool), and androidx.benchmark's Wire in :benchmark.
+buildCommonsLang3 = "3.20.0"
+buildHttpclient = "4.5.14"
+benchmarkWire = "6.4.7"
+
 [libraries]
 # AndroidX core
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -138,6 +150,17 @@ androidx-test-runner = { module = "androidx.test:runner", version.ref = "android
 androidx-test-core-ktx = { module = "androidx.test:core-ktx", version.ref = "androidxTestCore" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
+
+# Build classpath constraints (see buildJackson above)
+build-jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "buildJackson" }
+build-freemarker = { module = "org.freemarker:freemarker", version.ref = "buildFreemarker" }
+build-jose4j = { module = "org.bitbucket.b_c:jose4j", version.ref = "buildJose4j" }
+build-jdom2 = { module = "org.jdom:jdom2", version.ref = "buildJdom2" }
+build-bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+build-bcpkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
+build-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "buildCommonsLang3" }
+build-httpclient = { module = "org.apache.httpcomponents:httpclient", version.ref = "buildHttpclient" }
+benchmark-wire-runtime = { module = "com.squareup.wire:wire-runtime", version.ref = "benchmarkWire" }
 
 [plugins]
 android-test = { id = "com.android.test", version.ref = "agp" }
