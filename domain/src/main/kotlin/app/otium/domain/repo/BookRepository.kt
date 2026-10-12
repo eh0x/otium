@@ -6,7 +6,14 @@ import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
 import kotlinx.coroutines.flow.Flow
 
-/** The library store. Room is the source of truth; implementations live in the app module. */
+/**
+ * The library store. Room is the source of truth; implementations live in the app module.
+ *
+ * The store owns the cover files its books name. A cover path handed to [add] or [update] (one
+ * the [app.otium.domain.port.CoverStore] returned) belongs to the store from then on: once a
+ * write leaves a cover that no book names, because it was replaced, its book was deleted, or the
+ * write that brought it failed, the store deletes it. Callers never delete covers themselves.
+ */
 interface BookRepository {
     fun observeLibrary(filter: LibraryFilter): Flow<List<BookSummary>>
 

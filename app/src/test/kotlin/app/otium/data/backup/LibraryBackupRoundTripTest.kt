@@ -60,8 +60,10 @@ class LibraryBackupRoundTripTest {
         targetCovers = temp.newFolder("target-covers")
         source = database()
         target = database()
-        sourceBooks = RoomBookRepository(source.bookDao(), CoverFiles(sourceCovers))
-        targetBooks = RoomBookRepository(target.bookDao(), CoverFiles(targetCovers))
+        sourceBooks =
+            RoomBookRepository(source.bookDao(), CoverFiles(sourceCovers), Dispatchers.IO)
+        targetBooks =
+            RoomBookRepository(target.bookDao(), CoverFiles(targetCovers), Dispatchers.IO)
     }
 
     @After

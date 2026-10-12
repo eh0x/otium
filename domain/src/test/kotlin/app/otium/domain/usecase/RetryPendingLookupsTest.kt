@@ -67,6 +67,29 @@ class RetryPendingLookupsTest {
     }
 
     @Test
+    fun `a found cover replaces the one the book had, which is removed`() = runTest {
+        pending(dune) { copy(coverPath = "covers/old.jpg") }
+        metadata.isbnResult = found("Dune", cover = "https://covers/dune.jpg")
+
+        retry()
+
+        assertEquals(covers.stored.single(), repo.all.single().coverPath)
+        assertEquals(listOf("covers/old.jpg"), repo.deletedCovers)
+    }
+
+    @Test
+    fun `a found cover is removed again when the book cannot be saved`() = runTest {
+        pending(dune)
+        metadata.isbnResult = found("Dune", cover = "https://covers/dune.jpg")
+        repo.failWith = AppError.Storage("disk full")
+
+        val result = retry()
+
+        assertEquals(Try.Success(PendingLookups(resolved = 0, remaining = 1)), result)
+        assertEquals(covers.stored, repo.deletedCovers)
+    }
+
+    @Test
     fun `a book nobody knows stops waiting and keeps what it has`() = runTest {
         pending(dune)
         metadata.isbnResult = Try.Failure(AppError.NotFound)

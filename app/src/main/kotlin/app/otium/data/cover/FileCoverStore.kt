@@ -51,7 +51,8 @@ internal fun coversDirectory(context: Context): File = File(context.filesDir, CO
 /**
  * Stores covers as files in the app's private storage. A cover is downloaded once, checked, and
  * written to a temporary file that is renamed into place, so a failed or cancelled download never
- * leaves a half-written cover that a book could point at.
+ * leaves a half-written cover that a book could point at. Deleting covers is the book repository's
+ * job (see [CoverFiles]).
  */
 class FileCoverStore internal constructor(
     private val directory: File,
@@ -83,39 +84,9 @@ class FileCoverStore internal constructor(
         }
     }
 
-    override suspend fun saveFromBytes(bytes: ByteArray): Try<String> =
-        withContext(dispatchers.io) {
-            if (isUsablePicture(
-                    bytes,
-                )
-            ) {
-                store(bytes)
-            } else {
-                Try.Failure(AppError.InvalidInput("cover"))
-            }
-        }
-
     override suspend fun saveFromDevice(uri: String): Try<String> = withContext(dispatchers.io) {
         readScaled(uri.toUri())?.takeIf(::isUsablePicture)?.let(::store)
             ?: Try.Failure(AppError.InvalidInput("cover"))
-    }
-
-    override suspend fun delete(path: String): Try<Unit> = withContext(dispatchers.io) {
-        try {
-            val file = File(path).canonicalFile
-            when {
-                // Only direct children of the covers directory: no other file, and no `..` tricks.
-                file.parentFile != directory.canonicalFile ->
-                    Try.Failure(AppError.InvalidInput("path"))
-
-                file.exists() && !file.delete() ->
-                    Try.Failure(AppError.Storage("Could not delete the cover"))
-
-                else -> Try.Success(Unit)
-            }
-        } catch (error: IOException) {
-            Try.Failure(AppError.Storage(error.message ?: "Could not delete the cover"))
-        }
     }
 
     /** The picture's bytes, or why there are none. Oversized bodies count as "no cover". */

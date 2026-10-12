@@ -20,7 +20,6 @@ import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -170,25 +169,6 @@ class FileCoverStoreTest {
         assertEquals(AppError.Offline, store().saveFromUrl(url).error())
     }
 
-    // --- From bytes (a cover the user picked) ---
-
-    @Test
-    fun `a picked cover is stored`() = runBlocking {
-        val bytes = picture()
-
-        val path = store().saveFromBytes(bytes).path()
-
-        assertArrayEquals(bytes, File(path).readBytes())
-    }
-
-    @Test
-    fun `a picked file that is not a usable image is invalid input`() = runBlocking {
-        val result = store().saveFromBytes(ByteArray(5_000) { 7 })
-
-        assertEquals(AppError.InvalidInput("cover"), result.error())
-        assertTrue(savedFiles().isEmpty())
-    }
-
     // --- From the device (gallery or camera) ---
 
     private fun onDevice(bytes: ByteArray): String =
@@ -229,45 +209,5 @@ class FileCoverStoreTest {
         val result = store().saveFromDevice(File(temp.root, "missing.png").toURI().toString())
 
         assertEquals(AppError.InvalidInput("cover"), result.error())
-    }
-
-    // --- Delete ---
-
-    @Test
-    fun `a stored cover can be deleted`() = runBlocking {
-        val path = store().saveFromBytes(picture()).path()
-
-        val result = store().delete(path)
-
-        assertEquals(Try.Success(Unit), result)
-        assertFalse(File(path).exists())
-    }
-
-    @Test
-    fun `deleting a cover that is already gone succeeds`() = runBlocking {
-        val path = File(coversDir, "missing.jpg").path
-
-        assertEquals(Try.Success(Unit), store().delete(path))
-    }
-
-    @Test
-    fun `a file outside the covers directory is never deleted`() = runBlocking {
-        val outside = temp.newFile("precious.txt")
-
-        val result = store().delete(outside.path)
-
-        assertEquals(AppError.InvalidInput("path"), result.error())
-        assertTrue(outside.exists())
-    }
-
-    @Test
-    fun `a path that climbs out of the covers directory is refused`() = runBlocking {
-        val outside = temp.newFile("precious.txt")
-        coversDir.mkdirs()
-
-        val sneaky = File(coversDir, "../${outside.name}").path
-
-        assertEquals(AppError.InvalidInput("path"), store().delete(sneaky).error())
-        assertTrue(outside.exists())
     }
 }

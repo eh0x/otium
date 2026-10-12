@@ -178,12 +178,12 @@ class SaveBookTest {
     }
 
     @Test
-    fun `a stored photo is removed again when the book cannot be saved`() = runTest {
+    fun `a stored photo goes to the book store, which removes it when the save fails`() = runTest {
         repo.failWith = AppError.Storage("disk full")
 
         add(cover = CoverChoice.Picked("content://photos/1"))
 
-        assertTrue(covers.stored.isEmpty())
+        assertEquals(covers.stored, repo.deletedCovers)
     }
 
     @Test
@@ -193,7 +193,7 @@ class SaveBookTest {
         val result = add(cover = CoverChoice.Remote("https://covers/dune.jpg"))
 
         assertEquals(Try.Failure(AppError.Storage("disk full")), result)
-        assertTrue(covers.stored.isEmpty())
+        assertEquals(covers.stored, repo.deletedCovers)
     }
 
     // --- Updating ---
@@ -256,7 +256,7 @@ class SaveBookTest {
         saveBook.update(original.id, candidate(), CoverChoice.Picked("content://photos/2"))
 
         assertEquals(covers.stored.single(), repo.all.single().coverPath)
-        assertEquals(listOf("covers/old.jpg"), covers.deleted)
+        assertEquals(listOf("covers/old.jpg"), repo.deletedCovers)
     }
 
     @Test
@@ -267,7 +267,30 @@ class SaveBookTest {
 
         assertNull(repo.all.single().coverPath)
         assertNull(repo.all.single().coverSourceUrl)
-        assertEquals(listOf("covers/old.jpg"), covers.deleted)
+        assertEquals(listOf("covers/old.jpg"), repo.deletedCovers)
+    }
+
+    @Test
+    fun `an edit that keeps the cover never deletes it, even when the save fails`() = runTest {
+        val original = stored()
+        saveBook.update(original.id, candidate(), CoverChoice.Unchanged)
+        repo.failWith = AppError.Storage("disk full")
+
+        saveBook.update(original.id, candidate(), CoverChoice.Unchanged)
+
+        assertEquals("covers/old.jpg", repo.all.single().coverPath)
+        assertTrue(repo.deletedCovers.isEmpty())
+    }
+
+    @Test
+    fun `a new cover for an edit that fails is removed and the old one kept`() = runTest {
+        val original = stored()
+        repo.failWith = AppError.Storage("disk full")
+
+        saveBook.update(original.id, candidate(), CoverChoice.Picked("content://photos/2"))
+
+        assertEquals("covers/old.jpg", repo.all.single().coverPath)
+        assertEquals(covers.stored, repo.deletedCovers)
     }
 
     @Test
