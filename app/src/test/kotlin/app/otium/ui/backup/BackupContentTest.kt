@@ -9,12 +9,15 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import app.otium.applock.LockAvailability
 import app.otium.domain.fakes.backupInfo
 import app.otium.domain.model.BackupFrequency
 import app.otium.domain.model.BackupSettings
 import app.otium.domain.model.BackupSlot
 import app.otium.domain.model.DriveAuthState
 import app.otium.domain.model.RestorePreview
+import app.otium.ui.applock.AppLockActions
+import app.otium.ui.applock.AppLockUiState
 import app.otium.ui.theme.OtiumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -64,6 +67,47 @@ class BackupContentTest {
         }
 
         rule.onNodeWithText("Import and export").performScrollTo().performClick()
+
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun `the app lock switch asks to turn the lock on, then offers the timeouts`() {
+        val toggles = mutableListOf<Boolean>()
+        rule.setContent {
+            OtiumTheme(darkTheme = false) {
+                BackupContent(
+                    state = BackupUiState(),
+                    actions = BackupActions(),
+                    appLock = AppLockUiState(enabled = true),
+                    appLockActions = AppLockActions(onToggle = { toggles += it }),
+                )
+            }
+        }
+
+        rule.onNodeWithText("App lock").performScrollTo().performClick()
+        rule.onNodeWithText("1 minute").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("5 minutes").performScrollTo().assertIsDisplayed()
+
+        assertEquals(listOf(false), toggles)
+    }
+
+    @Test
+    fun `without a screen lock the app lock says how to set one`() {
+        var opened = 0
+        rule.setContent {
+            OtiumTheme(darkTheme = false) {
+                BackupContent(
+                    state = BackupUiState(),
+                    actions = BackupActions(),
+                    appLock = AppLockUiState(availability = LockAvailability.NO_SCREEN_LOCK),
+                    appLockActions = AppLockActions(onOpenSecuritySettings = { opened++ }),
+                )
+            }
+        }
+
+        rule.onNodeWithText("App lock").performScrollTo().assertIsNotEnabled()
+        rule.onNodeWithText("Open security settings").performScrollTo().performClick()
 
         assertEquals(1, opened)
     }
