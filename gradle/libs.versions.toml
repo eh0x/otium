@@ -68,7 +68,7 @@ buildJdom2 = "2.0.6.1"
 # Android Lint's own runtime (androidLintTool), and androidx.benchmark's Wire in :benchmark.
 buildCommonsLang3 = "3.20.0"
 buildHttpclient = "4.5.14"
-benchmarkWire = "6.4.7"
+benchmarkWire = "7.0.1"
 
 [libraries]
 # AndroidX core
