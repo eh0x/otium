@@ -58,6 +58,7 @@ import app.otium.ui.theme.otiumColors
 @Composable
 fun BackupScreen(
     modifier: Modifier = Modifier,
+    onOpenImportExport: () -> Unit = {},
     viewModel: BackupViewModel = hiltViewModel(),
     encryptionViewModel: EncryptionViewModel = hiltViewModel(),
 ) {
@@ -107,6 +108,7 @@ fun BackupScreen(
         actions = actions,
         encryptionActions = rememberEncryptionActions(encryptionViewModel),
         modifier = modifier,
+        onOpenImportExport = onOpenImportExport,
     )
 }
 
@@ -135,6 +137,7 @@ fun BackupContent(
     modifier: Modifier = Modifier,
     encryption: EncryptionUiState = EncryptionUiState(),
     encryptionActions: EncryptionActions = EncryptionActions(),
+    onOpenImportExport: () -> Unit = {},
 ) {
     val snackbar = remember { SnackbarHostState() }
     Notices(snackbar, state.message, state.error, actions.onMessageShown, actions.onErrorShown)
@@ -159,6 +162,7 @@ fun BackupContent(
             Section { EncryptionSection(encryption, state.isBusy, encryptionActions) }
             Section { RestoreSection(state, actions) }
             Section { AutoBackupSection(state, actions) }
+            Section { LibrarySection(enabled = !state.isBusy, onOpen = onOpenImportExport) }
         }
         OtiumSnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))
         state.restorePreview?.let { RestoreDialog(it, actions) }
@@ -301,6 +305,24 @@ private fun AutoBackupSection(state: BackupUiState, actions: BackupActions) {
             onCheckedChange = { actions.onSettingsChanged(settings.copy(chargingOnly = it)) },
         )
     }
+}
+
+/** The way to import a library from another app, or export this one. */
+@Composable
+private fun LibrarySection(enabled: Boolean, onOpen: () -> Unit) {
+    SectionTitle(stringResource(R.string.transfer_settings_heading))
+    Text(
+        text = stringResource(R.string.transfer_settings_note),
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+        color = MaterialTheme.otiumColors.muted,
+    )
+    OtiumButton(
+        text = stringResource(R.string.transfer_settings_action),
+        onClick = onOpen,
+        style = OtiumButtonStyle.Secondary,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 /** Shows what the backup holds before it replaces the library, and asks the user to confirm. */

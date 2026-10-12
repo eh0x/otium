@@ -2,10 +2,18 @@ package app.otium.di
 
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
+import app.otium.domain.port.DispatcherProvider
+import app.otium.domain.port.LibraryFiles
+import app.otium.domain.port.LibraryJson
+import app.otium.domain.port.LibrarySnapshot
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.usecase.AddBookFromIsbn
+import app.otium.domain.usecase.BackupLock
+import app.otium.domain.usecase.ExportLibrary
+import app.otium.domain.usecase.ImportLibrary
+import app.otium.domain.usecase.ReadLibraryFile
 import app.otium.domain.usecase.ReadingTracker
 import app.otium.domain.usecase.RetryPendingLookups
 import app.otium.domain.usecase.SaveBook
@@ -38,6 +46,31 @@ object UseCaseModule {
         clock: Clock,
         scheduler: LookupScheduler,
     ) = SaveIsbnForLater(repository, clock, scheduler)
+
+    @Provides
+    fun provideReadLibraryFile(
+        files: LibraryFiles,
+        json: LibraryJson,
+        dispatchers: DispatcherProvider,
+    ) = ReadLibraryFile(files, json, dispatchers.default)
+
+    @Provides
+    fun provideImportLibrary(
+        books: BookRepository,
+        readFile: ReadLibraryFile,
+        clock: Clock,
+        scheduler: LookupScheduler,
+        lock: BackupLock,
+    ) = ImportLibrary(books, readFile, clock, scheduler, lock)
+
+    @Provides
+    fun provideExportLibrary(
+        snapshot: LibrarySnapshot,
+        files: LibraryFiles,
+        json: LibraryJson,
+        clock: Clock,
+        dispatchers: DispatcherProvider,
+    ) = ExportLibrary(snapshot, files, json, clock, dispatchers.default)
 
     @Provides
     fun provideRetryPendingLookups(

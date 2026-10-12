@@ -198,6 +198,7 @@
     <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
     <string name="error_passphrase_required">This phone no longer holds your backup key. Set your passphrase again under Encrypt backups.</string>
     <string name="error_wrong_passphrase">That passphrase does not open this backup.</string>
+    <string name="error_unknown_file_format">Otium cannot read that file. Choose a library export from Goodreads, StoryGraph or Otium.</string>
     <string name="error_storage">Something went wrong saving your library. Please try again.</string>
     <string name="error_unexpected">Something went wrong. Please try again.</string>
 
@@ -288,4 +289,72 @@
     <string name="reading_add_pages_description">Add 10 pages to %1$s</string>
     <string name="reading_open">Open</string>
     <string name="reading_open_description">Open %1$s</string>
+
+    <!-- Import and export -->
+    <string name="transfer_title">Import and export</string>
+    <string name="transfer_settings_heading">Your library</string>
+    <string name="transfer_settings_note">Bring in books from Goodreads or StoryGraph, or take a copy of your library elsewhere.</string>
+    <string name="transfer_settings_action">Import and export</string>
+    <string name="import_heading">Import a library</string>
+    <string name="import_note">Choose a library export from Goodreads, StoryGraph or Otium. Books already in your library are left as they are. Books with an ISBN get their cover and details later, when you are online.</string>
+    <string name="import_action">Choose a file</string>
+    <string name="import_reading">Reading the file…</string>
+    <string name="import_progress">Adding books: %1$d of %2$d</string>
+    <string name="import_help_goodreads_title">From Goodreads</string>
+    <string name="import_help_goodreads">On the website, not the app: open My Books, choose Import and export under Tools, then Export Library. When the link to your export appears, download the file.</string>
+    <string name="import_help_storygraph_title">From StoryGraph</string>
+    <string name="import_help_storygraph">Open Manage Account, choose Export StoryGraph Library under Manage Your Data, and download the file from the email StoryGraph sends.</string>
+    <plurals name="import_preview_title">
+        <item quantity="one">Import %1$d book?</item>
+        <item quantity="other">Import %1$d books?</item>
+    </plurals>
+    <string name="import_preview_nothing_title">Nothing new to import</string>
+    <string name="import_preview_from">A library exported from %1$s.</string>
+    <string name="format_goodreads">Goodreads</string>
+    <string name="format_storygraph">StoryGraph</string>
+    <string name="format_otium">Otium</string>
+    <plurals name="import_preview_already">
+        <item quantity="one">%1$d book is already in your library and is left out.</item>
+        <item quantity="other">%1$d books are already in your library and are left out.</item>
+    </plurals>
+    <plurals name="import_preview_without_isbn">
+        <item quantity="one">%1$d book has no ISBN, so it is added as the file has it.</item>
+        <item quantity="other">%1$d books have no ISBN, so they are added as the file has them.</item>
+    </plurals>
+    <plurals name="import_preview_unreadable">
+        <item quantity="one">%1$d row has no title and is left out.</item>
+        <item quantity="other">%1$d rows have no title and are left out.</item>
+    </plurals>
+    <string name="import_preview_dropped">Ratings, reviews and reading dates are not imported.</string>
+    <string name="import_confirm_action">Import</string>
+    <string name="import_cancel">Cancel</string>
+    <string name="import_close">Close</string>
+    <plurals name="import_done">
+        <item quantity="one">%1$d book added.</item>
+        <item quantity="other">%1$d books added.</item>
+    </plurals>
+    <plurals name="import_done_skipped">
+        <item quantity="one">%1$d was already in your library.</item>
+        <item quantity="other">%1$d were already in your library.</item>
+    </plurals>
+    <plurals name="import_done_waiting">
+        <item quantity="one">%1$d will get its cover and details when you are online.</item>
+        <item quantity="other">%1$d will get their covers and details when you are online.</item>
+    </plurals>
+    <plurals name="import_done_failed">
+        <item quantity="one">%1$d could not be saved. Import the file again to try once more.</item>
+        <item quantity="other">%1$d could not be saved. Import the file again to try once more.</item>
+    </plurals>
+    <string name="import_done_dismiss">Done</string>
+    <string name="export_heading">Export your library</string>
+    <string name="export_note">A CSV file uses the columns of a Goodreads export: it opens in a spreadsheet and imports into most reading apps. A JSON file keeps everything Otium knows and imports back into Otium. Cover pictures are not included.</string>
+    <string name="export_unencrypted">Export files are not encrypted. Keep them somewhere private.</string>
+    <string name="export_csv_action">Export as CSV</string>
+    <string name="export_json_action">Export as JSON</string>
+    <string name="export_in_progress">Exporting…</string>
+    <string name="export_empty">Your library is empty, so there is nothing to export yet.</string>
+    <plurals name="export_done">
+        <item quantity="one">Exported %1$d book.</item>
+        <item quantity="other">Exported %1$d books.</item>
+    </plurals>
 </resources>

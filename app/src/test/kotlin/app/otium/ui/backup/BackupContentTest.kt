@@ -50,6 +50,24 @@ class BackupContentTest {
         }
     }
 
+    @Test
+    fun `the library section opens import and export`() {
+        var opened = 0
+        rule.setContent {
+            OtiumTheme(darkTheme = false) {
+                BackupContent(
+                    state = BackupUiState(),
+                    actions = BackupActions(),
+                    onOpenImportExport = { opened++ },
+                )
+            }
+        }
+
+        rule.onNodeWithText("Import and export").performScrollTo().performClick()
+
+        assertEquals(1, opened)
+    }
+
     // --- Google Drive ---
 
     @Test

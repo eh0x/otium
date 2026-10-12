@@ -31,6 +31,7 @@ Status: Validated through brainstorming, ready for implementation planning
   network; offline ISBN entries are queued.
 - Privacy: data stays on the device. Outbound calls are limited to the book APIs (ISBN or
   title/author only) and the user's own Google Drive. No analytics, no developer-held accounts.
+  Import and export read and write only files the owner picks in the system file picker.
 - Backup is stored in the Drive `appDataFolder` (scope `drive.appdata` only).
 - Solo hobby project, maintained by the owner.
 
@@ -65,6 +66,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D25 | Reading progress has one use case, `ReadingTracker` (set the page, finish, set the total), built on the shared rules `ClampPage` and `DeriveStatus` | Separate `UpdateProgress`, `MarkFinished` and `SetTotalPages` use cases | Refines D21: one module owns the progress rules and fetches the book once per change; ViewModels depend on one interface. The two pure rules stay separate because `Book.status`, the mappers and `SaveBook` use them too (architecture review 2026-10-11) |
 | D26 | Restore is one use case, `LibraryRestore` (prepare, confirm, cancel), that keeps the downloaded backup file to itself; `RestorePreview` carries only the slot and what the backup holds | `PrepareRestore` and `RestoreBackup` passing a `RestorePreview` that held the `File`, with the ViewModel deleting it | No file handle reaches UI state; the download is deleted in one place on confirm, cancel or a new prepare. The archiver and restorer ports stay separate: their data-layer implementations are separate and separately tested (architecture review 2026-10-11) |
 | D27 | The book repository owns the cover files its books name: after any write it deletes a cover no book names any more (replaced, its book deleted, or brought by a write that failed). `CoverStore` only stores covers (download, gallery or camera); covers a dead process left behind are purged at start-up once a day old | Use cases deleting covers themselves through `CoverStore.delete`; moving downloads and picks into the repository too | Deleting a book used to leave its cover on disk forever, and rollback code was repeated in `SaveBook` and `RetryPendingLookups`. Downloads stay out of the Room repository, which would otherwise need the HTTP client and image decoding (architecture review 2026-10-11) |
+| D28 | Import and export through files the owner picks: Goodreads and StoryGraph CSV in, Goodreads-format CSV and Otium JSON (versioned, every field but the cover file) out. `ImportLibrary` previews the file, then adds every new book straight away from what the file holds; books with an ISBN also wait for a lookup (D11). Books whose ISBN is already in the library are skipped. Progress comes from the shelf: read means finished, reading means page 1, and without a page count the shelf becomes a tag | Each row through the confirm screen; an automatic title search for rows without an ISBN; replacing the library as a restore does | Ranked first for v2 in the team session of 2026-10-10: it brings existing libraries in and lets the owner leave freely. A confirm screen per row does not scale to hundreds of books, and a title search picks wrong editions without anyone checking. `RetryPendingLookups` now ends a run at the first offline, rate-limit or timeout failure, so a large import does not keep asking a service that refuses |
 
 ## 4. Final Design
 
@@ -81,11 +83,13 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
   repo/        BookRepository, MetadataRepository                     (interfaces)
   port/        BarcodeScanner, CoverStore, DispatcherProvider,
                DriveBackupClient, DriveAuth, BackupArchiver,
-               LibraryRestorer, BackupPreferences, BackupScheduler    (interfaces)
+               LibraryRestorer, BackupPreferences, BackupScheduler,
+               LibraryFiles, LibraryJson, LibrarySnapshot              (interfaces)
+  transfer/    Csv, GoodreadsCsv, StoryGraphCsv, ImportRow (library file formats)
   usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
-               ObserveLibrary, AddBookFromIsbn, AddBookManually,
-               ReadingTracker, SaveBook, RetryPendingLookups, RunBackup, LibraryRestore,
-               ConfigureAutoBackup, RunScheduledBackup
+               AddBookFromIsbn, SaveBook, SaveIsbnForLater, RetryPendingLookups,
+               ReadingTracker, ReadLibraryFile, ImportLibrary, ExportLibrary, RunBackup,
+               LibraryRestore, ConfigureAutoBackup, RunScheduledBackup
 
 :app
   ui/          Compose screens + ViewModels + UI state
@@ -93,6 +97,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
     add/         scan, manual ISBN, title search, result picker
     detail/      book detail, progress update, edit
     backup/      backup/restore, schedule settings
+    transfer/    import and export
     theme/       OtiumTheme, OtiumColors, typography, shapes
   data/
     local/       Room: entities, FTS table, DAOs, row projections, mappers
@@ -103,6 +108,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
     prefs/       DataStoreLibraryPreferences, DataStoreBackupPreferences
     cover/       FileCoverStore (files directory, Coil), CoverFiles, OrphanedCovers
     scan/        MlKitBarcodeScanner
+    transfer/    ContentResolverLibraryFiles, JsonLibraryFormat, RoomLibrarySnapshot
   auth/        DriveConsent (what the screen does to give Drive access)
   work/        BackupWorker, BackupNotifier, LookupRetryWorker (WorkManager entry points)
   di/          Hilt modules (@Binds for every domain interface)
@@ -274,6 +280,26 @@ Errors:
 - Timeout 8 s per API.
 - Google Books API key in `local.properties` exposed via `BuildConfig`, restricted by package name
   and SHA-1, never committed. Keyless access is the low-quota fallback.
+
+#### Importing and exporting a library
+
+Settings, Import and export (D28). The owner picks a file; `ImportLibrary` works out its format
+from the header row (Goodreads: `Exclusive Shelf`; StoryGraph: `Read Status`) or from Otium's JSON
+`format` field, and previews it: new books, books already in the library, books without a usable
+ISBN, rows without a title. Nothing is written until the owner confirms. Then:
+
+- Each book is added from the file under the backup lock, so a restore never runs alongside.
+- A book with an ISBN, unless the file is Otium's own, gets `needsLookup`; one lookup run is
+  scheduled for all of them and fills in covers and details as offline entries are (D11).
+- Ratings, reviews and reading dates have no place in Otium and are not read.
+- An import cut short (the screen left, the process killed) keeps what it added; importing the
+  file again skips those books by ISBN.
+
+Export writes every book to a file the owner creates: CSV in Goodreads' columns (categories and
+tags become shelves) or Otium JSON. Covers are not exported; the JSON keeps each cover's source
+address. The Goodreads and StoryGraph columns were written from their documented exports, not
+checked against fresh ones; the readers look columns up by name and skip the ones they do not
+know.
 
 ### 4.4 UI and backup
 

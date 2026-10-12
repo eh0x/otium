@@ -73,6 +73,8 @@ by the headless screenshot tests (`app/build/screenshots`).
   offline wait for a connection.
 - **Backup to your own Google Drive.** A manual backup and an optional scheduled one, stored in
   your private app folder in Drive, with optional passphrase encryption.
+- **Import and export.** Bring a library in from a Goodreads or StoryGraph export, and take yours
+  out as CSV (in Goodreads' columns, which most reading apps import) or as Otium JSON.
 
 Not in version 1: iOS, syncing between devices, accounts or a backend, ratings and notes, reading
 statistics, social features, and several copies of the same ISBN.
@@ -85,6 +87,7 @@ statistics, social features, and several copies of the same ISBN.
 - Backups use the private app data folder of your Drive (the `drive.appdata` scope), which the app
   alone can read. With a passphrase set, the backup is encrypted (Argon2id and AES-256-GCM) before
   it leaves the phone.
+- Import and export read and write only the files you pick.
 
 ## Status
 
