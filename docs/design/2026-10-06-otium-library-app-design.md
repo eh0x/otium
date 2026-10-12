@@ -81,7 +81,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
                DriveBackupClient, DriveAuth, BackupArchiver,
                LibraryRestorer, BackupPreferences, BackupScheduler    (interfaces)
   usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
-               ObserveLibrary, AddBookFromIsbn, AddBookManually,
+               AddBookFromIsbn, SaveBook, SaveIsbnForLater, RetryPendingLookups,
                UpdateProgress, RunBackup, LibraryRestore,
                ConfigureAutoBackup, RunScheduledBackup
 

@@ -7,7 +7,6 @@ import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
-import app.otium.domain.usecase.ObserveLibrary
 import app.otium.testing.FakeDebugTools
 import app.otium.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,8 +33,7 @@ class LibraryViewModelTest {
     private val prefs = FakeLibraryPreferences()
     private val debugTools = FakeDebugTools()
 
-    private fun viewModel(tools: FakeDebugTools = debugTools) =
-        LibraryViewModel(ObserveLibrary(repo), repo, prefs, tools)
+    private fun viewModel(tools: FakeDebugTools = debugTools) = LibraryViewModel(repo, prefs, tools)
 
     /** Keeps the state flow active the way an open screen does. */
     private fun TestScope.screenOpen(vm: LibraryViewModel) {
