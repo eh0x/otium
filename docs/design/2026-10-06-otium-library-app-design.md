@@ -62,7 +62,9 @@ Status: Validated through brainstorming, ready for implementation planning
 | D22 | Domain interfaces for scanner, Drive client, cover store, backup archiver and restorer, and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
 | D23 | Optional passphrase encryption of the backup file (Argon2id, then Tink streaming AES-256-GCM), key kept wrapped by the Android Keystore for scheduled runs | SQLCipher for the database; no encryption; a key held only in the Keystore | The backup is the only copy that leaves the phone. A Keystore-only key would be lost with the phone; a passphrase lets a new phone restore (review S4) |
 | D24 | Direction B "Catalogue" redesign: the single-accent Classical palette, Cormorant Garamond and Lora, a bottom bar (Library, Reading, Add, Settings) and shelves by first category | Keep Earth & Ink with EB Garamond and Source Sans 3; Direction A "Plates" | Warmer and more academic while staying modern; one accent reads calmer than two hues; Backup becomes a destination instead of a menu item. Spec: the design handoff (2026-10) |
+| D25 | Reading progress has one use case, `ReadingTracker` (set the page, finish, set the total), built on the shared rules `ClampPage` and `DeriveStatus` | Separate `UpdateProgress`, `MarkFinished` and `SetTotalPages` use cases | Refines D21: one module owns the progress rules and fetches the book once per change; ViewModels depend on one interface. The two pure rules stay separate because `Book.status`, the mappers and `SaveBook` use them too (architecture review 2026-10-11) |
 | D26 | Restore is one use case, `LibraryRestore` (prepare, confirm, cancel), that keeps the downloaded backup file to itself; `RestorePreview` carries only the slot and what the backup holds | `PrepareRestore` and `RestoreBackup` passing a `RestorePreview` that held the `File`, with the ViewModel deleting it | No file handle reaches UI state; the download is deleted in one place on confirm, cancel or a new prepare. The archiver and restorer ports stay separate: their data-layer implementations are separate and separately tested (architecture review 2026-10-11) |
+| D27 | The book repository owns the cover files its books name: after any write it deletes a cover no book names any more (replaced, its book deleted, or brought by a write that failed). `CoverStore` only stores covers (download, gallery or camera); covers a dead process left behind are purged at start-up once a day old | Use cases deleting covers themselves through `CoverStore.delete`; moving downloads and picks into the repository too | Deleting a book used to leave its cover on disk forever, and rollback code was repeated in `SaveBook` and `RetryPendingLookups`. Downloads stay out of the Room repository, which would otherwise need the HTTP client and image decoding (architecture review 2026-10-11) |
 
 ## 4. Final Design
 
@@ -82,7 +84,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
                LibraryRestorer, BackupPreferences, BackupScheduler    (interfaces)
   usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
                ObserveLibrary, AddBookFromIsbn, AddBookManually,
-               UpdateProgress, RunBackup, LibraryRestore,
+               ReadingTracker, SaveBook, RetryPendingLookups, RunBackup, LibraryRestore,
                ConfigureAutoBackup, RunScheduledBackup
 
 :app
@@ -99,7 +101,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
     backup/      GoogleDriveBackupClient, BackupZip, ZipBackupArchiver, RoomLibraryRestorer,
                  GoogleAuthManager
     prefs/       DataStoreLibraryPreferences, DataStoreBackupPreferences
-    cover/       FileCoverStore (files directory, Coil)
+    cover/       FileCoverStore (files directory, Coil), CoverFiles, OrphanedCovers
     scan/        MlKitBarcodeScanner
   auth/        DriveConsent (what the screen does to give Drive access)
   work/        BackupWorker, BackupNotifier, LookupRetryWorker (WorkManager entry points)
@@ -207,6 +209,9 @@ Tables:
   `updatedAt`, `userEdited`, `needsLookup`.
 - `author`, `book_author`; `category`, `book_category`; `tag`, `book_tag`.
 - `book_fts`: FTS4 over title, subtitle, authors.
+- Cover files belong to the book repository (D27). A write that leaves a cover no book names
+  deletes it; `OrphanedCovers` deletes, at start-up, any cover file older than a day that no book
+  names, holding the backup lock so a restore never loses a cover it has just copied in.
 
 Search and filters:
 
@@ -384,7 +389,7 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 
 - **Unit (JUnit, Turbine, MockK):** `DeriveStatus`, ISBN-13 validation, `MergeMetadata` (gap fill,
   placeholder cover rejection), `LibraryFilter` to query, page clamping, and the use cases
-  (`AddBookFromIsbn`, `UpdateProgress`, `RunBackup`, `LibraryRestore`) against fake repositories and
+  (`AddBookFromIsbn`, `ReadingTracker`, `RunBackup`, `LibraryRestore`) against fake repositories and
   ports. `:domain` tests run on the plain JVM with no Android dependencies. ViewModel tests assert
   `AppError` to UI-state mapping.
 - **Data (Room in-memory, instrumented):** FTS search, combined filter and sort, duplicate ISBN

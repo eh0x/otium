@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /** In-memory [BookRepository] for use case tests. Filtering and sorting are not simulated. */
+@Suppress("TooManyFunctions") // Every BookRepository method, plus the cover rule they share.
 class FakeBookRepository : BookRepository {
     private val books = MutableStateFlow<Map<Long, Book>>(emptyMap())
     private var nextId = 1L
@@ -28,6 +29,9 @@ class FakeBookRepository : BookRepository {
     val filters = mutableListOf<LibraryFilter>()
     var lastProgressUpdate: Triple<Long, Int, Long>? = null
         private set
+
+    /** Covers deleted because no book named them after a write, oldest first. */
+    val deletedCovers = mutableListOf<String>()
 
     fun seed(book: Book): Book {
         val stored = if (book.id == 0L) book.copy(id = nextId++) else book
@@ -79,18 +83,25 @@ class FakeBookRepository : BookRepository {
         Try.Success(books.value.values.filter { it.needsLookup }.sortedBy { it.id })
 
     override suspend fun add(book: Book): Try<Long> {
-        failWith?.let { return Try.Failure(it) }
         val existing = book.isbn13?.let { isbn ->
             books.value.values.firstOrNull { it.isbn13 == isbn }
         }
-        if (existing != null) return Try.Failure(AppError.Duplicate(existing.id))
+        val error = failWith ?: existing?.let { AppError.Duplicate(it.id) }
+        if (error != null) {
+            release(book.coverPath)
+            return Try.Failure(error)
+        }
         return Try.Success(seed(book).id)
     }
 
     override suspend fun update(book: Book): Try<Unit> {
-        failWith?.let { return Try.Failure(it) }
-        if (book.id !in books.value) return Try.Failure(AppError.NotFound)
+        val before = books.value[book.id]
+        if (failWith != null || before == null) {
+            release(book.coverPath)
+            return Try.Failure(failWith ?: AppError.NotFound)
+        }
         books.value = books.value + (book.id to book)
+        release(before.coverPath)
         return Try.Success(Unit)
     }
 
@@ -105,9 +116,15 @@ class FakeBookRepository : BookRepository {
 
     override suspend fun delete(id: Long): Try<Unit> {
         failWith?.let { return Try.Failure(it) }
-        if (id !in books.value) return Try.Failure(AppError.NotFound)
+        val before = books.value[id] ?: return Try.Failure(AppError.NotFound)
         books.value = books.value - id
+        release(before.coverPath)
         return Try.Success(Unit)
+    }
+
+    /** Deletes [path] when no book names it, as the real store does after every write. */
+    private fun release(path: String?) {
+        if (path != null && books.value.values.none { it.coverPath == path }) deletedCovers += path
     }
 
     override fun observeCategories(): Flow<List<String>> =

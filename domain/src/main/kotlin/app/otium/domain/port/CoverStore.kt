@@ -3,9 +3,13 @@ package app.otium.domain.port
 import app.otium.domain.error.Try
 
 /**
- * Keeps book covers on the device. A cover is saved once, when the user adds a book, and the
+ * Puts book covers on the device. A cover is saved once, when the user adds a book, and the
  * returned path is what the book stores; nothing is fetched again to show it. Only covers of
  * books in the user's own library are ever stored.
+ *
+ * A stored cover is handed straight to [app.otium.domain.repo.BookRepository.add] or
+ * [app.otium.domain.repo.BookRepository.update], which owns it from then on and deletes it once
+ * no book names it.
  */
 interface CoverStore {
     /**
@@ -15,16 +19,10 @@ interface CoverStore {
      */
     suspend fun saveFromUrl(url: String): Try<String>
 
-    /** Stores a picture the user chose. Fails with `InvalidInput("cover")` if it is not usable. */
-    suspend fun saveFromBytes(bytes: ByteArray): Try<String>
-
     /**
      * Stores a picture the user picked from the gallery or took with the camera, given its
      * location on the device (a content or file URI). Large photos are scaled down to cover size.
      * Fails with `InvalidInput("cover")` when it cannot be read or is not a usable picture.
      */
     suspend fun saveFromDevice(uri: String): Try<String>
-
-    /** Deletes a stored cover. Succeeds when it is already gone; refuses any other file. */
-    suspend fun delete(path: String): Try<Unit>
 }

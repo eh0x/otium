@@ -71,8 +71,7 @@ class RetryPendingLookups(
             updatedAt = clock.nowMillis(),
             needsLookup = false,
         )
-        val saved = books.update(updated) is Try.Success
-        if (!saved && coverPath != null) covers.delete(coverPath)
-        return saved
+        // The book store deletes the cover again if this fails, or the one it replaces.
+        return books.update(updated) is Try.Success
     }
 }

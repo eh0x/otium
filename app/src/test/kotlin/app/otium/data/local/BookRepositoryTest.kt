@@ -14,6 +14,7 @@ import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.SortOrder
 import app.otium.domain.usecase.DeriveStatus
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -37,7 +38,7 @@ class BookRepositoryTest {
             ApplicationProvider.getApplicationContext(),
             OtiumDatabase::class.java,
         ).allowMainThreadQueries().build()
-        repo = RoomBookRepository(db.bookDao(), CoverFiles(COVERS))
+        repo = RoomBookRepository(db.bookDao(), CoverFiles(COVERS), Dispatchers.Unconfined)
     }
 
     @After

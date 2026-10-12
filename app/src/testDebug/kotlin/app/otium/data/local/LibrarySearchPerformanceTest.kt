@@ -3,12 +3,15 @@ package app.otium.data.local
 import androidx.room.Room
 import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
+import app.otium.data.cover.CoverFiles
 import app.otium.data.repo.RoomBookRepository
 import app.otium.debug.SyntheticBooks
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.SortOrder
+import java.io.File
 import kotlin.system.measureTimeMillis
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -36,7 +39,7 @@ class LibrarySearchPerformanceTest {
             ApplicationProvider.getApplicationContext(),
             OtiumDatabase::class.java,
         ).allowMainThreadQueries().build()
-        repo = RoomBookRepository(db.bookDao(), ApplicationProvider.getApplicationContext())
+        repo = RoomBookRepository(db.bookDao(), CoverFiles(File("covers")), Dispatchers.IO)
     }
 
     @After

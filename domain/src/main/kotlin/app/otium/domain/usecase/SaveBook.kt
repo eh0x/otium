@@ -18,8 +18,8 @@ import app.otium.domain.repo.BookRepository
  * ISBN that belongs to another book is rejected with that book's id.
  *
  * The chosen cover is put in the cover store here, once. A remote cover that cannot be downloaded
- * never stops the save: the book is kept without one. Any cover stored for a save that then fails
- * is removed again, so nothing is left behind.
+ * never stops the save: the book is kept without one. The stored cover goes to the book store with
+ * the book, which deletes it if the save fails and deletes the cover it replaces.
  */
 class SaveBook(
     private val books: BookRepository,
@@ -54,7 +54,7 @@ class SaveBook(
                 updatedAt = now,
                 userEdited = edited || candidate.source == BookSource.MANUAL,
             ).withDetailsOf(candidate, isbn13)
-            books.add(book).also { if (it is Try.Failure) discard(stored) }
+            books.add(book)
         }
 
     /**
@@ -74,12 +74,7 @@ class SaveBook(
                     userEdited = true,
                     needsLookup = false,
                 )
-                books.update(updated).also { result ->
-                    when (result) {
-                        is Try.Success -> replaceOldCover(existing.coverPath, stored.path)
-                        is Try.Failure -> discard(stored)
-                    }
-                }
+                books.update(updated)
             }
         }
 
@@ -100,8 +95,8 @@ class SaveBook(
         }
     }
 
-    /** The cover a book ends up with. [isNew] when this save put the file in the store. */
-    private data class StoredCover(val path: String?, val sourceUrl: String?, val isNew: Boolean)
+    /** The cover a book ends up with. */
+    private data class StoredCover(val path: String?, val sourceUrl: String?)
 
     /**
      * Puts the chosen cover in the store. A remote cover that cannot be downloaded leaves the book
@@ -109,29 +104,19 @@ class SaveBook(
      */
     private suspend fun store(cover: CoverChoice, existing: Book?): Try<StoredCover> {
         val stored = when (cover) {
-            CoverChoice.None -> StoredCover(null, null, isNew = false)
+            CoverChoice.None -> StoredCover(null, null)
 
-            CoverChoice.Unchanged ->
-                StoredCover(existing?.coverPath, existing?.coverSourceUrl, isNew = false)
+            CoverChoice.Unchanged -> StoredCover(existing?.coverPath, existing?.coverSourceUrl)
 
             is CoverChoice.Picked -> return covers.saveFromDevice(cover.uri)
-                .map { StoredCover(it, null, isNew = true) }
+                .map { StoredCover(it, null) }
 
             is CoverChoice.Remote -> when (val result = covers.saveFromUrl(cover.url)) {
-                is Try.Success -> StoredCover(result.value, cover.url, isNew = true)
-                is Try.Failure -> StoredCover(null, cover.url, isNew = false)
+                is Try.Success -> StoredCover(result.value, cover.url)
+                is Try.Failure -> StoredCover(null, cover.url)
             }
         }
         return Try.Success(stored)
-    }
-
-    /** Removes a cover this save stored when the save itself then failed. */
-    private suspend fun discard(stored: StoredCover) {
-        if (stored.isNew && stored.path != null) covers.delete(stored.path)
-    }
-
-    private suspend fun replaceOldCover(oldPath: String?, newPath: String?) {
-        if (oldPath != null && oldPath != newPath) covers.delete(oldPath)
     }
 
     /** The normalized ISBN-13, or null when the candidate has no ISBN at all. */
