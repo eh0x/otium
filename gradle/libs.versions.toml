@@ -25,7 +25,7 @@ room = "2.8.5"
 work = "2.12.0"
 camerax = "1.6.2"
 datastore = "1.2.1"
-exifinterface = "1.4.1"
+exifinterface = "1.4.2"
 
 # DI
 hilt = "2.60.1"
