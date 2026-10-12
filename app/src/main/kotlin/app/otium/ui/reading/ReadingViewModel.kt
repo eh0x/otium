@@ -8,7 +8,7 @@ import app.otium.domain.model.BookStatus
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.SortOrder
-import app.otium.domain.usecase.ObserveLibrary
+import app.otium.domain.repo.BookRepository
 import app.otium.domain.usecase.ReadingTracker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -31,17 +31,19 @@ internal const val QUICK_PAGES = 10
  */
 @HiltViewModel
 class ReadingViewModel @Inject constructor(
-    observeLibrary: ObserveLibrary,
+    books: BookRepository,
     private val reading: ReadingTracker,
 ) : ViewModel() {
 
     private val error = MutableStateFlow<AppError?>(null)
 
     val uiState: StateFlow<ReadingUiState> = combine(
-        observeLibrary(
+        books.observeLibrary(
             LibraryFilter(status = BookStatus.IN_PROGRESS, sort = SortOrder.LAST_UPDATED),
         ),
-        observeLibrary(LibraryFilter(status = BookStatus.READ, sort = SortOrder.LAST_UPDATED)),
+        books.observeLibrary(
+            LibraryFilter(status = BookStatus.READ, sort = SortOrder.LAST_UPDATED),
+        ),
         error,
     ) { open, finished, failure ->
         ReadingUiState(

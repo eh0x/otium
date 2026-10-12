@@ -3,7 +3,6 @@ package app.otium.ui.reading
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
-import app.otium.domain.usecase.ObserveLibrary
 import app.otium.domain.usecase.ReadingTracker
 import app.otium.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,7 +23,7 @@ class ReadingViewModelTest {
     private val repo = FakeBookRepository()
 
     private fun viewModel() = ReadingViewModel(
-        observeLibrary = ObserveLibrary(repo),
+        books = repo,
         reading = ReadingTracker(repo, FixedClock()),
     )
 
