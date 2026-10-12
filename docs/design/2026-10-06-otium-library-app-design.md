@@ -67,6 +67,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D26 | Restore is one use case, `LibraryRestore` (prepare, confirm, cancel), that keeps the downloaded backup file to itself; `RestorePreview` carries only the slot and what the backup holds | `PrepareRestore` and `RestoreBackup` passing a `RestorePreview` that held the `File`, with the ViewModel deleting it | No file handle reaches UI state; the download is deleted in one place on confirm, cancel or a new prepare. The archiver and restorer ports stay separate: their data-layer implementations are separate and separately tested (architecture review 2026-10-11) |
 | D27 | The book repository owns the cover files its books name: after any write it deletes a cover no book names any more (replaced, its book deleted, or brought by a write that failed). `CoverStore` only stores covers (download, gallery or camera); covers a dead process left behind are purged at start-up once a day old | Use cases deleting covers themselves through `CoverStore.delete`; moving downloads and picks into the repository too | Deleting a book used to leave its cover on disk forever, and rollback code was repeated in `SaveBook` and `RetryPendingLookups`. Downloads stay out of the Room repository, which would otherwise need the HTTP client and image decoding (architecture review 2026-10-11) |
 | D28 | Import and export through files the owner picks: Goodreads and StoryGraph CSV in, Goodreads-format CSV and Otium JSON (versioned, every field but the cover file) out. `ImportLibrary` previews the file, then adds every new book straight away from what the file holds; books with an ISBN also wait for a lookup (D11). Books whose ISBN is already in the library are skipped. Progress comes from the shelf: read means finished, reading means page 1, and without a page count the shelf becomes a tag | Each row through the confirm screen; an automatic title search for rows without an ISBN; replacing the library as a restore does | Ranked first for v2 in the team session of 2026-10-10: it brings existing libraries in and lets the owner leave freely. A confirm screen per row does not scale to hundreds of books, and a title search picks wrong editions without anyone checking. `RetryPendingLookups` now ends a run at the first offline, rate-limit or timeout failure, so a large import does not keep asking a service that refuses |
+| D29 | The library database stays unencrypted by the app in v1: it is protected by the Android sandbox and file-based encryption of user storage. What leaves the phone is protected where it leaves (passphrase-encrypted backups, D23); exports are plain files and the screen says so. The threat model is in 4.8 | SQLCipher now; SQLCipher in v2 with a migration; encrypting chosen fields | SQLCipher adds a native library per ABI and its own key: a lost or invalidated key would lose the whole library, a worse outcome for one owner than the threats it answers. Against a locked phone, other apps and the network, the platform already protects the file; against an unlocked phone, an app lock helps where database encryption does not. Revisit when private notes arrive or the threat model changes (team session 2026-10-10, open decision 2; review S4) |
 
 ## 4. Final Design
 
@@ -430,12 +431,62 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 
 ### 4.6 Play Store readiness
 
-- Privacy policy page: data stays on device; Drive appdata only; book APIs receive ISBN or
-  title/author only.
-- Data safety form: no data collected by the developer.
+- Privacy policy page, written from 4.8 so that it claims only what the app does:
+  - The library stays on the device. The developer runs no server and receives nothing.
+  - Google Books and Open Library receive the ISBN, or the title and author typed in a search,
+    together with the device's IP address, as any web request does. Their own privacy policies
+    apply to that request.
+  - Backups go to the user's own Google Drive app data folder, and only when the user connects
+    Drive. They are encrypted only when the user sets a passphrase.
+  - Import and export read and write only files the user picks; an export is not encrypted.
+- Data safety form: no data collected or shared by the developer. The book lookups are requests
+  the user starts to a third-party service over https; say so in the form's notes rather than
+  declaring them as developer collection.
 - Release build with R8, signing config kept out of git, Play App Signing.
 - Permissions: camera (justified in-app), `INTERNET`, `POST_NOTIFICATIONS` (backup failure notice).
 - Follow Google Books terms: required attribution, cover caching limited to the user's own library.
+
+### 4.8 Threat model and data protection
+
+Otium keeps one person's catalogue of their own books: titles, authors, tags, shelves, reading
+progress and dates. It is not health or payment data, but reading choices can reveal beliefs,
+health or politics, so it is treated as private. Protection follows from the threats a solo,
+offline app actually faces (D29).
+
+Where the data is and how it is protected:
+
+| Data | Where | Protection | Revisit when |
+|------|-------|------------|--------------|
+| Library database (Room) | App sandbox | Android sandbox; file-based encryption of user storage, which keeps it unreadable until the first unlock after a restart | Private notes (Marginalia) arrive, or the threat model changes |
+| Cover pictures | App sandbox | As the database | As the database |
+| Backup settings, Drive account email | DataStore in the sandbox | As the database; excluded from Android backup and device transfer | — |
+| Backup key | DataStore in the sandbox | Only stored wrapped by an AES-256-GCM key in the Android Keystore that cannot be read out; never stored with or as the passphrase | — |
+| Drive backup | The user's Drive `appDataFolder` (`drive.appdata` scope) | Only Otium can open the folder. With a passphrase: Argon2id (64 MiB, 3 passes), then Tink streaming AES-256-GCM, before upload | Offering encryption by default (open) |
+| Export file (CSV, JSON) | Wherever the user saves it | None: a plain file for other apps. The screen says so, and CSV cells are escaped against formula injection | An encrypted Otium JSON export (open) |
+| Network traffic | Google Books, Open Library, Google Drive | https only, system certificate authorities, no cleartext (network security config) | — |
+
+Threats and how they are met:
+
+- **Lost or stolen phone, locked.** Covered by the lock screen, the sandbox and file-based
+  encryption. Nothing in Otium weakens them: Android's cloud backup and device transfer exclude
+  all app data.
+- **Other apps on the phone.** Covered by the sandbox. Every exported component other than the
+  launcher must be guarded by a permission, and the file provider shares only the camera's cache
+  folder; `ManifestPolicyTest` checks both on the merged manifest.
+- **Someone watching the network.** Covered by https everywhere. There are no certificate pins,
+  on purpose: Google rotates its certificates, and a stale pin would break lookups and backups.
+- **Someone with the user's Google account.** Covered for backups with a passphrase set. A backup
+  without one can be read by anyone who signs in as the user and restores with Otium.
+- **Leaks through the developer.** None possible: no backend, accounts, analytics, crash reporting
+  or logging of library data.
+
+Not covered, and accepted for v1:
+
+- **An unlocked phone in someone else's hands.** They can browse and export the library. An
+  optional app lock (biometric or device credential) is the next step.
+- **A rooted or compromised phone.** Out of scope: no app-level measure holds once the sandbox
+  is gone.
+- **Export files once they leave the app.** The user chose where they went.
 
 ## 5. Risks
 
