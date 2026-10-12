@@ -348,6 +348,7 @@
     <string name="import_done_dismiss">Done</string>
     <string name="export_heading">Export your library</string>
     <string name="export_note">A CSV file uses the columns of a Goodreads export: it opens in a spreadsheet and imports into most reading apps. A JSON file keeps everything Otium knows and imports back into Otium. Cover pictures are not included.</string>
+    <string name="export_unencrypted">Export files are not encrypted. Keep them somewhere private.</string>
     <string name="export_csv_action">Export as CSV</string>
     <string name="export_json_action">Export as JSON</string>
     <string name="export_in_progress">Exporting…</string>

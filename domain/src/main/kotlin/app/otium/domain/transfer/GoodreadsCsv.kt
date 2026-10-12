@@ -40,6 +40,7 @@ object GoodreadsCsv {
     fun matches(table: CsvTable): Boolean = table.hasColumns(TITLE, AUTHOR, EXCLUSIVE_SHELF)
 
     fun read(table: CsvTable): List<ImportRow> = table.records.map { record ->
+        val text = { column: String -> FileValues.fromSpreadsheetSafe(record[column]) }
         val exclusive = record[EXCLUSIVE_SHELF].lowercase()
         val shelf = when (exclusive) {
             SHELF_READ -> Shelf.READ
@@ -51,18 +52,18 @@ object GoodreadsCsv {
             it.isNotEmpty() && it != SHELF_READ && it != SHELF_READING && it != SHELF_TO_READ
         }
         ImportRow(
-            title = record[TITLE],
-            authors = (listOf(record[AUTHOR]) + FileValues.names(record[ADDITIONAL_AUTHORS]))
+            title = text(TITLE),
+            authors = (listOf(text(AUTHOR)) + FileValues.names(text(ADDITIONAL_AUTHORS)))
                 .filter(String::isNotEmpty)
                 .distinct(),
             isbn = FileValues.isbnOrNull(record[ISBN13]) ?: FileValues.isbnOrNull(record[ISBN]),
             isbn10 = FileValues.isbnOrNull(record[ISBN]),
-            publisher = record[PUBLISHER].ifEmpty { null },
+            publisher = text(PUBLISHER).ifEmpty { null },
             publishedYear = FileValues.positiveIntOrNull(record[YEAR])
                 ?: FileValues.positiveIntOrNull(record[ORIGINAL_YEAR]),
             totalPages = FileValues.positiveIntOrNull(record[PAGES]) ?: 0,
             shelf = shelf,
-            tags = (FileValues.names(record[SHELVES]) + listOfNotNull(customShelf))
+            tags = (FileValues.names(text(SHELVES)) + listOfNotNull(customShelf))
                 .filterNot { it.lowercase() in setOf(SHELF_READ, SHELF_READING, SHELF_TO_READ) }
                 .distinct(),
             addedAt = FileValues.parseDate(record[DATE_ADDED]),
@@ -72,9 +73,15 @@ object GoodreadsCsv {
     /**
      * [books] in Goodreads' columns. ISBNs are written as `="…"`, as Goodreads does, so that a
      * spreadsheet keeps their leading zeros. Categories and tags both become shelves, with spaces
-     * turned into hyphens, since Goodreads shelf names have none.
+     * turned into hyphens, since Goodreads shelf names have none. Text a book's owner typed (or a
+     * service returned) is made [FileValues.spreadsheetSafe], so a title such as
+     * `=HYPERLINK(…)` stays text when the file is opened in a spreadsheet.
      */
     fun write(books: List<Book>): String = Csv.write(listOf(COLUMNS) + books.map(::record))
+
+    /** The columns that hold free text. The rest are ISBN guards, numbers, dates or fixed words. */
+    private val TEXT_COLUMNS =
+        setOf(TITLE, AUTHOR, AUTHOR_LAST_FIRST, ADDITIONAL_AUTHORS, PUBLISHER, SHELVES)
 
     private fun record(book: Book): List<String> {
         val values = mapOf(
@@ -100,18 +107,16 @@ object GoodreadsCsv {
             READ_COUNT to if (book.status == BookStatus.READ) "1" else "0",
             OWNED_COPIES to "1",
         )
-        return COLUMNS.map { values[it].orEmpty() }
+        return COLUMNS.map { column ->
+            val value = values[column].orEmpty()
+            if (column in TEXT_COLUMNS) FileValues.spreadsheetSafe(value) else value
+        }
     }
 
     /** "Ursula K. Le Guin" becomes "Guin, Ursula K. Le": a guess, as Goodreads' own is. */
     private fun lastFirst(name: String): String {
         val parts = name.trim().split(Regex("""\s+"""))
-        return if (parts.size <
-            2
-        ) {
-            name.trim()
-        } else {
-            "${parts.last()}, ${parts.dropLast(1).joinToString(" ")}"
-        }
+        if (parts.size < 2) return name.trim()
+        return "${parts.last()}, ${parts.dropLast(1).joinToString(" ")}"
     }
 }

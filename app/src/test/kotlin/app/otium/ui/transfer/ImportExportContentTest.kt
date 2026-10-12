@@ -63,6 +63,15 @@ class ImportExportContentTest {
     }
 
     @Test
+    fun `the export says calmly that its files are not encrypted`() {
+        show(ImportExportUiState(bookCount = 3))
+
+        rule.onNodeWithText("Export files are not encrypted. Keep them somewhere private.")
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun `where to find an export is explained`() {
         show(ImportExportUiState())
 

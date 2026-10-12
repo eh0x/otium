@@ -8,6 +8,24 @@ import java.time.ZoneOffset
 internal object FileValues {
     private val DATE = Regex("""(\d{4})[/-](\d{1,2})[/-](\d{1,2})""")
 
+    /** First characters that make a spreadsheet read a cell as a formula (OWASP, CSV injection). */
+    private val FORMULA_STARTS = setOf('=', '+', '-', '@', '\t', '\r')
+
+    /**
+     * [value] as a cell no spreadsheet runs as a formula: one starting with `=`, `+`, `-`, `@`, a
+     * tab or a carriage return gets a leading apostrophe, which spreadsheets show as text.
+     */
+    fun spreadsheetSafe(value: String): String =
+        if (value.firstOrNull() in FORMULA_STARTS) "'$value" else value
+
+    /** Undoes [spreadsheetSafe], so an exported title reads back as it was. */
+    fun fromSpreadsheetSafe(value: String): String =
+        if (value.length > 1 && value[0] == '\'' && value[1] in FORMULA_STARTS) {
+            value.substring(1)
+        } else {
+            value
+        }
+
     /** Epoch milliseconds at the start of the day written as `2024/03/05` or `2024-03-05`. */
     fun parseDate(value: String): Long? {
         val (year, month, day) = DATE.find(value)?.destructured ?: return null

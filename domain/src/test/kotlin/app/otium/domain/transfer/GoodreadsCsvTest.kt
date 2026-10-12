@@ -107,6 +107,40 @@ class GoodreadsCsvTest {
     }
 
     @Test
+    fun `text a spreadsheet would run as a formula is written as text`() {
+        val hostile = book(isbn13 = "9780306406157", title = "=HYPERLINK(\"http://x\")")
+            .copy(
+                authors = listOf("+Plus", "@At"),
+                publisher = "-Minus",
+                tags = listOf("\tTabbed"),
+            )
+
+        val record = CsvTable.of(GoodreadsCsv.write(listOf(hostile)))!!.records.single()
+
+        assertEquals("'=HYPERLINK(\"http://x\")", record["Title"])
+        assertEquals("'+Plus", record["Author"])
+        assertEquals("'@At", record["Additional Authors"])
+        assertEquals("'-Minus", record["Publisher"])
+        assertEquals("the isbn guard stays a formula", "=\"9780306406157\"", record["ISBN13"])
+    }
+
+    @Test
+    fun `escaped text reads back as it was and plain text is untouched`() {
+        val books = listOf(
+            book(title = "=SUM(A1:A9)").copy(authors = listOf("-Dash"), publisher = "@Press"),
+            book(title = "It's fine").copy(publisher = "O'Reilly"),
+        )
+
+        val back = GoodreadsCsv.read(CsvTable.of(GoodreadsCsv.write(books))!!)
+
+        assertEquals("=SUM(A1:A9)", back[0].title)
+        assertEquals(listOf("-Dash"), back[0].authors)
+        assertEquals("@Press", back[0].publisher)
+        assertEquals("It's fine", back[1].title)
+        assertEquals("O'Reilly", back[1].publisher)
+    }
+
+    @Test
     fun `the export writes every goodreads column with the isbn guard`() {
         val text = GoodreadsCsv.write(listOf(book(isbn13 = "9780306406157")))
         val record = CsvTable.of(text)!!.records.single()

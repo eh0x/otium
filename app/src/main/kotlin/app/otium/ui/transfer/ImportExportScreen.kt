@@ -254,5 +254,7 @@ private fun ExportSection(state: ImportExportUiState, actions: ImportExportActio
         enabled = state.canExport,
         modifier = Modifier.fillMaxWidth(),
     )
+    // Said once, calmly, where the choice is made; the export itself is never blocked.
+    if (state.bookCount > 0) Note(stringResource(R.string.export_unencrypted))
     if (state.exporting != null) BusyIndicator(stringResource(R.string.export_in_progress))
 }
