@@ -15,6 +15,9 @@ sealed interface AppError {
     data object CorruptBackup : AppError
     data object NothingToBackUp : AppError
 
+    /** The file is not a library export Otium can read (Goodreads, StoryGraph or Otium). */
+    data object UnknownFileFormat : AppError
+
     /** The backup is encrypted with a key this device does not hold; ask for its passphrase. */
     data object PassphraseRequired : AppError
 

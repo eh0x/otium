@@ -102,6 +102,10 @@ data object ReadingRoute
 @Serializable
 data object SettingsRoute
 
+/** Importing a library from Goodreads, StoryGraph or Otium, and exporting this one. */
+@Serializable
+data object ImportExportRoute
+
 /** Debug builds only: the theme catalog. */
 @Serializable
 data object CatalogRoute

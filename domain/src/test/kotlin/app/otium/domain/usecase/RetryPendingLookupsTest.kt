@@ -103,7 +103,7 @@ class RetryPendingLookupsTest {
     }
 
     @Test
-    fun `a lookup that cannot reach the services stays pending for a later try`() = runTest {
+    fun `a lookup that cannot reach the services ends the run and stays pending`() = runTest {
         pending(dune)
         pending(emma)
         metadata.isbnResults[dune] = Try.Failure(AppError.Offline)
@@ -111,9 +111,49 @@ class RetryPendingLookupsTest {
 
         val result = retry()
 
+        assertEquals(Try.Success(PendingLookups(resolved = 0, remaining = 2)), result)
+        assertEquals("the next book is not asked for", listOf(dune), metadata.lookedUp)
+        assertTrue(repo.all.all { it.needsLookup })
+    }
+
+    @Test
+    fun `a rate limited service is not asked again in the same run`() = runTest {
+        pending(dune)
+        pending(emma)
+        metadata.isbnResults[dune] = found("Dune")
+        metadata.isbnResults[emma] = Try.Failure(AppError.RateLimited)
+        pending("9780306406157")
+
+        val result = retry()
+
+        assertEquals(Try.Success(PendingLookups(resolved = 1, remaining = 2)), result)
+        assertEquals(listOf(dune, emma), metadata.lookedUp)
+    }
+
+    @Test
+    fun `any other failure keeps that book waiting and moves on`() = runTest {
+        pending(dune)
+        pending(emma)
+        metadata.isbnResults[dune] = Try.Failure(AppError.Unexpected("bad answer"))
+        metadata.isbnResults[emma] = found("Emma")
+
+        val result = retry()
+
         assertEquals(Try.Success(PendingLookups(resolved = 1, remaining = 1)), result)
         assertTrue(repo.all.single { it.isbn13 == dune }.needsLookup)
         assertEquals("Emma", repo.all.single { it.isbn13 == emma }.title)
+    }
+
+    @Test
+    fun `a finished book stays finished when the lookup changes its page count`() = runTest {
+        pending(dune) { copy(totalPages = 300, currentPage = 300) }
+        metadata.isbnResult = found("Dune", pages = 412)
+
+        retry()
+
+        val saved = repo.all.single()
+        assertEquals(412, saved.totalPages)
+        assertEquals(412, saved.currentPage)
     }
 
     @Test
