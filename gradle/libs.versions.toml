@@ -5,7 +5,7 @@ kotlin = "2.4.20"
 ksp = "2.3.12"
 
 # Code quality
-spotless = "8.10.3"
+spotless = "8.10.4"
 ktlint = "1.8.0"
 detekt = "1.23.8"
 # Code coverage for the JVM and Android unit tests, merged into one report.
