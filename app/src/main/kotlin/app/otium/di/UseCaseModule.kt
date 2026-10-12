@@ -6,7 +6,6 @@ import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.usecase.AddBookFromIsbn
-import app.otium.domain.usecase.ObserveLibrary
 import app.otium.domain.usecase.ReadingTracker
 import app.otium.domain.usecase.RetryPendingLookups
 import app.otium.domain.usecase.SaveBook
@@ -20,9 +19,6 @@ import dagger.hilt.components.SingletonComponent
 @Module
 @InstallIn(SingletonComponent::class)
 object UseCaseModule {
-
-    @Provides
-    fun provideObserveLibrary(repository: BookRepository) = ObserveLibrary(repository)
 
     @Provides
     fun provideReadingTracker(repository: BookRepository, clock: Clock) =

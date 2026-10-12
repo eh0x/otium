@@ -9,7 +9,6 @@ import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
 import app.otium.domain.port.LibraryPreferences
 import app.otium.domain.repo.BookRepository
-import app.otium.domain.usecase.ObserveLibrary
 import app.otium.ui.debug.DebugTools
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,8 +39,7 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
  */
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val observeLibrary: ObserveLibrary,
-    repository: BookRepository,
+    private val repository: BookRepository,
     private val preferences: LibraryPreferences,
     private val debugTools: DebugTools,
 ) : ViewModel() {
@@ -72,7 +70,7 @@ class LibraryViewModel @Inject constructor(
     /** Null until the first result, which is how "loading" is told from "empty". */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val books: Flow<List<BookSummary>?> = filter
-        .flatMapLatest { observeLibrary(it) }
+        .flatMapLatest { repository.observeLibrary(it) }
         .map<List<BookSummary>, List<BookSummary>?> { it }
         .onStart { emit(null) }
 
