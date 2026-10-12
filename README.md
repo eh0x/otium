@@ -86,7 +86,7 @@ statistics, social features, and several copies of the same ISBN.
   own Google Drive for backup.
 - Backups use the private app data folder of your Drive (the `drive.appdata` scope), which the app
   alone can read. With a passphrase set, the backup is encrypted (Argon2id and AES-256-GCM) before
-  it leaves the phone.
+  it leaves the phone. Otium suggests a passphrase once you connect Drive.
 - Import and export read and write only the files you pick.
 
 ## Status

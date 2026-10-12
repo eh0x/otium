@@ -20,9 +20,15 @@ enum class PassphraseProblem { TOO_SHORT, MISMATCH }
 
 /** A passphrase the screen is asking for. */
 sealed interface PassphrasePrompt {
-    /** Turn encryption on, or change the passphrase when [changing]. */
-    data class Set(val changing: Boolean, val problem: PassphraseProblem? = null) :
-        PassphrasePrompt
+    /**
+     * Turn encryption on, or change the passphrase when [changing]. When [suggested], the app
+     * opened it by itself as the recommended choice, and the owner may say "Not now".
+     */
+    data class Set(
+        val changing: Boolean,
+        val problem: PassphraseProblem? = null,
+        val suggested: Boolean = false,
+    ) : PassphrasePrompt
 
     /** Unlock the encrypted backup in [slot] to restore it; [wrong] after a failed try. */
     data class Unlock(val slot: BackupSlot, val wrong: Boolean = false) : PassphrasePrompt

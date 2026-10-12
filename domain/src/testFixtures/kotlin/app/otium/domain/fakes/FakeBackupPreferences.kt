@@ -34,4 +34,12 @@ class FakeBackupPreferences(initial: BackupSettings = BackupSettings(), failedRu
     override suspend fun setFailedRuns(count: Int) {
         failed = count
     }
+
+    private val suggested = MutableStateFlow(false)
+
+    override val encryptionSuggested: MutableStateFlow<Boolean> = suggested
+
+    override suspend fun markEncryptionSuggested() {
+        suggested.value = true
+    }
 }

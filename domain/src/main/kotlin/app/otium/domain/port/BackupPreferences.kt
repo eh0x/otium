@@ -20,4 +20,12 @@ interface BackupPreferences {
     suspend fun failedRuns(): Int
 
     suspend fun setFailedRuns(count: Int)
+
+    /**
+     * True once the owner has been offered backup encryption. The offer is made once, when Drive
+     * is connected without it (D32), and never repeated.
+     */
+    val encryptionSuggested: Flow<Boolean>
+
+    suspend fun markEncryptionSuggested()
 }

@@ -78,6 +78,19 @@ class PassphrasePanelTest {
     }
 
     @Test
+    fun `the suggestion says why, keeps the warning, and can be put off`() {
+        show(PassphrasePrompt.Set(changing = false, suggested = true))
+
+        rule.onNodeWithText("Protect your backups").assertIsDisplayed()
+        rule.onNodeWithText("Recommended.", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("If you forget this passphrase", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("Cancel").assertDoesNotExist()
+        rule.onNodeWithText("Not now").performClick()
+
+        assertEquals(1, dismissed)
+    }
+
+    @Test
     fun `the warning and the minimum length are spelled out`() {
         show(PassphrasePrompt.Set(changing = false))
 

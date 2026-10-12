@@ -3,6 +3,9 @@ package app.otium.ui.backup
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeBackupEncryption
+import app.otium.domain.fakes.FakeBackupPreferences
+import app.otium.domain.fakes.FakeDriveAuth
+import app.otium.domain.model.DriveAuthState
 import app.otium.domain.port.BackupEncryption
 import app.otium.domain.usecase.SetBackupPassphrase
 import app.otium.testing.MainDispatcherRule
@@ -26,9 +29,84 @@ class EncryptionViewModelTest {
     val mainRule = MainDispatcherRule()
 
     private val encryption = FakeBackupEncryption()
+    private val driveAuth = FakeDriveAuth()
+    private val preferences = FakeBackupPreferences()
 
     private fun viewModel(with: BackupEncryption = encryption) =
-        EncryptionViewModel(with, SetBackupPassphrase(with))
+        EncryptionViewModel(with, SetBackupPassphrase(with), driveAuth, preferences)
+
+    // --- Suggested by default (D32) ---
+
+    @Test
+    fun `once Drive is connected without encryption, the passphrase is suggested once`() = runTest {
+        driveAuth.state.value = DriveAuthState.SignedIn("reader@example.org")
+        val vm = viewModel()
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        assertEquals(
+            PassphrasePrompt.Set(changing = false, suggested = true),
+            vm.uiState.value.prompt,
+        )
+        assertTrue(preferences.encryptionSuggested.value)
+    }
+
+    @Test
+    fun `not now closes the suggestion for good`() = runTest {
+        driveAuth.state.value = DriveAuthState.SignedIn(null)
+        val first = viewModel()
+        screenOpen(first)
+        advanceUntilIdle()
+
+        first.onPassphraseDismissed()
+        val again = viewModel()
+        screenOpen(again)
+        advanceUntilIdle()
+
+        assertNull(first.uiState.value.prompt)
+        assertNull(again.uiState.value.prompt)
+    }
+
+    @Test
+    fun `nothing is suggested before Drive is connected, and it is once it is`() = runTest {
+        val vm = viewModel()
+        screenOpen(vm)
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.prompt)
+
+        driveAuth.state.value = DriveAuthState.SignedIn(null)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.prompt?.suggested == true)
+    }
+
+    @Test
+    fun `nothing is suggested when encryption is already on`() = runTest {
+        encryption.turnOn("correct horse")
+        driveAuth.state.value = DriveAuthState.SignedIn(null)
+        val vm = viewModel()
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.prompt)
+        assertFalse(preferences.encryptionSuggested.value)
+    }
+
+    @Test
+    fun `accepting the suggestion turns encryption on as usual`() = runTest {
+        driveAuth.state.value = DriveAuthState.SignedIn(null)
+        val vm = viewModel()
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        vm.enter("correct horse battery")
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isOn)
+        assertNull(vm.uiState.value.prompt)
+    }
+
+    // --- Setting and changing the passphrase ---
 
     private fun TestScope.screenOpen(vm: EncryptionViewModel) {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
