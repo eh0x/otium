@@ -176,4 +176,27 @@ class MergeMetadataTest {
         )!!
         assertEquals("9780306406157", merged.isbn13)
     }
+
+    @Test
+    fun `the series comes from whichever source names one`() {
+        val merged = MergeMetadata(
+            google = google(),
+            openLibrary = openLibrary().copy(series = "Dune", seriesIndex = 1.0),
+        )!!
+
+        assertEquals("Dune", merged.series)
+        assertEquals(1.0, merged.seriesIndex)
+    }
+
+    @Test
+    fun `a series no source names is guessed from the subtitle`() {
+        val merged = MergeMetadata(
+            google = google(title = "Caliban's War").copy(subtitle = "Book 2 of The Expanse"),
+            openLibrary = null,
+        )!!
+
+        assertEquals("The Expanse", merged.series)
+        assertEquals(2.0, merged.seriesIndex)
+        assertEquals("Book 2 of The Expanse", merged.subtitle)
+    }
 }

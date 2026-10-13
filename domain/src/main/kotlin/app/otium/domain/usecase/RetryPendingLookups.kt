@@ -75,6 +75,12 @@ class RetryPendingLookups(
             isbn10 = found.isbn10 ?: book.isbn10,
             title = found.title.ifBlank { book.title },
             subtitle = found.subtitle,
+            series = book.series ?: found.series,
+            seriesIndex = if (book.series != null || book.seriesIndex != null) {
+                book.seriesIndex
+            } else {
+                found.seriesIndex
+            },
             authors = found.authors,
             publisher = found.publisher,
             publishedYear = found.publishedYear,

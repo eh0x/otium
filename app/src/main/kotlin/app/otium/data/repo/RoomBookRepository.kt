@@ -18,6 +18,7 @@ import app.otium.domain.error.map
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.SeriesProgress
 import app.otium.domain.model.SortKeys
 import app.otium.domain.model.SortOrder
 import app.otium.domain.port.DispatcherProvider
@@ -36,6 +37,7 @@ import kotlinx.coroutines.withContext
  * a write is deleted here (see [BookRepository]); covers left behind by a process that died are
  * found by [OrphanedCovers].
  */
+@Suppress("TooManyFunctions") // One function per BookRepository method, plus the cover rule.
 class RoomBookRepository internal constructor(
     private val dao: BookDao,
     private val covers: CoverFiles,
@@ -120,6 +122,12 @@ class RoomBookRepository internal constructor(
 
     override fun observeAuthors(): Flow<List<String>> = dao.observeAllAuthors()
 
+    override fun observeSeries(): Flow<List<SeriesProgress>> =
+        dao.observeSeriesProgress().map { rows ->
+            rows.map { SeriesProgress(it.name, it.books, it.read, it.fraction) }
+                .sortedWith(compareBy(SortKeys.bySeriesName) { it.name })
+        }
+
     /** Converts database exceptions to [AppError.Storage]; cancellation is rethrown. */
     private inline fun <T> guard(block: () -> Try<T>): Try<T> = try {
         block()
@@ -180,11 +188,12 @@ private suspend fun BookDao.findExistingOrNull(isbn13: String) = try {
 }
 
 /**
- * Catalogue order for title and author, which SQL cannot express simply. Other orders come
- * from the query as they are. The sort is stable, so ties keep the query's order.
+ * Catalogue order for title, author and series, which SQL cannot express simply. Other orders
+ * come from the query as they are. The sort is stable, so ties keep the query's order.
  */
 private fun List<BookSummary>.sortedFor(sort: SortOrder): List<BookSummary> = when (sort) {
     SortOrder.TITLE -> sortedWith(SortKeys.byTitle)
     SortOrder.AUTHOR -> sortedWith(SortKeys.byAuthor)
+    SortOrder.SERIES -> sortedWith(SortKeys.bySeries)
     SortOrder.RECENTLY_ADDED, SortOrder.LAST_UPDATED, SortOrder.PROGRESS -> this
 }

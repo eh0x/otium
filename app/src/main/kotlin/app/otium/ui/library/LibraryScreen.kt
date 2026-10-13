@@ -87,6 +87,7 @@ fun LibraryContent(state: LibraryUiState, actions: LibraryActions, modifier: Mod
 internal fun SortOrder.labelRes(): Int = when (this) {
     SortOrder.TITLE -> R.string.sort_title
     SortOrder.AUTHOR -> R.string.sort_author
+    SortOrder.SERIES -> R.string.sort_series
     SortOrder.RECENTLY_ADDED -> R.string.sort_by_recently_added
     SortOrder.LAST_UPDATED -> R.string.sort_last_updated
     SortOrder.PROGRESS -> R.string.sort_progress
@@ -97,6 +98,7 @@ internal fun SortOrder.labelRes(): Int = when (this) {
 internal fun SortOrder.byLabelRes(): Int = when (this) {
     SortOrder.TITLE -> R.string.sort_by_title
     SortOrder.AUTHOR -> R.string.sort_by_author
+    SortOrder.SERIES -> R.string.sort_by_series
     SortOrder.RECENTLY_ADDED -> R.string.sort_by_recently_added
     SortOrder.LAST_UPDATED -> R.string.sort_by_last_updated
     SortOrder.PROGRESS -> R.string.sort_by_progress

@@ -58,9 +58,14 @@ object LibraryQueryBuilder {
             args += author
         }
 
+        filter.series?.let { series ->
+            conditions += "b.series = ?"
+            args += series
+        }
+
         val where = if (conditions.isEmpty()) "" else " WHERE " + conditions.joinToString(" AND ")
         val sql = "SELECT b.id, b.title, b.authors, b.coverPath, b.coverSourceUrl, " +
-            "b.currentPage, b.totalPages, $SHELF AS shelf, b.updatedAt " +
+            "b.currentPage, b.totalPages, $SHELF AS shelf, b.updatedAt, b.series, b.seriesIndex " +
             "FROM book b$where ORDER BY ${orderBy(filter.sort)}"
         return BuiltQuery(sql, args)
     }
@@ -89,13 +94,17 @@ object LibraryQueryBuilder {
     }
 
     /**
-     * SQL order. The repository re-sorts title and author with the domain SortKeys, which file
-     * titles without their leading article and authors by surname.
+     * SQL order. The repository re-sorts title, author and series with the domain SortKeys, which
+     * file titles and series without their leading article and authors by surname.
      */
     private fun orderBy(sort: SortOrder): String = when (sort) {
         SortOrder.TITLE -> "b.title COLLATE NOCASE ASC, b.id ASC"
 
         SortOrder.AUTHOR -> "b.authors COLLATE NOCASE ASC, b.title COLLATE NOCASE ASC, b.id ASC"
+
+        SortOrder.SERIES ->
+            "b.series IS NULL, b.series COLLATE NOCASE ASC, b.seriesIndex IS NULL, " +
+                "b.seriesIndex ASC, b.title COLLATE NOCASE ASC, b.id ASC"
 
         SortOrder.RECENTLY_ADDED -> "b.addedAt DESC, b.id DESC"
 

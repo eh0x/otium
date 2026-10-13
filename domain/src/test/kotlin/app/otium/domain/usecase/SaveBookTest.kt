@@ -299,4 +299,39 @@ class SaveBookTest {
 
         assertEquals(Try.Failure(AppError.NotFound), result)
     }
+
+    // --- Series ---
+
+    @Test
+    fun `the series and its number are saved, trimmed`() = runTest {
+        val id = (add(candidate().copy(series = "  Dune ", seriesIndex = 1.5)) as Try.Success).value
+
+        val saved = repo.all.single { it.id == id }
+        assertEquals("Dune", saved.series)
+        assertEquals(1.5, saved.seriesIndex)
+    }
+
+    @Test
+    fun `a blank series and an impossible number are saved as none`() = runTest {
+        listOf(-1.0, Double.NaN, Double.POSITIVE_INFINITY).forEachIndexed { i, number ->
+            val given = candidate(isbn13 = null, title = "Book $i")
+                .copy(series = " ", seriesIndex = number)
+            val id = (add(given) as Try.Success).value
+
+            val saved = repo.all.single { it.id == id }
+            assertNull(saved.series)
+            assertNull(saved.seriesIndex)
+        }
+    }
+
+    @Test
+    fun `editing replaces the series`() = runTest {
+        val existing = repo.seed(book(series = "Dune", seriesIndex = 1.0))
+
+        saveBook.update(existing.id, candidate(isbn13 = null), CoverChoice.Unchanged)
+
+        val saved = repo.all.single()
+        assertNull(saved.series)
+        assertNull(saved.seriesIndex)
+    }
 }

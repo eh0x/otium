@@ -10,7 +10,9 @@ data class LibraryFilter(
     val categories: Set<String> = emptySet(),
     val tags: Set<String> = emptySet(),
     val author: String? = null,
+    /** Only books in this series, matched exactly. */
+    val series: String? = null,
     val sort: SortOrder = SortOrder.TITLE,
 )
 
-enum class SortOrder { TITLE, AUTHOR, RECENTLY_ADDED, LAST_UPDATED, PROGRESS }
+enum class SortOrder { TITLE, AUTHOR, SERIES, RECENTLY_ADDED, LAST_UPDATED, PROGRESS }

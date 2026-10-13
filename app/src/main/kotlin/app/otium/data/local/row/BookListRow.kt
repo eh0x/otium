@@ -12,4 +12,6 @@ data class BookListRow(
     /** The first category, by position. */
     val shelf: String?,
     val updatedAt: Long,
+    val series: String?,
+    val seriesIndex: Double?,
 )

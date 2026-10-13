@@ -2,6 +2,7 @@ package app.otium.data.remote.openlibrary
 
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
+import app.otium.domain.usecase.ParseSeries
 import java.util.Locale
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -51,11 +52,14 @@ private fun JsonElement?.text(): String? = when (this) {
  */
 internal fun EditionDto.toCandidate(authorNames: List<String>, work: WorkDto?): BookCandidate {
     val isbn13 = isbn13.firstOrNull { it.isNotBlank() }
+    val series = ParseSeries.fromCatalogue(series)
     return BookCandidate(
         isbn13 = isbn13,
         isbn10 = isbn10.firstOrNull { it.isNotBlank() },
         title = title.orEmpty().trim(),
         subtitle = subtitle?.trim()?.takeIf(String::isNotEmpty),
+        series = series?.name,
+        seriesIndex = series?.index,
         authors = authorNames,
         publisher = publishers.firstOrNull { it.isNotBlank() }?.trim(),
         publishedYear = publishDate?.let { YEAR.find(it)?.groupValues?.get(1)?.toInt() },

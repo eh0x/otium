@@ -9,6 +9,10 @@ data class Book(
     val isbn10: String?,
     val title: String,
     val subtitle: String?,
+    /** The series the book belongs to, as the owner names it. */
+    val series: String? = null,
+    /** The book's number in [series]; fractional for in-between books such as 1.5. */
+    val seriesIndex: Double? = null,
     val authors: List<String>,
     val publisher: String?,
     val publishedYear: Int?,

@@ -9,6 +9,10 @@ data class BookCandidate(
     val isbn10: String? = null,
     val title: String = "",
     val subtitle: String? = null,
+    /** The series the book belongs to, as free text. */
+    val series: String? = null,
+    /** The book's number in [series]; fractional for in-between books such as 1.5. */
+    val seriesIndex: Double? = null,
     val authors: List<String> = emptyList(),
     val publisher: String? = null,
     val publishedYear: Int? = null,

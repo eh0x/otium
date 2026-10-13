@@ -16,6 +16,7 @@ import app.otium.data.local.entity.BookTagCrossRef
 import app.otium.data.local.entity.CategoryEntity
 import app.otium.data.local.entity.TagEntity
 import app.otium.data.local.row.BookListRow
+import app.otium.data.local.row.SeriesProgressRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -112,6 +113,22 @@ abstract class BookDao {
 
     @Query("SELECT name FROM tag ORDER BY name COLLATE NOCASE")
     abstract fun observeAllTags(): Flow<List<String>>
+
+    /**
+     * Each series with its book count, read count and average progress. The CASE expressions
+     * must stay in sync with the domain DeriveStatus and SeriesProgress rules (covered by a
+     * boundary test in BookRepositoryTest).
+     */
+    @Query(
+        "SELECT series AS name, COUNT(*) AS books, " +
+            "SUM(CASE WHEN totalPages > 0 AND currentPage >= totalPages THEN 1 ELSE 0 END) " +
+            "AS read, " +
+            "AVG(CASE WHEN currentPage <= 0 OR totalPages <= 0 THEN 0.0 " +
+            "WHEN currentPage >= totalPages THEN 1.0 " +
+            "ELSE currentPage * 1.0 / totalPages END) AS fraction " +
+            "FROM book WHERE series IS NOT NULL GROUP BY series",
+    )
+    abstract fun observeSeriesProgress(): Flow<List<SeriesProgressRow>>
 
     // --- Writes ---
 

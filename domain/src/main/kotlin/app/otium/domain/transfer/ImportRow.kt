@@ -22,6 +22,8 @@ data class ImportRow(
     val isbn: String? = null,
     val isbn10: String? = null,
     val subtitle: String? = null,
+    val series: String? = null,
+    val seriesIndex: Double? = null,
     val publisher: String? = null,
     val publishedYear: Int? = null,
     val language: String? = null,

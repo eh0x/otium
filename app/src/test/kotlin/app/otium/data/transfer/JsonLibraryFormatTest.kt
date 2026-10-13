@@ -27,12 +27,16 @@ class JsonLibraryFormatTest {
             totalPages = 412,
             currentPage = 40,
             addedAt = 11L,
+            series = "Dune Chronicles",
+            seriesIndex = 1.5,
         ).copy(isbn10 = "0441013597", source = BookSource.GOOGLE, userEdited = true)
 
         val row = rows(format.write(listOf(book), exportedAt = 99L)).single()
 
         assertEquals("Dune", row.title)
         assertEquals("Book one", row.subtitle)
+        assertEquals("Dune Chronicles", row.series)
+        assertEquals(1.5, row.seriesIndex)
         assertEquals(listOf("Frank Herbert"), row.authors)
         assertEquals("9780441013593", row.isbn)
         assertEquals("0441013597", row.isbn10)

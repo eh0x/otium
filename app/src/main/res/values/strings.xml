@@ -66,6 +66,8 @@
 
     <string name="sort_title">Title</string>
     <string name="sort_author">Author</string>
+    <string name="sort_series">Series</string>
+    <string name="sort_by_series">By series</string>
     <string name="sort_last_updated">Recently updated</string>
     <string name="sort_progress">Progress</string>
     <string name="sort_by_title">By title</string>
