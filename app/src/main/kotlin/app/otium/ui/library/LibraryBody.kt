@@ -29,6 +29,8 @@ import androidx.compose.ui.unit.sp
 import app.otium.R
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryViewMode
+import app.otium.domain.model.SeriesProgress
+import app.otium.ui.common.formatSeriesNumber
 import app.otium.ui.components.Hairline
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.hairlineBottom
@@ -62,14 +64,22 @@ internal fun LibraryBody(state: LibraryUiState, actions: LibraryActions) {
     }
 }
 
-/** "On the desk" first, then one shelf per category. */
+/**
+ * "On the desk" first, then one shelf per category, or per series when grouped by series. A
+ * chosen series shows its progress above everything.
+ */
 @Composable
 private fun Shelves(state: LibraryUiState, actions: LibraryActions) {
-    val unshelved = stringResource(R.string.library_unshelved)
+    val unnamed = stringResource(
+        if (state.groupsBySeries) R.string.library_no_series else R.string.library_unshelved,
+    )
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 6.dp, bottom = 18.dp),
     ) {
+        state.seriesSummary?.let { summary ->
+            item(key = "series-summary", contentType = "summary") { SeriesSummary(summary) }
+        }
         if (state.desk.isNotEmpty()) {
             item(key = "desk", contentType = "shelf") {
                 ShelfSection(
@@ -86,7 +96,7 @@ private fun Shelves(state: LibraryUiState, actions: LibraryActions) {
         }
         items(items = state.shelves, key = { "shelf:${it.name}" }, contentType = { "shelf" }) {
             ShelfSection(
-                name = it.name ?: unshelved,
+                name = it.name ?: unnamed,
                 count = pluralStringResource(
                     R.plurals.library_book_count,
                     it.books.size,
@@ -94,6 +104,7 @@ private fun Shelves(state: LibraryUiState, actions: LibraryActions) {
                 ),
                 books = it.books,
                 actions = actions,
+                series = it.series,
             )
         }
     }
@@ -105,6 +116,7 @@ private fun ShelfSection(
     count: String,
     books: List<BookSummary>,
     actions: LibraryActions,
+    series: SeriesProgress? = null,
 ) {
     val divider = MaterialTheme.otiumColors.divider
     Column(modifier = Modifier.padding(bottom = 8.dp)) {
@@ -132,6 +144,9 @@ private fun ShelfSection(
                 modifier = Modifier.alignByBaseline(),
             )
         }
+        series?.let {
+            SeriesProgressLine(it, Modifier.padding(start = 22.dp, end = 22.dp, bottom = 8.dp))
+        }
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,28 +169,71 @@ private fun ShelfSection(
     }
 }
 
-/** The index: rows in sort order, under letter headings when sorted by title. */
+/**
+ * The index: rows in sort order, under letter headings when sorted by title and under series
+ * headings, with each book's number in its series, when sorted by series.
+ */
 @Composable
 private fun Index(state: LibraryUiState, actions: LibraryActions) {
     val positions = remember(state.books) {
         state.books.withIndex().associate { (index, book) -> book.id to index + 1 }
     }
+    val noSeries = stringResource(R.string.library_no_series)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, bottom = 18.dp),
     ) {
+        state.seriesSummary?.let { summary ->
+            item(key = "series-summary", contentType = "summary") {
+                SeriesSummary(summary, horizontalPadding = 0.dp)
+            }
+        }
         state.index.forEach { group ->
-            group.letter?.let { letter ->
-                item(key = "letter:$letter", contentType = "letter") { LetterHeading(letter) }
+            when (val heading = group.heading) {
+                is GroupHeading.Letter -> item(key = "letter:${heading.letter}", "letter") {
+                    LetterHeading(heading.letter)
+                }
+
+                is GroupHeading.Series -> item(key = "series:${heading.progress.name}", "series") {
+                    SeriesHeading(heading.progress.name, heading.progress)
+                }
+
+                GroupHeading.NoSeries -> item(key = "no-series", contentType = "series") {
+                    SeriesHeading(noSeries, progress = null)
+                }
+
+                null -> Unit
             }
             items(items = group.books, key = { it.id }, contentType = { "book" }) { book ->
+                val number = book.seriesIndex?.takeIf { state.groupsBySeries }
                 IndexRow(
                     book = book,
                     position = positions.getValue(book.id),
                     onOpen = { actions.onOpenBook(book.id) },
+                    seriesNumber = number?.let {
+                        stringResource(R.string.series_book_number, formatSeriesNumber(it))
+                    },
                 )
             }
         }
+    }
+}
+
+/** A series over its books in the index: its name, then the owner's progress through it. */
+@Composable
+private fun SeriesHeading(name: String, progress: SeriesProgress?) {
+    Column(
+        modifier = Modifier.padding(top = 18.dp, bottom = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.semantics { heading() },
+        )
+        progress?.let { SeriesProgressLine(it) }
+        Hairline()
     }
 }
 

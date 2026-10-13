@@ -48,6 +48,7 @@ class LibraryViewModel @Inject constructor(
         val query: String = "",
         val status: BookStatus? = null,
         val sort: SortOrder = SortOrder.TITLE,
+        val series: String? = null,
     )
 
     private val controls = MutableStateFlow(Controls())
@@ -63,6 +64,7 @@ class LibraryViewModel @Inject constructor(
         LibraryFilter(
             query = debouncedQuery,
             status = current.status,
+            series = current.series,
             sort = current.sort,
         )
     }.distinctUntilChanged()
@@ -79,7 +81,8 @@ class LibraryViewModel @Inject constructor(
         books,
         preferences.viewMode,
         repository.observeCount(),
-    ) { current, loaded, viewMode, count ->
+        repository.observeSeries(),
+    ) { current, loaded, viewMode, count, series ->
         LibraryUiState(
             query = current.query,
             status = current.status,
@@ -89,6 +92,8 @@ class LibraryViewModel @Inject constructor(
             totalBooks = count,
             isLoading = loaded == null,
             debugToolsAvailable = debugTools.isAvailable,
+            series = current.series,
+            knownSeries = series,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -102,7 +107,13 @@ class LibraryViewModel @Inject constructor(
 
     fun onSortSelected(sort: SortOrder) = controls.update { it.copy(sort = sort) }
 
-    /** Clears search and the status filter. Sort order and view mode are presentation, so they stay. */
+    /** Narrows the library to one series; null shows every book again. */
+    fun onSeriesSelected(series: String?) = controls.update { it.copy(series = series) }
+
+    /**
+     * Clears search and the status and series filters. Sort order and view mode are
+     * presentation, so they stay.
+     */
     fun onClearFilters() = controls.update { Controls(sort = it.sort) }
 
     fun onViewModeSelected(mode: LibraryViewMode) {

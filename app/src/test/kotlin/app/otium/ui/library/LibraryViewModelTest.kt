@@ -194,6 +194,40 @@ class LibraryViewModelTest {
     // --- View mode ---
 
     @Test
+    fun `a chosen series filters the library and the series list comes with progress`() = runTest {
+        repo.seed(book(title = "Dune", series = "Dune", totalPages = 10, currentPage = 10))
+        repo.seed(book(title = "Dune Messiah", series = "Dune", totalPages = 10))
+        repo.seed(book(title = "Emma"))
+        val vm = viewModel()
+        screenOpen(vm)
+
+        vm.onSeriesSelected("Dune")
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals("Dune", repo.lastFilter?.series)
+        assertEquals("Dune", state.series)
+        assertEquals(listOf("Dune", "Dune Messiah"), state.books.map { it.title })
+        assertEquals(listOf("Dune"), state.knownSeries.map { it.name })
+        assertEquals(1, state.knownSeries.single().read)
+    }
+
+    @Test
+    fun `clear filters also clears the series`() = runTest {
+        repo.seed(book(title = "Dune", series = "Dune"))
+        val vm = viewModel()
+        screenOpen(vm)
+        vm.onSeriesSelected("Dune")
+        advanceUntilIdle()
+
+        vm.onClearFilters()
+        advanceUntilIdle()
+
+        assertEquals(null, vm.uiState.value.series)
+        assertEquals(null, repo.lastFilter?.series)
+    }
+
+    @Test
     fun `the view mode is read from preferences and saved when changed`() = runTest {
         prefs.setViewMode(LibraryViewMode.LIST)
         val vm = viewModel()

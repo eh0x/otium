@@ -45,6 +45,7 @@ fun LibraryScreen(
             onQueryChange = viewModel::onQueryChange,
             onStatusSelected = viewModel::onStatusSelected,
             onSortSelected = viewModel::onSortSelected,
+            onSeriesSelected = viewModel::onSeriesSelected,
             onClearFilters = viewModel::onClearFilters,
             onViewModeSelected = viewModel::onViewModeSelected,
             onOpenBook = onOpenBook,
@@ -105,8 +106,13 @@ internal fun SortOrder.byLabelRes(): Int = when (this) {
 }
 
 /** The orders offered in the arrange sheet. Recently added stays in the model but is not offered. */
-internal val ArrangeSortOrders =
-    listOf(SortOrder.TITLE, SortOrder.AUTHOR, SortOrder.LAST_UPDATED, SortOrder.PROGRESS)
+internal val ArrangeSortOrders = listOf(
+    SortOrder.TITLE,
+    SortOrder.AUTHOR,
+    SortOrder.SERIES,
+    SortOrder.LAST_UPDATED,
+    SortOrder.PROGRESS,
+)
 
 @Composable
 private fun MoreMenu(actions: LibraryActions, modifier: Modifier = Modifier) {
