@@ -21,6 +21,8 @@ fun BookEntity.toDomain(
     isbn10 = isbn10,
     title = title,
     subtitle = subtitle,
+    series = series,
+    seriesIndex = seriesIndex,
     authors = authors,
     publisher = publisher,
     publishedYear = publishedYear,
@@ -59,6 +61,8 @@ fun Book.toEntity(covers: CoverFiles) = BookEntity(
     updatedAt = updatedAt,
     userEdited = userEdited,
     needsLookup = needsLookup,
+    series = series,
+    seriesIndex = seriesIndex,
 )
 
 fun BookListRow.toSummary(covers: CoverFiles) = BookSummary(
@@ -72,4 +76,6 @@ fun BookListRow.toSummary(covers: CoverFiles) = BookSummary(
     status = DeriveStatus(currentPage, totalPages),
     shelf = shelf,
     updatedAt = updatedAt,
+    series = series,
+    seriesIndex = seriesIndex,
 )

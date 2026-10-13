@@ -213,9 +213,24 @@ Tables:
   string), `publisher`, `publishedYear`, `language`, `description`, `totalPages`, `currentPage`
   (default 0), `coverPath` (the cover's file name in the covers directory), `coverSourceUrl`,
   `source` (google/openlibrary/manual), `addedAt`,
-  `updatedAt`, `userEdited`, `needsLookup`.
+  `updatedAt`, `userEdited`, `needsLookup`, `series` (free text, nullable) and `seriesIndex`
+  (`REAL`, nullable, so a novella can be 1.5). The series columns arrived in schema version 2.
 - `author`, `book_author`; `category`, `book_category`; `tag`, `book_tag`.
-- `book_fts`: FTS4 over title, subtitle, authors.
+- `book_fts`: FTS4 over title, subtitle, authors, series.
+
+Series:
+
+- Neither metadata service has a structured series field. Open Library editions carry a free-text
+  `series` list (seen in the recorded `edition-dune.json`: `"Dune (1); Dune Chronicles, Book 1"`);
+  `ParseSeries` reads it, and otherwise guesses from the subtitle, then the title. In a subtitle
+  or title a number only counts after a keyword ("Book 2", "Vol. 3", "#3"), so "1984" is never a
+  series number. The guess only prefills the confirm form, which the owner edits; the subtitle is
+  left as it is.
+- Series names match exactly; "Dune" and "dune" are two series until the owner edits one.
+- Progress through a series counts only the books in the library: "2 of 5 read", and a bar that
+  averages each book's progress (a read book counts as 1, a book in progress as its share of
+  pages). `BookDao.observeSeriesProgress` computes it in SQL, ignoring filters, and must agree with
+  the domain `SeriesProgress` (a boundary test checks it).
 - Cover files belong to the book repository (D27). A write that leaves a cover no book names
   deletes it; `OrphanedCovers` deletes, at start-up, any cover file older than a day that no book
   names, holding the backup lock so a restore never loses a cover it has just copied in.
@@ -223,7 +238,8 @@ Tables:
 Search and filters:
 
 - FTS prefix match on the text input, debounced about 200 ms.
-- Filters combine with AND: status, categories (multi), tags (multi), optional author. Within the
+- Filters combine with AND: status, categories (multi), tags (multi), optional author, optional
+  series. Within the
   categories group and within the tags group a book matches when it has any of the selected values
   (OR inside a group, AND between groups).
 - Text input becomes an FTS4 prefix query over letters and digits only (`the hobb` becomes
@@ -234,7 +250,9 @@ Search and filters:
   by any book are deleted.
 - Status in SQL: not started = `currentPage = 0`; in progress = `0 < currentPage < totalPages`; read
   = `currentPage >= totalPages` (with `totalPages > 0`).
-- Sort: title, author, recently added, last updated, progress.
+- Sort: title, author, series, recently added, last updated, progress. By author, an author's
+  series stay together in reading order. By series, shelves and the index stand under one heading
+  per series with its progress, books outside a series last.
 - A single DAO query is built from a `LibraryFilter` object and returns `Flow<List<BookListRow>>` (a
   Room projection kept in `data/local/`). `RoomBookRepository` maps rows to the domain
   `BookSummary`, so the UI never sees Room types.

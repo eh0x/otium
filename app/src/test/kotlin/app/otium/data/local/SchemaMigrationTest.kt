@@ -53,4 +53,37 @@ class SchemaMigrationTest {
         )
             .close()
     }
+
+    @Test
+    fun `version 1 books survive the move to series, without one and still searchable`() {
+        helper.createDatabase("series-migration", 1).use { db ->
+            db.execSQL(
+                "INSERT INTO book (id, isbn13, isbn10, title, subtitle, authors, publisher, " +
+                    "publishedYear, language, description, totalPages, currentPage, coverPath, " +
+                    "coverSourceUrl, source, addedAt, updatedAt, userEdited, needsLookup) " +
+                    "VALUES (7, '9780261103344', NULL, 'The Hobbit', 'There and Back Again', " +
+                    "'J. R. R. Tolkien', NULL, 1937, 'en', NULL, 310, 12, NULL, NULL, " +
+                    "'MANUAL', 1, 2, 0, 0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate("series-migration", 2, true, *OtiumDatabase.migrations)
+            .use { db ->
+                db.query("SELECT title, series, seriesIndex, currentPage FROM book").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("The Hobbit", it.getString(0))
+                    assertTrue(it.isNull(1))
+                    assertTrue(it.isNull(2))
+                    assertEquals(12, it.getInt(3))
+                }
+                db.query("SELECT rowid FROM book_fts WHERE book_fts MATCH 'back*'").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(7L, it.getLong(0))
+                }
+                db.execSQL("UPDATE book SET series = 'Middle-earth' WHERE id = 7")
+                db.query("SELECT rowid FROM book_fts WHERE book_fts MATCH 'middle*'").use {
+                    assertTrue(it.moveToFirst())
+                }
+            }
+    }
 }

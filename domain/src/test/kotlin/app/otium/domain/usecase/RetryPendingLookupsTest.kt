@@ -189,4 +189,32 @@ class RetryPendingLookupsTest {
         assertEquals(Try.Success(PendingLookups(resolved = 0, remaining = 0)), result)
         assertTrue(metadata.lookedUp.isEmpty())
     }
+
+    @Test
+    fun `a found series fills a book that has none`() = runTest {
+        pending(dune)
+        metadata.isbnResult = Try.Success(
+            found("Dune").value.copy(series = "Dune Chronicles", seriesIndex = 1.0),
+        )
+
+        retry()
+
+        val saved = repo.all.single()
+        assertEquals("Dune Chronicles", saved.series)
+        assertEquals(1.0, saved.seriesIndex)
+    }
+
+    @Test
+    fun `a series the book already has is kept`() = runTest {
+        pending(dune) { copy(series = "Dune", seriesIndex = 1.0) }
+        metadata.isbnResult = Try.Success(
+            found("Dune").value.copy(series = "Dune Chronicles", seriesIndex = 2.0),
+        )
+
+        retry()
+
+        val saved = repo.all.single()
+        assertEquals("Dune", saved.series)
+        assertEquals(1.0, saved.seriesIndex)
+    }
 }

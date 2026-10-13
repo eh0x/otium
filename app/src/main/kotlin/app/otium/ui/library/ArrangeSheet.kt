@@ -22,7 +22,7 @@ import app.otium.ui.components.OtiumSheet
 import app.otium.ui.components.labelRes
 import app.otium.ui.theme.otiumColors
 
-/** Status and sort for the library. Choices apply at once; Done only closes the sheet. */
+/** Status, series and sort for the library. Choices apply at once; Done only closes the sheet. */
 @Composable
 internal fun ArrangeSheet(state: LibraryUiState, actions: LibraryActions, onDismiss: () -> Unit) {
     OtiumSheet(onDismissRequest = onDismiss) {
@@ -47,6 +47,7 @@ internal fun ArrangeSheet(state: LibraryUiState, actions: LibraryActions, onDism
                 )
             }
         }
+        if (state.knownSeries.isNotEmpty()) SeriesChoice(state, actions)
         SectionLabel(stringResource(R.string.arrange_sort))
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -68,6 +69,34 @@ internal fun ArrangeSheet(state: LibraryUiState, actions: LibraryActions, onDism
                 .padding(top = 22.dp)
                 .heightIn(min = 48.dp),
         )
+    }
+}
+
+/** One chip per series, with how many of its books are read: "Dune · 2/5". */
+@Composable
+private fun SeriesChoice(state: LibraryUiState, actions: LibraryActions) {
+    SectionLabel(stringResource(R.string.arrange_series))
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OtiumChip(
+            label = stringResource(R.string.filter_status_all),
+            selected = state.series == null,
+            onClick = { actions.onSeriesSelected(null) },
+        )
+        state.knownSeries.forEach { series ->
+            OtiumChip(
+                label = stringResource(
+                    R.string.series_chip,
+                    series.name,
+                    series.read,
+                    series.books,
+                ),
+                selected = state.series == series.name,
+                onClick = { actions.onSeriesSelected(series.name) },
+            )
+        }
     }
 }
 

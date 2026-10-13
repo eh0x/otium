@@ -144,6 +144,8 @@ class SaveBook(
         isbn10 = candidate.isbn10?.let(::normalizeIsbn10),
         title = candidate.title.trim(),
         subtitle = candidate.subtitle.cleaned(),
+        series = candidate.series.cleaned(),
+        seriesIndex = candidate.seriesIndex?.takeIf { it.isFinite() && it >= 0 },
         authors = candidate.authors.map(String::trim).filter(String::isNotEmpty),
         publisher = candidate.publisher.cleaned(),
         publishedYear = candidate.publishedYear,

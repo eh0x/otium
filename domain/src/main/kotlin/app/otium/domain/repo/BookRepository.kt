@@ -4,6 +4,7 @@ import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.SeriesProgress
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -44,4 +45,10 @@ interface BookRepository {
     fun observeTags(): Flow<List<String>>
 
     fun observeAuthors(): Flow<List<String>>
+
+    /**
+     * Every series in the library with the owner's progress through it, ignoring any filter.
+     * Ordered by name as filed (see [app.otium.domain.model.SortKeys.series]).
+     */
+    fun observeSeries(): Flow<List<SeriesProgress>>
 }

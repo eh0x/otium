@@ -4,8 +4,11 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookSource
+import app.otium.domain.model.BookStatus
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.SeriesProgress
+import app.otium.domain.model.SortKeys
 import app.otium.domain.port.Clock
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.usecase.DeriveStatus
@@ -64,6 +67,8 @@ class FakeBookRepository : BookRepository {
                         status = DeriveStatus(it.currentPage, it.totalPages),
                         shelf = it.categories.firstOrNull(),
                         updatedAt = it.updatedAt,
+                        series = it.series,
+                        seriesIndex = it.seriesIndex,
                     )
                 }
         }
@@ -135,6 +140,22 @@ class FakeBookRepository : BookRepository {
 
     override fun observeAuthors(): Flow<List<String>> =
         books.map { map -> map.values.flatMap { it.authors }.distinct().sorted() }
+
+    override fun observeSeries(): Flow<List<SeriesProgress>> = books.map { map ->
+        map.values.filter { it.series != null }
+            .groupBy { it.series!! }
+            .map { (name, inSeries) ->
+                SeriesProgress(
+                    name = name,
+                    books = inSeries.size,
+                    read = inSeries.count { it.status == BookStatus.READ },
+                    fraction = inSeries.sumOf {
+                        SeriesProgress.bookProgress(it.currentPage, it.totalPages)
+                    } / inSeries.size,
+                )
+            }
+            .sortedWith(compareBy(SortKeys.bySeriesName) { it.name })
+    }
 }
 
 class FixedClock(var now: Long = 1_000L) : Clock {
@@ -149,12 +170,16 @@ fun book(
     currentPage: Int = 0,
     categories: List<String> = emptyList(),
     tags: List<String> = emptyList(),
+    series: String? = null,
+    seriesIndex: Double? = null,
 ) = Book(
     id = id,
     isbn13 = isbn13,
     isbn10 = null,
     title = title,
     subtitle = null,
+    series = series,
+    seriesIndex = seriesIndex,
     authors = listOf("Some Author"),
     publisher = null,
     publishedYear = null,

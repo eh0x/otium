@@ -11,6 +11,7 @@ import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.SeriesProgress
 import app.otium.domain.model.SortOrder
 import app.otium.domain.usecase.DeriveStatus
 import java.io.File
@@ -647,6 +648,103 @@ class BookRepositoryTest {
     @Test
     fun `observeBook for an unknown id emits null`() = runTest {
         assertNull(repo.observeBook(123L).first())
+    }
+
+    // --- Series ---
+
+    @Test
+    fun `a book keeps its series in the book and in its summary`() = runTest {
+        val id = add(testBook(title = "Dune", series = "Dune Chronicles", seriesIndex = 1.5))
+
+        val book = (repo.getBook(id) as Try.Success).value
+        val summary = repo.observeLibrary(LibraryFilter()).first().single()
+        assertEquals("Dune Chronicles", book.series)
+        assertEquals(1.5, book.seriesIndex)
+        assertEquals("Dune Chronicles", summary.series)
+        assertEquals(1.5, summary.seriesIndex)
+    }
+
+    @Test
+    fun `series filter matches the name exactly and combines with status`() = runTest {
+        add(testBook(title = "Dune", series = "Dune", totalPages = 10, currentPage = 10))
+        add(testBook(title = "Messiah", series = "Dune", totalPages = 10))
+        add(testBook(title = "Lowercase", series = "dune"))
+        add(testBook(title = "Emma"))
+
+        assertEquals(setOf("Dune", "Messiah"), titles(LibraryFilter(series = "Dune")).toSet())
+        assertEquals(
+            listOf("Dune"),
+            titles(LibraryFilter(series = "Dune", status = BookStatus.READ)),
+        )
+    }
+
+    @Test
+    fun `sort by series groups each series in number order, books outside a series last`() =
+        runTest {
+            add(testBook(title = "Emma"))
+            add(testBook(title = "Caliban's War", series = "The Expanse", seriesIndex = 2.0))
+            add(testBook(title = "Children of Dune", series = "Dune", seriesIndex = 3.0))
+            add(testBook(title = "Leviathan Wakes", series = "The Expanse", seriesIndex = 1.0))
+            add(testBook(title = "Dune", series = "Dune", seriesIndex = 1.0))
+
+            assertEquals(
+                listOf("Dune", "Children of Dune", "Leviathan Wakes", "Caliban's War", "Emma"),
+                titles(LibraryFilter(sort = SortOrder.SERIES)),
+            )
+        }
+
+    @Test
+    fun `search matches the series name`() = runTest {
+        add(testBook(title = "Guards! Guards!", series = "Discworld", seriesIndex = 8.0))
+        add(testBook(title = "Emma"))
+
+        assertEquals(listOf("Guards! Guards!"), titles(LibraryFilter(query = "discw")))
+    }
+
+    @Test
+    fun `series progress agrees with SeriesProgress for boundary values`() = runTest {
+        val pages = listOf(0, 1, 5, 10, 11)
+        val totals = listOf(0, 10)
+        for (total in totals) {
+            for (current in pages) {
+                add(testBook(series = "S", totalPages = total, currentPage = current))
+            }
+        }
+        add(testBook(title = "Outside"))
+
+        val expected = SeriesProgress.of(
+            "S",
+            repo.observeLibrary(LibraryFilter(series = "S")).first(),
+        )
+        val actual = repo.observeSeries().first().single()
+
+        assertEquals(expected.copy(fraction = 0.0), actual.copy(fraction = 0.0))
+        assertEquals(expected.fraction, actual.fraction, 1e-9)
+    }
+
+    @Test
+    fun `series are listed by name as filed, whatever the library filter`() = runTest {
+        add(testBook(series = "The Expanse"))
+        add(testBook(series = "Dune"))
+        add(testBook(series = "Abhorsen"))
+        add(testBook())
+
+        assertEquals(
+            listOf("Abhorsen", "Dune", "The Expanse"),
+            repo.observeSeries().first().map { it.name },
+        )
+    }
+
+    @Test
+    fun `series progress re-emits when progress changes`() = runTest {
+        val id = add(testBook(series = "Dune", totalPages = 100))
+
+        repo.observeSeries().test {
+            assertEquals(0, awaitItem().single().read)
+            repo.updateProgress(id, 100, 2L)
+            assertEquals(1, awaitUntil { it.single().read == 1 }.single().read)
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     private companion object {

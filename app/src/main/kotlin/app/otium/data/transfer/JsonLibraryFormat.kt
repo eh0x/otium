@@ -72,6 +72,8 @@ private data class LibraryFileDto(
 private data class BookDto(
     val title: String,
     val subtitle: String? = null,
+    val series: String? = null,
+    val seriesIndex: Double? = null,
     val authors: List<String> = emptyList(),
     val isbn13: String? = null,
     val isbn10: String? = null,
@@ -96,6 +98,8 @@ private data class BookDto(
         isbn = isbn13 ?: isbn10,
         isbn10 = isbn10,
         subtitle = subtitle,
+        series = series,
+        seriesIndex = seriesIndex,
         publisher = publisher,
         publishedYear = publishedYear,
         language = language,
@@ -115,6 +119,8 @@ private data class BookDto(
 private fun Book.toDto() = BookDto(
     title = title,
     subtitle = subtitle,
+    series = series,
+    seriesIndex = seriesIndex,
     authors = authors,
     isbn13 = isbn13,
     isbn10 = isbn10,

@@ -55,6 +55,18 @@
         <item quantity="other">%1$d open</item>
     </plurals>
     <string name="library_unshelved">Unshelved</string>
+    <string name="library_no_series">Not in a series</string>
+    <!-- Progress through the books of a series that are in the library: "2 of 5 read". -->
+    <plurals name="series_progress">
+        <item quantity="one">%1$d of %2$d read</item>
+        <item quantity="other">%1$d of %2$d read</item>
+    </plurals>
+    <!-- Read aloud for a series progress bar: "2 of 5 read, 47%". -->
+    <string name="series_progress_description">%1$s, %2$d%%</string>
+    <!-- A book's number in its series: "Book 2", "Book 1.5". -->
+    <string name="series_book_number">Book %1$s</string>
+    <!-- A filter chip for one series: "Dune · 2/5". -->
+    <string name="series_chip">%1$s · %2$d/%3$d</string>
     <!-- A book's place in the list, as in a library accession number: "001". -->
     <string name="library_accession">%1$03d</string>
     <string name="library_page_short">p. %1$d/%2$d</string>
@@ -66,6 +78,8 @@
 
     <string name="sort_title">Title</string>
     <string name="sort_author">Author</string>
+    <string name="sort_series">Series</string>
+    <string name="sort_by_series">By series</string>
     <string name="sort_last_updated">Recently updated</string>
     <string name="sort_progress">Progress</string>
     <string name="sort_by_title">By title</string>
@@ -80,6 +94,7 @@
     <string name="arrange_title">Arrange</string>
     <string name="arrange_status">Status</string>
     <string name="arrange_sort">Sort by</string>
+    <string name="arrange_series">Series</string>
 
     <!-- Book detail -->
     <string name="detail_back">Back</string>
@@ -153,6 +168,8 @@
     <string name="confirm_field_title">Title</string>
     <string name="confirm_field_title_required">A title is needed to save the book</string>
     <string name="confirm_field_subtitle">Subtitle</string>
+    <string name="confirm_field_series">Series</string>
+    <string name="confirm_field_series_number">No.</string>
     <string name="confirm_field_authors">Authors</string>
     <string name="confirm_field_list_hint">Separate names with commas</string>
     <string name="confirm_field_isbn">ISBN</string>

@@ -119,6 +119,8 @@ class ImportLibrary(
             isbn10 = isbn10?.takeIf { it.length == ISBN10_LENGTH && ValidateIsbn13(it).isValid() },
             title = title.trim(),
             subtitle = subtitle,
+            series = series?.trim()?.takeIf(String::isNotEmpty),
+            seriesIndex = seriesIndex?.takeIf { it.isFinite() && it >= 0 },
             authors = authors,
             publisher = publisher,
             publishedYear = publishedYear,

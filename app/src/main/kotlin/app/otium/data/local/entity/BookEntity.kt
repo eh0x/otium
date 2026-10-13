@@ -30,4 +30,7 @@ data class BookEntity(
     val updatedAt: Long,
     val userEdited: Boolean,
     val needsLookup: Boolean,
+    /** Added in schema version 2, so the columns sit after the version 1 ones. */
+    val series: String? = null,
+    val seriesIndex: Double? = null,
 )

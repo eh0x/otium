@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
@@ -40,6 +41,9 @@ import app.otium.ui.theme.otiumColors
 private const val MAX_TAG_SUGGESTIONS = 5
 private const val DESCRIPTION_MIN_LINES = 3
 
+// The series name takes three parts of the row, its number one.
+private const val SERIES_NAME_WEIGHT = 3f
+
 /**
  * Every editable field of the book. The essentials and the shelf come first; the rest sit under
  * "More details". Each change reports the whole new form.
@@ -69,6 +73,7 @@ internal fun ConfirmForm(
             supporting = R.string.confirm_field_list_hint,
             capitalization = KeyboardCapitalization.Words,
         )
+        SeriesFields(form, onFormChange)
         FormField(
             value = form.totalPages,
             onValueChange = { onFormChange(form.copy(totalPages = it.filter(Char::isDigit))) },
@@ -97,6 +102,32 @@ internal fun ConfirmForm(
             compact = true,
         )
         if (moreDetails) MoreDetails(form, knownTags, onFormChange)
+    }
+}
+
+/**
+ * The series and the book's number in it, side by side. A lookup may have guessed both from the
+ * subtitle, so they sit with the essentials where the owner sees the guess.
+ */
+@Composable
+private fun SeriesFields(form: BookForm, onFormChange: (BookForm) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FormField(
+            value = form.series,
+            onValueChange = { onFormChange(form.copy(series = it)) },
+            label = R.string.confirm_field_series,
+            capitalization = KeyboardCapitalization.Words,
+            modifier = Modifier.weight(SERIES_NAME_WEIGHT),
+        )
+        FormField(
+            value = form.seriesIndex,
+            onValueChange = { typed ->
+                onFormChange(form.copy(seriesIndex = typed.filter { it.isDigit() || it in ".," }))
+            },
+            label = R.string.confirm_field_series_number,
+            keyboardType = KeyboardType.Decimal,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -180,6 +211,7 @@ private fun FormField(
     value: String,
     onValueChange: (String) -> Unit,
     @StringRes label: Int,
+    modifier: Modifier = Modifier,
     @StringRes supporting: Int? = null,
     isError: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
@@ -189,7 +221,7 @@ private fun FormField(
     TextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         label = {
             Text(stringResource(label).uppercase(), style = MaterialTheme.typography.labelSmall)
         },
