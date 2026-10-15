@@ -11,5 +11,7 @@ data class DetailActions(
     val onTotalPagesConfirmed: (Int) -> Unit = {},
     val onEdit: () -> Unit = {},
     val onDelete: () -> Unit = {},
+    val onNoteSaved: (NoteDraft) -> Unit = {},
+    val onNoteDeleted: (Long) -> Unit = {},
     val onErrorShown: () -> Unit = {},
 )
