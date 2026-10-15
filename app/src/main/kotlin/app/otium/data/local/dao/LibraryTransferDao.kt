@@ -9,6 +9,7 @@ import app.otium.data.local.entity.BookCategoryCrossRef
 import app.otium.data.local.entity.BookEntity
 import app.otium.data.local.entity.BookTagCrossRef
 import app.otium.data.local.entity.CategoryEntity
+import app.otium.data.local.entity.NoteEntity
 import app.otium.data.local.entity.TagEntity
 
 /**
@@ -40,7 +41,13 @@ interface LibraryTransferDao {
     @Query("SELECT * FROM book_tag")
     suspend fun bookTags(): List<BookTagCrossRef>
 
-    /** Deleting books removes their join rows too (cascade) and the full-text index (triggers). */
+    @Query("SELECT * FROM note ORDER BY id")
+    suspend fun notes(): List<NoteEntity>
+
+    /**
+     * Deleting books removes their join rows and notes too (cascade) and the full-text index
+     * (triggers).
+     */
     @Query("DELETE FROM book")
     suspend fun deleteBooks()
 
@@ -73,4 +80,7 @@ interface LibraryTransferDao {
 
     @Insert
     suspend fun insertBookTags(rows: List<BookTagCrossRef>)
+
+    @Insert
+    suspend fun insertNotes(rows: List<NoteEntity>)
 }

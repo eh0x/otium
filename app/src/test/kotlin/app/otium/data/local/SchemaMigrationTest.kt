@@ -86,4 +86,43 @@ class SchemaMigrationTest {
                 }
             }
     }
+
+    @Test
+    fun `version 2 books survive the move to notes, and a book's notes go with it`() {
+        helper.createDatabase("notes-migration", 2).use { db ->
+            db.execSQL(
+                "INSERT INTO book (id, isbn13, isbn10, title, subtitle, authors, publisher, " +
+                    "publishedYear, language, description, totalPages, currentPage, coverPath, " +
+                    "coverSourceUrl, source, addedAt, updatedAt, userEdited, needsLookup, " +
+                    "series, seriesIndex) VALUES (7, '9780261103344', NULL, 'The Hobbit', NULL, " +
+                    "'J. R. R. Tolkien', NULL, 1937, 'en', NULL, 310, 12, NULL, NULL, " +
+                    "'MANUAL', 1, 2, 0, 0, 'Middle-earth', 1.0)",
+            )
+        }
+
+        helper.runMigrationsAndValidate("notes-migration", 3, true, *OtiumDatabase.migrations)
+            .use { db ->
+                db.query("SELECT title, series, currentPage FROM book").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("The Hobbit", it.getString(0))
+                    assertEquals("Middle-earth", it.getString(1))
+                    assertEquals(12, it.getInt(2))
+                }
+                db.query("SELECT COUNT(*) FROM note").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(0, it.getInt(0))
+                }
+
+                db.execSQL("PRAGMA foreign_keys = ON")
+                db.execSQL(
+                    "INSERT INTO note (bookId, kind, text, page, createdAt, updatedAt) " +
+                        "VALUES (7, 'QUOTE', 'In a hole in the ground', 1, 3, 3)",
+                )
+                db.execSQL("DELETE FROM book WHERE id = 7")
+                db.query("SELECT COUNT(*) FROM note").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(0, it.getInt(0))
+                }
+            }
+    }
 }
