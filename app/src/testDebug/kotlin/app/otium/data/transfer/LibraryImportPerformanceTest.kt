@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.repo.RoomBookRepository
+import app.otium.data.repo.RoomNoteRepository
 import app.otium.debug.SyntheticBooks
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeLibraryFiles
@@ -54,6 +55,7 @@ class LibraryImportPerformanceTest {
         files.files["content://big"] = GoodreadsCsv.write(SyntheticBooks.generate(BOOKS))
         val import = ImportLibrary(
             books = RoomBookRepository(db.bookDao(), CoverFiles(File("covers")), Dispatchers.IO),
+            notes = RoomNoteRepository(db.noteDao()),
             readFile = ReadLibraryFile(files, JsonLibraryFormat(), Dispatchers.Unconfined),
             clock = FixedClock(),
             scheduler = {},

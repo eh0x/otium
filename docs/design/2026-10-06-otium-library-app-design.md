@@ -71,6 +71,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D30 | Optional app lock, off by default, in Settings only. The system prompt (`androidx.biometric` 1.1.0, the stable line) accepts `BIOMETRIC_WEAK \| DEVICE_CREDENTIAL`: the face (often Class 2), a fingerprint, or the screen lock as fallback, without a confirmation tap. It asks on every start and after the app spent the chosen time in the background (1 minute by default, or 5), counted for the whole process on the clock since boot. Turning it on and off both ask first. While locked, the screens stay in memory but are not drawn, read aloud or focusable, and a dialog, sheet or menu that was open is taken off screen until the owner unlocks (each is a window of its own, so drawing nothing would not hide it); on Android 13 and later the recent apps preview is hidden. If the phone loses its screen lock, the app lock turns itself off and says so | `BIOMETRIC_STRONG` only; an "immediately" timeout; `FLAG_SECURE`; binding a key to the lock (`CryptoObject`); suggesting the lock when Drive connects | The lock answers the threat 4.8 left open, an unlocked phone in someone else's hands, without touching the data: the database stays as D29 decided. Class 3 only would leave out face unlock on many phones; the pair chosen is the one Android supports from API 26 (`DEVICE_CREDENTIAL` alone and `BIOMETRIC_STRONG \| DEVICE_CREDENTIAL` are not on Android 10 and lower). "Immediately" would ask again after every file pick, cover photo and Google consent screen. `FLAG_SECURE` would also block the owner's own screenshots. Turning itself off rather than shutting the owner out is safe, since a phone without a screen lock protects nothing anyway (four-role security review 2026-10-13) |
 | D31 | Marginalia (notes and quotes) is stored in the same unencrypted Room database as the library, in its own `note` table; D29 stands. Notes are covered by the Android sandbox, the app lock and, once they leave the phone, the backup passphrase. Notes are released together with or after the app lock. The backup screen suggests a passphrase before the first Drive backup, because the notes are what makes an unencrypted backup costly. Notes are searchable per book first; the optional private 1 to 5 mark is not built | SQLCipher for the whole database; encrypting only the note text; a separate encrypted notes database | Notes are more personal than reading status, but they add no new threat: the threats left uncovered by D29 (an unlocked phone, a rooted phone) are met by the app lock or are out of scope, and SQLCipher answers none of them. Its cost is unchanged: a native library per ABI, and a lost or invalidated key loses the whole library, not only the notes. The one new cost of notes is on the path out of the phone, an unencrypted Drive backup, which a passphrase covers and the exports already say they do not. A separate notes database or field encryption would add a second key to lose without covering a threat. Revisit when the threat model changes, for example if notes could be shared (team session 2026-10-15) |
 | D32 | Backup encryption is the suggested default (amends D23). Once Drive is connected while encryption is off, the passphrase panel opens by itself, once, as "Protect your backups", with the reason, the existing warning that a forgotten passphrase cannot be recovered, and **Not now**. The offer is remembered per device and never repeated; while off, the setting says encryption is recommended. Backups are never blocked, and backups made before stay as they are | Encryption on with no way out (forced); asking before every backup; leaving it off and unmentioned | A passphrase is what keeps a backup private if the Google account is compromised (4.8), but it cannot be recovered, so the choice stays with the owner: offered at the moment it matters, once, with the cost stated. Asking again would be nagging, which Otium avoids (four-role security review 2026-10-13) |
+| D33 | Otium JSON export is version 2 and carries notes (extends D28). Each book holds a `notes` list (kind, text, page, created and updated times) in reading order, read from the same transaction as the books. The version is raised, not left at 1 with an optional field, so an app that only knows version 1 refuses the file instead of importing the books and quietly leaving the notes behind; version 1 files are still read. Importing adds the notes of the books it adds and nothing else: a book already in the library keeps what it has, so importing a file twice adds nothing. Notes pass the same checks as the editor (`Note.cleanText`, page 1 or more) and keep their times. The Goodreads CSV stays without notes, and the screen says so | Version 1 plus an optional `notes` field; merging notes into books already in the library; notes in Goodreads' "Private Notes" column; a separate notes file | A refused file is a visible, recoverable failure; a file read in part is a silent loss of the one thing the export was made to keep. Merging notes would need a way to tell a note already there from a new one, and the file holds no stable id, so it would either duplicate or drop; skipping known books keeps D28's rule that importing twice is safe. The Goodreads column holds one string, no pages and no kinds, and the file is meant for other apps. A separate notes file would be easy to lose track of |
 
 ## 4. Final Design
 
@@ -314,14 +315,18 @@ ISBN, rows without a title. Nothing is written until the owner confirms. Then:
 - A book with an ISBN, unless the file is Otium's own, gets `needsLookup`; one lookup run is
   scheduled for all of them and fills in covers and details as offline entries are (D11).
 - Ratings, reviews and reading dates have no place in Otium and are not read.
+- The notes of an Otium file (version 2) come with the books the import adds, each checked as the
+  note editor checks it and keeping the times it was written; a note that fails the check is left
+  out and counted on the result screen. The notes of a book that is already in the library are
+  not read (D33).
 - An import cut short (the screen left, the process killed) keeps what it added; importing the
   file again skips those books by ISBN.
 
 Export writes every book to a file the owner creates: CSV in Goodreads' columns (categories and
-tags become shelves) or Otium JSON. Covers are not exported; the JSON keeps each cover's source
-address. The Goodreads and StoryGraph columns were written from their documented exports, not
-checked against fresh ones; the readers look columns up by name and skip the ones they do not
-know.
+tags become shelves; no notes) or Otium JSON (version 2: each book carries its notes and quotes in
+reading order). Covers are not exported; the JSON keeps each cover's source address. The Goodreads
+and StoryGraph columns were written from their documented exports, not checked against fresh
+ones; the readers look columns up by name and skip the ones they do not know.
 
 ### 4.4 UI and backup
 
@@ -486,8 +491,8 @@ Where the data is and how it is protected:
 | Backup settings, Drive account email | DataStore in the sandbox | As the database; excluded from Android backup and device transfer | — |
 | App lock choice | DataStore in the sandbox | As the database; a new phone starts with the lock off | — |
 | Backup key | DataStore in the sandbox | Only stored wrapped by an AES-256-GCM key in the Android Keystore that cannot be read out; never stored with or as the passphrase | — |
-| Drive backup | The user's Drive `appDataFolder` (`drive.appdata` scope) | Only Otium can open the folder. With a passphrase: Argon2id (64 MiB, 3 passes), then Tink streaming AES-256-GCM, before upload. Encryption is suggested once Drive is connected (D31) | — |
-| Export file (CSV, JSON) | Wherever the user saves it | None: a plain file for other apps. The screen says so, and CSV cells are escaped against formula injection | An encrypted Otium JSON export (open) |
+| Drive backup | The user's Drive `appDataFolder` (`drive.appdata` scope) | Only Otium can open the folder. With a passphrase: Argon2id (64 MiB, 3 passes), then Tink streaming AES-256-GCM, before upload. Encryption is suggested once Drive is connected (D32) | — |
+| Export file (CSV, JSON) | Wherever the user saves it | None: a plain file for other apps. The screen says so, and CSV cells are escaped against formula injection. The JSON holds every note and quote in the clear (D33) | An encrypted Otium JSON export (open) |
 | Network traffic | Google Books, Open Library, Google Drive | https only, system certificate authorities, no cleartext (network security config) | — |
 
 Threats and how they are met:
@@ -503,7 +508,7 @@ Threats and how they are met:
 - **Someone with the user's Google account.** Covered for backups with a passphrase set. A backup
   without one can be read by anyone who signs in as the user and restores with Otium, notes and
   quotes included. This is the one risk notes add, so the backup screen suggests a passphrase
-  before the first Drive backup (D31).
+  before the first Drive backup (D32).
 - **Leaks through the developer.** None possible: no backend, accounts, analytics, crash reporting
   or logging of library data.
 - **An unlocked phone in someone else's hands.** Covered when the owner turns on the app lock

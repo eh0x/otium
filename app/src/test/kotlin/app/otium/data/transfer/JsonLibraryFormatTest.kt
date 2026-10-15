@@ -4,6 +4,10 @@ import app.otium.data.local.testBook
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.BookSource
+import app.otium.domain.model.LibraryEntry
+import app.otium.domain.model.Note
+import app.otium.domain.model.NoteKind
+import app.otium.domain.transfer.ImportNote
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,7 +35,7 @@ class JsonLibraryFormatTest {
             seriesIndex = 1.5,
         ).copy(isbn10 = "0441013597", source = BookSource.GOOGLE, userEdited = true)
 
-        val row = rows(format.write(listOf(book), exportedAt = 99L)).single()
+        val row = rows(format.write(listOf(LibraryEntry(book)), exportedAt = 99L)).single()
 
         assertEquals("Dune", row.title)
         assertEquals("Book one", row.subtitle)
@@ -59,7 +63,9 @@ class JsonLibraryFormatTest {
     fun `a book still waiting for its lookup keeps waiting after an import`() {
         val waiting = testBook(isbn13 = "9780441013593").copy(needsLookup = true)
 
-        assertFalse(rows(format.write(listOf(waiting), exportedAt = 1L)).single().complete)
+        val text = format.write(listOf(LibraryEntry(waiting)), exportedAt = 1L)
+
+        assertFalse(rows(text).single().complete)
     }
 
     @Test
@@ -67,7 +73,7 @@ class JsonLibraryFormatTest {
         val text = format.write(emptyList(), exportedAt = 5L)
 
         assertTrue(text.contains("\"format\": \"otium-library\""))
-        assertTrue(text.contains("\"version\": 1"))
+        assertTrue(text.contains("\"version\": 2"))
         assertTrue(text.contains("\"exportedAt\": 5"))
     }
 
@@ -95,8 +101,74 @@ class JsonLibraryFormatTest {
     @Test
     fun `a file from a newer version is refused rather than read in part`() {
         assertEquals(
-            Try.Failure(AppError.IncompatibleBackup(backupSchema = 2, appSchema = 1)),
-            format.read("""{"format":"otium-library","version":2,"books":[]}"""),
+            Try.Failure(AppError.IncompatibleBackup(backupSchema = 3, appSchema = 2)),
+            format.read("""{"format":"otium-library","version":3,"books":[]}"""),
         )
+    }
+
+    @Test
+    fun `notes are written with their book in reading order and read back`() {
+        val notes = listOf(
+            Note(1L, 7L, NoteKind.QUOTE, "Fear is the mind-killer.", 12, 100L, 300L),
+            Note(2L, 7L, NoteKind.NOTE, "Reread this.", null, 200L, 200L),
+        )
+
+        val row = rows(format.write(listOf(LibraryEntry(testBook(), notes)), 1L)).single()
+
+        assertEquals(
+            listOf(
+                ImportNote(NoteKind.QUOTE, "Fear is the mind-killer.", 12, 100L, 300L),
+                ImportNote(NoteKind.NOTE, "Reread this.", null, 200L, 200L),
+            ),
+            row.notes,
+        )
+    }
+
+    @Test
+    fun `a book without notes writes none and reads back none`() {
+        val text = format.write(listOf(LibraryEntry(testBook())), exportedAt = 1L)
+
+        assertFalse(text.contains("notes"))
+        assertTrue(rows(text).single().notes.isEmpty())
+    }
+
+    @Test
+    fun `a version 1 file still reads, without notes`() {
+        val row = rows(
+            """{"format":"otium-library","version":1,"books":[{"title":"Old","totalPages":10}]}""",
+        ).single()
+
+        assertEquals("Old", row.title)
+        assertTrue(row.notes.isEmpty())
+    }
+
+    @Test
+    fun `a note with missing or unknown parts is read as far as it goes`() {
+        val row = rows(
+            """{"format":"otium-library","version":2,"books":[{"title":"B","notes":[
+                {"text":"No kind or times"},
+                {"kind":"HIGHLIGHT","text":"Unknown kind","page":4,"extra":1},
+                {"kind":"QUOTE"}
+            ]}]}""",
+        ).single()
+
+        assertEquals(
+            listOf(
+                ImportNote(NoteKind.NOTE, "No kind or times"),
+                ImportNote(NoteKind.NOTE, "Unknown kind", page = 4),
+                ImportNote(NoteKind.QUOTE, ""),
+            ),
+            row.notes,
+        )
+    }
+
+    @Test
+    fun `text with quotes, newlines and unicode survives the round trip`() {
+        val text = "“Quoted”\nline two — ünïcode \"and\" \\ slash"
+        val notes = listOf(Note(1L, 1L, NoteKind.QUOTE, text, 1, 1L, 1L))
+
+        val row = rows(format.write(listOf(LibraryEntry(testBook(), notes)), 1L)).single()
+
+        assertEquals(text, row.notes.single().text)
     }
 }

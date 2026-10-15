@@ -7,10 +7,13 @@ import app.otium.data.backup.readAll
 import app.otium.data.cover.CoverFiles
 import app.otium.data.cover.coversDirectory
 import app.otium.data.local.OtiumDatabase
+import app.otium.data.local.entity.NoteEntity
 import app.otium.data.local.mapper.toDomain
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
+import app.otium.domain.model.LibraryEntry
+import app.otium.domain.model.Note
 import app.otium.domain.port.LibrarySnapshot
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -30,15 +33,25 @@ class RoomLibrarySnapshot internal constructor(
         @ApplicationContext context: Context,
     ) : this(database, CoverFiles(coversDirectory(context)))
 
-    override suspend fun books(): Try<List<Book>> = try {
-        Try.Success(database.readAll().toBooks(covers))
+    override suspend fun entries(): Try<List<LibraryEntry>> = try {
+        Try.Success(database.readAll().toEntries(covers))
     } catch (error: SQLiteException) {
         Try.Failure(AppError.Storage(error.message ?: "database error"))
     }
 }
 
-/** The books in [this], oldest first, each with its labels in the order the owner gave them. */
-internal fun LibraryRows.toBooks(covers: CoverFiles): List<Book> {
+/**
+ * The books in [this], oldest first, each with its labels in the order the owner gave them and
+ * its notes in reading order.
+ */
+internal fun LibraryRows.toEntries(covers: CoverFiles): List<LibraryEntry> {
+    val notesOf = notes.map(NoteEntity::toDomain).groupBy { it.bookId }
+    return toBooks(covers).map { book ->
+        LibraryEntry(book, notesOf[book.id].orEmpty().sortedWith(Note.READING_ORDER))
+    }
+}
+
+private fun LibraryRows.toBooks(covers: CoverFiles): List<Book> {
     val authorNames = authors.associate { it.id to it.name }
     val categoryNames = categories.associate { it.id to it.name }
     val tagNames = tags.associate { it.id to it.name }

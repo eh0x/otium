@@ -5,9 +5,13 @@ import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeLibraryFiles
 import app.otium.domain.fakes.FakeLibraryJson
+import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
 import app.otium.domain.model.BookStatus
+import app.otium.domain.model.Note
+import app.otium.domain.model.NoteKind
+import app.otium.domain.transfer.ImportNote
 import app.otium.domain.transfer.ImportRow
 import app.otium.domain.transfer.LibraryFormat
 import app.otium.domain.transfer.Shelf
@@ -26,8 +30,10 @@ class ImportLibraryTest {
     private val files = FakeLibraryFiles()
     private val json = FakeLibraryJson()
     private var scheduled = 0
+    private val noteRepo = FakeNoteRepository(repo)
     private val import = ImportLibrary(
         books = repo,
+        notes = noteRepo,
         readFile = ReadLibraryFile(files, json, Dispatchers.Unconfined),
         clock = FixedClock(now = 5_000L),
         scheduler = { scheduled++ },
@@ -226,5 +232,183 @@ class ImportLibraryTest {
         import.import(preview("{}"))
 
         assertEquals(10, titled("Short").currentPage)
+    }
+
+    @Test
+    fun `the notes of an otium file come with the books and keep their times`() = runTest {
+        json.rows = listOf(
+            ImportRow(
+                title = "Annotated",
+                isbn = "9780306406157",
+                notes = listOf(
+                    ImportNote(NoteKind.QUOTE, "  A line worth keeping. ", 12, 100L, 300L),
+                    ImportNote(NoteKind.NOTE, "Whole-book thought", null, 200L, 200L),
+                ),
+            ),
+        )
+
+        val preview = preview("{}")
+        val result = import.import(preview)
+
+        assertEquals(2, preview.notes)
+        assertEquals(2, result.notesAdded)
+        assertEquals(0, result.notesSkipped)
+        val saved = noteRepo.of(titled("Annotated").id)
+        assertEquals(
+            listOf(
+                Note(
+                    1L,
+                    titled("Annotated").id,
+                    NoteKind.QUOTE,
+                    "A line worth keeping.",
+                    12,
+                    100L,
+                    300L,
+                ),
+                Note(
+                    2L,
+                    titled("Annotated").id,
+                    NoteKind.NOTE,
+                    "Whole-book thought",
+                    null,
+                    200L,
+                    200L,
+                ),
+            ),
+            saved,
+        )
+    }
+
+    @Test
+    fun `a note without times is dated now and never ends before it began`() = runTest {
+        json.rows = listOf(
+            ImportRow(
+                title = "Undated",
+                notes = listOf(
+                    ImportNote(NoteKind.NOTE, "No times"),
+                    ImportNote(
+                        NoteKind.NOTE,
+                        "Updated before created",
+                        createdAt = 900L,
+                        updatedAt = 10L,
+                    ),
+                    ImportNote(NoteKind.NOTE, "Bad times", createdAt = -4L, updatedAt = 0L),
+                ),
+            ),
+        )
+
+        import.import(preview("{}"))
+
+        val saved = noteRepo.of(titled("Undated").id)
+        assertEquals(
+            listOf(5_000L, 5_000L),
+            saved.first {
+                it.text == "No times"
+            }.let { listOf(it.createdAt, it.updatedAt) },
+        )
+        assertEquals(
+            listOf(900L, 900L),
+            saved.first {
+                it.text.startsWith("Updated")
+            }.let { listOf(it.createdAt, it.updatedAt) },
+        )
+        assertEquals(
+            listOf(5_000L, 5_000L),
+            saved.first {
+                it.text == "Bad times"
+            }.let { listOf(it.createdAt, it.updatedAt) },
+        )
+    }
+
+    @Test
+    fun `notes the editor would refuse are left out and counted`() = runTest {
+        json.rows = listOf(
+            ImportRow(
+                title = "Messy",
+                notes = listOf(
+                    ImportNote(NoteKind.NOTE, "Fine"),
+                    ImportNote(NoteKind.NOTE, "   "),
+                    ImportNote(NoteKind.QUOTE, "x".repeat(Note.MAX_TEXT_LENGTH + 1)),
+                    ImportNote(NoteKind.QUOTE, "Page zero", page = 0),
+                ),
+            ),
+        )
+
+        val preview = preview("{}")
+        val result = import.import(preview)
+
+        assertEquals("the preview counts only what will be kept", 1, preview.notes)
+        assertEquals(1, result.notesAdded)
+        assertEquals(3, result.notesSkipped)
+        assertEquals(listOf("Fine"), noteRepo.all.map { it.text })
+    }
+
+    @Test
+    fun `a text of exactly the longest length is kept`() = runTest {
+        json.rows = listOf(
+            ImportRow(
+                title = "Long",
+                notes = listOf(ImportNote(NoteKind.QUOTE, "x".repeat(Note.MAX_TEXT_LENGTH))),
+            ),
+        )
+
+        val result = import.import(preview("{}"))
+
+        assertEquals(1, result.notesAdded)
+    }
+
+    @Test
+    fun `books already in the library are left alone and so are their notes`() = runTest {
+        repo.seed(book(isbn13 = "9780306406157", title = "Mine"))
+        json.rows = listOf(
+            ImportRow(
+                title = "Mine",
+                isbn = "9780306406157",
+                notes = listOf(ImportNote(NoteKind.NOTE, "From the file")),
+            ),
+            ImportRow(
+                title = "New",
+                isbn = "9780141439518",
+                notes = listOf(ImportNote(NoteKind.NOTE, "Comes along")),
+            ),
+        )
+
+        val preview = preview("{}")
+        val result = import.import(preview)
+
+        assertEquals(1, preview.notes)
+        assertEquals(1, result.skipped)
+        assertEquals(1, result.notesAdded)
+        assertEquals(listOf("Comes along"), noteRepo.all.map { it.text })
+    }
+
+    @Test
+    fun `importing the same otium file twice adds its notes once`() = runTest {
+        json.rows = listOf(
+            ImportRow(
+                title = "Once",
+                isbn = "9780306406157",
+                notes = listOf(ImportNote(NoteKind.NOTE, "Only one copy")),
+            ),
+        )
+
+        import.import(preview("{}"))
+        val second = import.import(preview("{}"))
+
+        assertEquals(0, second.notesAdded)
+        assertEquals(1, noteRepo.all.size)
+    }
+
+    @Test
+    fun `books without a note import as before`() = runTest {
+        json.rows = listOf(ImportRow(title = "Plain"))
+
+        val preview = preview("{}")
+        val result = import.import(preview)
+
+        assertEquals(0, preview.notes)
+        assertEquals(0, result.notesAdded)
+        assertEquals(0, result.notesSkipped)
+        assertTrue(noteRepo.all.isEmpty())
     }
 }

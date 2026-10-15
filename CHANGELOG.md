@@ -22,6 +22,13 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
   book's page; a book with six or more notes can be searched. Notes stay on the phone and are
   part of your Drive backup, so set a backup passphrase if you want them encrypted there.
 
+- The Otium JSON export now includes your notes and quotes (file version 2), and importing an
+  Otium file brings them back with the books it adds. Books already in your library are left
+  alone, with their notes, so importing a file twice adds nothing. The preview and the result say
+  how many notes there are and how many were left out. The CSV export still has no notes, and the
+  screen says so. Export files are not encrypted, so keep a JSON file somewhere private. An older
+  Otium that only knows version 1 will refuse the new file instead of importing it without notes.
+
 ### Changed
 
 - Backup encryption is now recommended. The first time you open Settings with Drive connected and

@@ -1,6 +1,7 @@
 package app.otium.domain.transfer
 
 import app.otium.domain.model.BookSource
+import app.otium.domain.model.NoteKind
 
 /** The kinds of library file Otium reads. Goodreads is also the format of Otium's CSV export. */
 enum class LibraryFormat { GOODREADS, STORYGRAPH, OTIUM }
@@ -43,4 +44,18 @@ data class ImportRow(
     /** True when the file already holds full details, so no lookup is needed. */
     val complete: Boolean = false,
     val userEdited: Boolean = false,
+    /** The book's notes. Only Otium's own file (version 2 and later) carries them. */
+    val notes: List<ImportNote> = emptyList(),
+)
+
+/**
+ * One note or quote read from an Otium file, before it is checked: the text may be blank or too
+ * long, and a time of null means the file did not say.
+ */
+data class ImportNote(
+    val kind: NoteKind,
+    val text: String,
+    val page: Int? = null,
+    val createdAt: Long? = null,
+    val updatedAt: Long? = null,
 )

@@ -20,5 +20,19 @@ data class Note(
     companion object {
         /** A quote is rarely longer than a page; the limit keeps a pasted chapter out. */
         const val MAX_TEXT_LENGTH = 10_000
+
+        /** [text] trimmed, or null when it is blank or longer than [MAX_TEXT_LENGTH]. */
+        fun cleanText(text: String): String? =
+            text.trim().takeIf { it.isNotEmpty() && it.length <= MAX_TEXT_LENGTH }
+
+        /** A book's notes in reading order: by page, then oldest first; notes without a page last. */
+        val READING_ORDER: Comparator<Note> =
+            compareBy<Note> { it.page == null }
+                .thenBy { it.page }
+                .thenBy { it.createdAt }
+                .thenBy { it.id }
+
+        /** Whether [page] is acceptable: none, or 1 or more. */
+        fun isValidPage(page: Int?): Boolean = page == null || page >= 1
     }
 }

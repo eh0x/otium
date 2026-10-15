@@ -1,9 +1,12 @@
 package app.otium.domain.port
 
 import app.otium.domain.error.Try
-import app.otium.domain.model.Book
+import app.otium.domain.model.LibraryEntry
 
-/** Every book in the library with its labels, read from one consistent view, for an export. */
+/**
+ * Every book in the library with its labels and notes, read from one consistent view, for an
+ * export.
+ */
 fun interface LibrarySnapshot {
-    suspend fun books(): Try<List<Book>>
+    suspend fun entries(): Try<List<LibraryEntry>>
 }

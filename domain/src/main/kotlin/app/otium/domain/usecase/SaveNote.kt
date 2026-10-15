@@ -31,14 +31,11 @@ class SaveNote(private val notes: NoteRepository, private val clock: Clock) {
 
     /** The trimmed text, or the field that is not acceptable. */
     private fun validate(text: String, page: Int?): Try<String> {
-        val trimmed = text.trim()
+        val cleaned = Note.cleanText(text)
         return when {
-            trimmed.isEmpty() || trimmed.length > Note.MAX_TEXT_LENGTH ->
-                Try.Failure(AppError.InvalidInput("text"))
-
-            page != null && page < 1 -> Try.Failure(AppError.InvalidInput("page"))
-
-            else -> Try.Success(trimmed)
+            cleaned == null -> Try.Failure(AppError.InvalidInput("text"))
+            !Note.isValidPage(page) -> Try.Failure(AppError.InvalidInput("page"))
+            else -> Try.Success(cleaned)
         }
     }
 }
