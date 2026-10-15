@@ -11,6 +11,7 @@ buildscript {
             classpath(libs.build.freemarker)
             classpath(libs.build.jose4j)
             classpath(libs.build.jdom2)
+            classpath(libs.build.commons.lang3)
             classpath(libs.build.bcprov)
             classpath(libs.build.bcpkix)
         }
