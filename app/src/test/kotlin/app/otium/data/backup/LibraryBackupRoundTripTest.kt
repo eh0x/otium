@@ -3,16 +3,21 @@ package app.otium.data.backup
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import app.otium.data.backup.archive.BackupManifest
 import app.otium.data.backup.archive.BackupZip
 import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.local.testBook
 import app.otium.data.repo.RoomBookRepository
+import app.otium.data.repo.RoomNoteRepository
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.Note
+import app.otium.domain.model.NoteKind
 import app.otium.domain.port.DispatcherProvider
 import java.io.File
 import java.util.zip.ZipFile
@@ -37,6 +42,13 @@ class LibraryBackupRoundTripTest {
 
     @get:Rule
     val temp = TemporaryFolder()
+
+    /** Builds a library in an earlier schema, as a backup from an older app version holds. */
+    @get:Rule
+    val helper = MigrationTestHelper(
+        InstrumentationRegistry.getInstrumentation(),
+        OtiumDatabase::class.java,
+    )
 
     private object RealDispatchers : DispatcherProvider {
         override val main: CoroutineDispatcher = Dispatchers.Unconfined
@@ -158,6 +170,59 @@ class LibraryBackupRoundTripTest {
             listOf("The Hobbit"),
             targetBooks.observeLibrary(LibraryFilter(query = "tolkien")).first().map { it.title },
         )
+    }
+
+    @Test
+    fun `notes come back from the backup and the replaced library's notes are gone`() =
+        runBlocking {
+            val hobbitId = fillSource()
+            val longQuote = "q".repeat(Note.MAX_TEXT_LENGTH)
+            val notes = RoomNoteRepository(source.noteDao())
+            notes.add(Note(0L, hobbitId, NoteKind.QUOTE, "In a hole", 1, 10L, 10L))
+            notes.add(Note(0L, hobbitId, NoteKind.NOTE, longQuote, null, 11L, 12L))
+            val oldId = (targetBooks.add(testBook(title = "Old Book")) as Try.Success).value
+            RoomNoteRepository(target.noteDao())
+                .add(Note(0L, oldId, NoteKind.NOTE, "old note", 3, 1L, 1L))
+
+            val result = restorer().restore(backupOfSource().file)
+
+            assertEquals(Try.Success(Unit), result)
+            assertEquals(
+                listOf(
+                    Note(1L, hobbitId, NoteKind.QUOTE, "In a hole", 1, 10L, 10L),
+                    Note(2L, hobbitId, NoteKind.NOTE, longQuote, null, 11L, 12L),
+                ),
+                RoomNoteRepository(target.noteDao()).observeNotes(hobbitId).first(),
+            )
+            assertEquals(
+                listOf("In a hole", longQuote),
+                target.transferDao().notes().map { it.text },
+            )
+        }
+
+    @Test
+    fun `a backup made before notes existed restores its books and no notes`() = runBlocking {
+        val keeperId = (targetBooks.add(testBook(title = "Keep Me")) as Try.Success).value
+        RoomNoteRepository(target.noteDao())
+            .add(Note(0L, keeperId, NoteKind.NOTE, "replaced", 1, 1L, 1L))
+        val oldFile = helper.createDatabase("before-notes", 2).use { db ->
+            db.execSQL(
+                "INSERT INTO book (id, isbn13, isbn10, title, subtitle, authors, publisher, " +
+                    "publishedYear, language, description, totalPages, currentPage, coverPath, " +
+                    "coverSourceUrl, source, addedAt, updatedAt, userEdited, needsLookup, " +
+                    "series, seriesIndex) VALUES (7, NULL, NULL, 'The Hobbit', NULL, " +
+                    "'J. R. R. Tolkien', NULL, 1937, 'en', NULL, 310, 12, NULL, NULL, " +
+                    "'MANUAL', 1, 2, 0, 0, NULL, NULL)",
+            )
+            File(requireNotNull(db.path))
+        }
+
+        val result = restorer().restore(craftedBackup(oldFile, schemaVersion = 2, bookCount = 1))
+
+        assertEquals(Try.Success(Unit), result)
+        assertEquals(listOf("The Hobbit"), titles(targetBooks))
+        assertTrue(RoomNoteRepository(target.noteDao()).observeNotes(7L).first().isEmpty())
+        assertTrue(RoomNoteRepository(target.noteDao()).observeNotes(keeperId).first().isEmpty())
     }
 
     @Test
