@@ -129,7 +129,7 @@ internal fun PassphrasePanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OtiumButton(
-                    text = stringResource(R.string.restore_cancel),
+                    text = stringResource(prompt.dismissRes()),
                     onClick = onDismiss,
                     style = OtiumButtonStyle.Secondary,
                     enabled = !busy,
@@ -150,6 +150,12 @@ private fun NewPassphraseFields(
     input: PassphraseInput,
     onDone: () -> Unit,
 ) {
+    if (prompt.suggested) {
+        Text(
+            stringResource(R.string.passphrase_suggest_note),
+            style = bodyStyle(),
+        )
+    }
     Text(
         text = stringResource(R.string.passphrase_warning),
         style = MaterialTheme.typography.bodyMedium,
@@ -275,11 +281,22 @@ private fun minLengthText(id: Int): String =
     pluralStringResource(id, SetBackupPassphrase.MIN_LENGTH, SetBackupPassphrase.MIN_LENGTH)
 
 private fun PassphrasePrompt.titleRes(): Int = when (this) {
-    is PassphrasePrompt.Set ->
-        if (changing) R.string.passphrase_change_title else R.string.passphrase_set_title
+    is PassphrasePrompt.Set -> when {
+        changing -> R.string.passphrase_change_title
+        suggested -> R.string.passphrase_suggest_title
+        else -> R.string.passphrase_set_title
+    }
 
     is PassphrasePrompt.Unlock -> R.string.passphrase_restore_title
 }
+
+/** "Not now" for a passphrase the app suggested by itself, "Cancel" otherwise. */
+private fun PassphrasePrompt.dismissRes(): Int =
+    if ((this as? PassphrasePrompt.Set)?.suggested == true) {
+        R.string.passphrase_not_now
+    } else {
+        R.string.restore_cancel
+    }
 
 private fun PassphrasePrompt.actionRes(): Int = when (this) {
     is PassphrasePrompt.Set ->

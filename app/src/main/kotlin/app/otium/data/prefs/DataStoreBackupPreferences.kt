@@ -13,6 +13,7 @@ import app.otium.domain.model.BackupSettings
 import app.otium.domain.port.BackupPreferences
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -76,7 +77,15 @@ class DataStoreBackupPreferences @Inject constructor(
         dataStore.edit { it[FAILED_RUNS] = count }
     }
 
+    override val encryptionSuggested: Flow<Boolean> =
+        dataStore.data.map { it[ENCRYPTION_SUGGESTED] ?: false }.distinctUntilChanged()
+
+    override suspend fun markEncryptionSuggested() {
+        dataStore.edit { it[ENCRYPTION_SUGGESTED] = true }
+    }
+
     private companion object {
+        val ENCRYPTION_SUGGESTED = booleanPreferencesKey("backup_encryption_suggested")
         val AUTO_BACKUP = booleanPreferencesKey("backup_auto")
         val FREQUENCY = stringPreferencesKey("backup_frequency")
         val WIFI_ONLY = booleanPreferencesKey("backup_wifi_only")

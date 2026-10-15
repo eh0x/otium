@@ -265,7 +265,7 @@
     </plurals>
     <string name="backup_encrypted">Encrypted</string>
     <string name="encryption_heading">Encrypt backups</string>
-    <string name="encryption_off">Off. With a passphrase only you can read your backups, even if someone enters your Google account.</string>
+    <string name="encryption_off">Off. Recommended: with a passphrase only you can read your backups, even if someone enters your Google account.</string>
     <string name="encryption_on">On. New backups are encrypted with your passphrase.</string>
     <string name="encryption_change">Change passphrase</string>
     <string name="encryption_working">Protecting your key…</string>
@@ -275,6 +275,9 @@
     <string name="encryption_off_message">New backups will not be encrypted. Backups already in Drive stay encrypted and still need your passphrase.</string>
     <string name="encryption_off_action">Turn off</string>
     <string name="passphrase_set_title">Set a backup passphrase</string>
+    <string name="passphrase_suggest_title">Protect your backups</string>
+    <string name="passphrase_suggest_note">Recommended. Your backups are kept in your own Google Drive; with a passphrase only you can read them, even if someone enters your Google account. You can also do this later in Settings.</string>
+    <string name="passphrase_not_now">Not now</string>
     <string name="passphrase_change_title">Change the backup passphrase</string>
     <string name="passphrase_label">Passphrase</string>
     <string name="passphrase_confirm_label">Type it again</string>

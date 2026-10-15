@@ -249,8 +249,8 @@ class BackupContentTest {
         show(signedIn, encryptionActions = EncryptionActions(onSetPassphrase = { asked++ }))
 
         rule.onNodeWithText(
-            "Off. With a passphrase only you can read your backups, even if someone enters " +
-                "your Google account.",
+            "Off. Recommended: with a passphrase only you can read your backups, even if " +
+                "someone enters your Google account.",
         )
             .performScrollTo()
             .assertIsDisplayed()

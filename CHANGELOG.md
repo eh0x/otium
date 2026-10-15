@@ -13,6 +13,13 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
   book's page; a book with six or more notes can be searched. Notes stay on the phone and are
   part of your Drive backup, so set a backup passphrase if you want them encrypted there.
 
+### Changed
+
+- Backup encryption is now recommended. The first time you open Settings with Drive connected and
+  no passphrase set, Otium offers once to protect your backups, with "Not now" to decline for
+  good. Nothing is blocked, backups already made stay as they are, and you can still set a
+  passphrase later in Settings, which now says it is recommended.
+
 ## [1.1.0] - 2026-10-15
 
 Known issues: Otium is not on Google Play yet, and backup to Google Drive works only once the

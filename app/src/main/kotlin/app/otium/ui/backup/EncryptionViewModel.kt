@@ -4,7 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
+import app.otium.domain.model.DriveAuthState
 import app.otium.domain.port.BackupEncryption
+import app.otium.domain.port.BackupPreferences
+import app.otium.domain.port.DriveAuth
 import app.otium.domain.usecase.SetBackupPassphrase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -23,11 +26,17 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
  * State holder for backup encryption on the backup screen: setting or changing the passphrase,
  * and turning encryption off after the user confirms. Passphrases arrive as character arrays and
  * are cleared as soon as they have been used, whatever the outcome.
+ *
+ * Encryption is the suggested default (D32): once Drive is connected without it, the passphrase
+ * panel opens by itself as the recommended choice, once. "Not now" closes it for good; the
+ * setting stays where it always was.
  */
 @HiltViewModel
 class EncryptionViewModel @Inject constructor(
     private val encryption: BackupEncryption,
     private val setBackupPassphrase: SetBackupPassphrase,
+    private val driveAuth: DriveAuth,
+    private val preferences: BackupPreferences,
 ) : ViewModel() {
 
     private data class Transient(
@@ -70,6 +79,27 @@ class EncryptionViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
             initialValue = EncryptionUiState(),
         )
+
+    // Declared after the state it updates: viewModelScope starts at once.
+    init {
+        viewModelScope.launch {
+            combine(driveAuth.state, encryption.activeKeyId, preferences.encryptionSuggested) {
+                    auth,
+                    keyId,
+                    suggested,
+                ->
+                auth is DriveAuthState.SignedIn && keyId == null && !suggested
+            }.first { it }
+            preferences.markEncryptionSuggested()
+            transient.update {
+                if (it.prompt != null) {
+                    it
+                } else {
+                    it.copy(prompt = PassphrasePrompt.Set(changing = false, suggested = true))
+                }
+            }
+        }
+    }
 
     /** Asks for a passphrase: a first one, or a new one when encryption is already on. */
     fun onSetPassphrase() {
