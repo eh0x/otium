@@ -43,3 +43,22 @@ internal val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("INSERT INTO `book_fts`(`book_fts`) VALUES('rebuild')")
     }
 }
+
+/**
+ * Version 3 adds notes and quotes (Marginalia): one table, deleted with its book. Nothing else
+ * changes, so the book index is left alone. The SQL must match Room's character for character
+ * (see the exported schema 3.json, down to the space before the last bracket): a restore refuses
+ * a backup whose schema text differs from a fresh library's.
+ */
+internal val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `note` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`bookId` INTEGER NOT NULL, `kind` TEXT NOT NULL, `text` TEXT NOT NULL, " +
+                "`page` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, " +
+                "FOREIGN KEY(`bookId`) REFERENCES `book`(`id`) ON UPDATE NO ACTION " +
+                "ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_note_bookId` ON `note` (`bookId`)")
+    }
+}
