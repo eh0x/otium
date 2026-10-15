@@ -41,7 +41,7 @@ jobs:
         run: ./gradlew spotlessCheck detekt checkDocs --build-cache --parallel
 
       - name: Upload Detekt Reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: detekt-reports
@@ -55,7 +55,7 @@ jobs:
           always() && hashFiles('build/reports/detekt/detekt.sarif') != '' &&
           (github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository)
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: build/reports/detekt/detekt.sarif
           category: detekt
@@ -100,7 +100,7 @@ jobs:
 
       # Only on findings. Secrets are redacted in the report, so the artifact is safe to keep.
       - name: Upload gitleaks report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: gitleaks-report
@@ -156,7 +156,7 @@ jobs:
           always() && hashFiles('build/reports/zizmor.sarif') != '' &&
           (github.event_name != 'pull_request' ||
           github.event.pull_request.head.repo.full_name == github.repository)
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           sarif_file: build/reports/zizmor.sarif
           category: zizmor
@@ -197,7 +197,7 @@ jobs:
         run: scripts/scan-dependencies.sh --sarif "$RUNNER_TEMP/osv-scanner.sarif"
 
       - name: Upload OSV-Scanner report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: osv-scanner-report
@@ -225,7 +225,7 @@ jobs:
         run: ./gradlew lint --build-cache --parallel
 
       - name: Upload Lint Reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: lint-reports
@@ -252,7 +252,7 @@ jobs:
         run: ./gradlew testDebugUnitTest :domain:test koverVerifyCoverage --build-cache --parallel
 
       - name: Upload Test Reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: test-reports
@@ -260,7 +260,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Coverage Reports
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: kover-coverage-reports
