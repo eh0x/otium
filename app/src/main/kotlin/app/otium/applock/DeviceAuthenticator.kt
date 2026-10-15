@@ -3,6 +3,8 @@ package app.otium.applock
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.ContextWrapper
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -10,6 +12,10 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 import javax.inject.Inject
 
 /** Whether this phone can confirm its owner at all. */
@@ -73,9 +79,27 @@ class BiometricDeviceAuthenticator @Inject constructor(
         prompt: AuthPrompt,
         onResult: (AuthResult) -> Unit,
     ) {
+        val cipher = try {
+            getOrCreateSecretKey()
+            getCipher().apply { init(Cipher.ENCRYPT_MODE, getOrCreateSecretKey()) }
+        } catch (e: Exception) {
+            onResult(AuthResult.Failed(e.message ?: "Failed to initialize secure authentication"))
+            return
+        }
+
         val callback = object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                onResult(AuthResult.Success)
+                val authenticatedCipher = result.cryptoObject?.cipher
+                if (authenticatedCipher == null) {
+                    onResult(AuthResult.Failed("Missing cryptographic proof"))
+                    return
+                }
+                try {
+                    authenticatedCipher.doFinal(AUTH_CHALLENGE)
+                    onResult(AuthResult.Success)
+                } catch (e: Exception) {
+                    onResult(AuthResult.Failed(e.message ?: "Cryptographic authentication failed"))
+                }
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -92,7 +116,7 @@ class BiometricDeviceAuthenticator @Inject constructor(
             .setConfirmationRequired(false)
             .build()
         BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), callback)
-            .authenticate(info)
+            .authenticate(info, BiometricPrompt.CryptoObject(cipher))
     }
 
     private fun Int.toResult(message: String): AuthResult = when (this) {
@@ -106,8 +130,37 @@ class BiometricDeviceAuthenticator @Inject constructor(
         else -> AuthResult.Failed(message)
     }
 
+    private fun getCipher(): Cipher =
+        Cipher.getInstance(
+            "${KeyProperties.KEY_ALGORITHM_AES}/${KeyProperties.BLOCK_MODE_CBC}/${KeyProperties.ENCRYPTION_PADDING_PKCS7}",
+        )
+
+    private fun getOrCreateSecretKey(): SecretKey {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        val existingKey = keyStore.getKey(KEY_ALIAS, null) as? SecretKey
+        if (existingKey != null) return existingKey
+
+        val keyGenerator = KeyGenerator.getInstance(
+            KeyProperties.KEY_ALGORITHM_AES,
+            "AndroidKeyStore",
+        )
+        val keySpec = KeyGenParameterSpec.Builder(
+            KEY_ALIAS,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
+            .setUserAuthenticationRequired(true)
+            .setInvalidatedByBiometricEnrollment(true)
+            .build()
+        keyGenerator.init(keySpec)
+        return keyGenerator.generateKey()
+    }
+
     private companion object {
         const val ALLOWED = BIOMETRIC_WEAK or DEVICE_CREDENTIAL
+        const val KEY_ALIAS = "app.otium.applock.biometric_key"
+        val AUTH_CHALLENGE = "applock-auth-challenge".toByteArray()
     }
 }
 
