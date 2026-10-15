@@ -36,6 +36,9 @@ data class ConfirmRoute(
     val isbn10: String? = null,
     val title: String = "",
     val subtitle: String? = null,
+    val series: String? = null,
+    /** The number in [series] as text, because route arguments cannot be nullable numbers. */
+    val seriesIndex: String? = null,
     val authors: List<String> = emptyList(),
     val publisher: String? = null,
     val publishedYear: Int = 0,
@@ -59,6 +62,8 @@ data class ConfirmRoute(
             isbn10 = candidate.isbn10,
             title = candidate.title,
             subtitle = candidate.subtitle,
+            series = candidate.series,
+            seriesIndex = candidate.seriesIndex?.toString(),
             authors = candidate.authors,
             publisher = candidate.publisher,
             publishedYear = candidate.publishedYear ?: 0,
@@ -80,6 +85,8 @@ data class ConfirmRoute(
         isbn10 = isbn10,
         title = title,
         subtitle = subtitle,
+        series = series,
+        seriesIndex = seriesIndex?.toDoubleOrNull(),
         authors = authors,
         publisher = publisher,
         publishedYear = publishedYear.takeIf { it > 0 },
@@ -101,6 +108,10 @@ data object ReadingRoute
 /** Top-level tab: settings, which hold backing up to Google Drive and restoring. */
 @Serializable
 data object SettingsRoute
+
+/** Importing a library from Goodreads, StoryGraph or Otium, and exporting this one. */
+@Serializable
+data object ImportExportRoute
 
 /** Debug builds only: the theme catalog. */
 @Serializable

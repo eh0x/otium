@@ -37,6 +37,23 @@ class OpenLibraryMapperTest {
     }
 
     @Test
+    fun `the recorded series entry gives the series and its number`() {
+        val candidate = duneEdition.toCandidate(authorNames = emptyList(), work = null)
+
+        assertEquals("Dune", candidate.series)
+        assertEquals(1.0, candidate.seriesIndex)
+    }
+
+    @Test
+    fun `an edition without a series entry has none`() {
+        val candidate = read<EditionDto>("edition-hobbit.json")
+            .toCandidate(authorNames = emptyList(), work = null)
+
+        assertNull(candidate.series)
+        assertNull(candidate.seriesIndex)
+    }
+
+    @Test
     fun `the description and subjects come from the work`() {
         val candidate = duneEdition.toCandidate(authorNames = emptyList(), work = duneWork)
 

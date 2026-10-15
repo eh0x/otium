@@ -2,17 +2,22 @@ package app.otium.di
 
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
+import app.otium.domain.port.DispatcherProvider
+import app.otium.domain.port.LibraryFiles
+import app.otium.domain.port.LibraryJson
+import app.otium.domain.port.LibrarySnapshot
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.usecase.AddBookFromIsbn
-import app.otium.domain.usecase.MarkFinished
-import app.otium.domain.usecase.ObserveLibrary
+import app.otium.domain.usecase.BackupLock
+import app.otium.domain.usecase.ExportLibrary
+import app.otium.domain.usecase.ImportLibrary
+import app.otium.domain.usecase.ReadLibraryFile
+import app.otium.domain.usecase.ReadingTracker
 import app.otium.domain.usecase.RetryPendingLookups
 import app.otium.domain.usecase.SaveBook
 import app.otium.domain.usecase.SaveIsbnForLater
-import app.otium.domain.usecase.SetTotalPages
-import app.otium.domain.usecase.UpdateProgress
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,19 +29,8 @@ import dagger.hilt.components.SingletonComponent
 object UseCaseModule {
 
     @Provides
-    fun provideObserveLibrary(repository: BookRepository) = ObserveLibrary(repository)
-
-    @Provides
-    fun provideUpdateProgress(repository: BookRepository, clock: Clock) =
-        UpdateProgress(repository, clock)
-
-    @Provides
-    fun provideMarkFinished(repository: BookRepository, updateProgress: UpdateProgress) =
-        MarkFinished(repository, updateProgress)
-
-    @Provides
-    fun provideSetTotalPages(repository: BookRepository, clock: Clock) =
-        SetTotalPages(repository, clock)
+    fun provideReadingTracker(repository: BookRepository, clock: Clock) =
+        ReadingTracker(repository, clock)
 
     @Provides
     fun provideAddBookFromIsbn(books: BookRepository, metadata: MetadataRepository) =
@@ -52,6 +46,31 @@ object UseCaseModule {
         clock: Clock,
         scheduler: LookupScheduler,
     ) = SaveIsbnForLater(repository, clock, scheduler)
+
+    @Provides
+    fun provideReadLibraryFile(
+        files: LibraryFiles,
+        json: LibraryJson,
+        dispatchers: DispatcherProvider,
+    ) = ReadLibraryFile(files, json, dispatchers.default)
+
+    @Provides
+    fun provideImportLibrary(
+        books: BookRepository,
+        readFile: ReadLibraryFile,
+        clock: Clock,
+        scheduler: LookupScheduler,
+        lock: BackupLock,
+    ) = ImportLibrary(books, readFile, clock, scheduler, lock)
+
+    @Provides
+    fun provideExportLibrary(
+        snapshot: LibrarySnapshot,
+        files: LibraryFiles,
+        json: LibraryJson,
+        clock: Clock,
+        dispatchers: DispatcherProvider,
+    ) = ExportLibrary(snapshot, files, json, clock, dispatchers.default)
 
     @Provides
     fun provideRetryPendingLookups(

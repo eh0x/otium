@@ -24,11 +24,16 @@ object MergeMetadata {
             .distinct()
             .filter(coverIsUsable)
 
+        // Name and number come from the same source, so they never describe different series.
+        val series = sources.firstOrNull { !it.series.isNullOrBlank() || it.seriesIndex != null }
+
         return BookCandidate(
             isbn13 = sources.firstNotNullOfOrNull { it.isbn13?.takeIf(String::isNotBlank) },
             isbn10 = sources.firstNotNullOfOrNull { it.isbn10?.takeIf(String::isNotBlank) },
             title = sources.firstNotNullOfOrNull { it.title.takeIf(String::isNotBlank) }.orEmpty(),
             subtitle = sources.firstNotNullOfOrNull { it.subtitle?.takeIf(String::isNotBlank) },
+            series = series?.series?.takeIf(String::isNotBlank),
+            seriesIndex = series?.seriesIndex,
             authors = sources.firstOrNull { it.authors.isNotEmpty() }?.authors.orEmpty(),
             publisher = sources.firstNotNullOfOrNull { it.publisher?.takeIf(String::isNotBlank) },
             publishedYear = sources.firstNotNullOfOrNull { it.publishedYear },
@@ -44,6 +49,6 @@ object MergeMetadata {
             coverUrl = covers.firstOrNull(),
             alternateCoverUrls = covers.drop(1),
             source = if (google != null) BookSource.GOOGLE else BookSource.OPEN_LIBRARY,
-        )
+        ).withSeriesGuess()
     }
 }

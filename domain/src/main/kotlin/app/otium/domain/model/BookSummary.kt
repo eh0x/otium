@@ -15,4 +15,6 @@ data class BookSummary(
     val shelf: String? = null,
     /** Epoch milliseconds of the last change, such as progress. */
     val updatedAt: Long = 0L,
+    val series: String? = null,
+    val seriesIndex: Double? = null,
 )

@@ -109,10 +109,17 @@ fun ShelfBook(book: BookSummary, onOpen: () -> Unit, modifier: Modifier = Modifi
 
 /**
  * A row of the index: cover, title, author, status (with the page while reading) and, at the
- * right edge, the book's place in the list, like an accession number.
+ * right edge, the book's place in the list, like an accession number. [seriesNumber] ("Book 2")
+ * goes before the author when the index stands under series.
  */
 @Composable
-fun IndexRow(book: BookSummary, position: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+fun IndexRow(
+    book: BookSummary,
+    position: Int,
+    onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
+    seriesNumber: String? = null,
+) {
     val muted = MaterialTheme.otiumColors.muted
     val small = MaterialTheme.typography.bodySmall.copy(
         fontSize = 11.sp,
@@ -142,7 +149,8 @@ fun IndexRow(book: BookSummary, position: Int, onOpen: () -> Unit, modifier: Mod
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = book.authors,
+                text = seriesNumber?.let { stringResource(R.string.dot_joined, it, book.authors) }
+                    ?: book.authors,
                 style = MaterialTheme.typography.bodySmall.copy(fontStyle = FontStyle.Italic),
                 color = muted,
                 maxLines = 1,

@@ -28,6 +28,13 @@ class LibraryQueryBuilderTest {
     }
 
     @Test
+    fun `ftsQuery ignores how the words are spaced, so search text needs no cleaning first`() {
+        assertEquals("the* hobbit*", LibraryQueryBuilder.ftsQuery("  the   hobbit \n"))
+        assertEquals("the* hobbit*", LibraryQueryBuilder.ftsQuery("the\thobbit"))
+        assertEquals(null, LibraryQueryBuilder.ftsQuery(" \n\t "))
+    }
+
+    @Test
     fun `ftsQuery strips fts syntax and punctuation`() {
         assertEquals("c*", LibraryQueryBuilder.ftsQuery("c++ !!"))
         assertEquals("o* brien*", LibraryQueryBuilder.ftsQuery("o'brien"))

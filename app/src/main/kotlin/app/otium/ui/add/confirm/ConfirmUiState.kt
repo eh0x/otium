@@ -6,6 +6,8 @@ import app.otium.domain.model.Book
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.CoverChoice
+import app.otium.ui.common.formatSeriesNumber
+import app.otium.ui.common.parseSeriesNumber
 
 /**
  * The confirm form as the user types it. Numbers stay text until saving, so a half-typed value
@@ -16,6 +18,9 @@ data class BookForm(
     val isbn: String = "",
     val title: String = "",
     val subtitle: String = "",
+    val series: String = "",
+    /** The book's number in [series] as typed: "2", "1.5" or "1,5". */
+    val seriesIndex: String = "",
     val authors: String = "",
     val publisher: String = "",
     val publishedYear: String = "",
@@ -43,6 +48,8 @@ data class BookForm(
         isbn10 = isbn10,
         title = title.trim(),
         subtitle = subtitle.orNull(),
+        series = series.orNull(),
+        seriesIndex = parseSeriesNumber(seriesIndex),
         authors = authors.splitList(),
         publisher = publisher.orNull(),
         publishedYear = publishedYear.trim().toIntOrNull(),
@@ -59,6 +66,8 @@ data class BookForm(
             isbn = candidate.isbn13 ?: candidate.isbn10.orEmpty(),
             title = candidate.title,
             subtitle = candidate.subtitle.orEmpty(),
+            series = candidate.series.orEmpty(),
+            seriesIndex = candidate.seriesIndex?.let(::formatSeriesNumber).orEmpty(),
             authors = candidate.authors.joinToString(LIST_SEPARATOR),
             publisher = candidate.publisher.orEmpty(),
             publishedYear = candidate.publishedYear?.toString().orEmpty(),
@@ -73,6 +82,8 @@ data class BookForm(
             isbn = book.isbn13 ?: book.isbn10.orEmpty(),
             title = book.title,
             subtitle = book.subtitle.orEmpty(),
+            series = book.series.orEmpty(),
+            seriesIndex = book.seriesIndex?.let(::formatSeriesNumber).orEmpty(),
             authors = book.authors.joinToString(LIST_SEPARATOR),
             publisher = book.publisher.orEmpty(),
             publishedYear = book.publishedYear?.toString().orEmpty(),

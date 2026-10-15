@@ -15,6 +15,7 @@ data class LibraryActions(
     val onQueryChange: (String) -> Unit = {},
     val onStatusSelected: (BookStatus?) -> Unit = {},
     val onSortSelected: (SortOrder) -> Unit = {},
+    val onSeriesSelected: (String?) -> Unit = {},
     val onClearFilters: () -> Unit = {},
     val onViewModeSelected: (LibraryViewMode) -> Unit = {},
     val onOpenBook: (Long) -> Unit = {},

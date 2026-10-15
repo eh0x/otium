@@ -8,9 +8,7 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.repo.BookRepository
-import app.otium.domain.usecase.MarkFinished
-import app.otium.domain.usecase.SetTotalPages
-import app.otium.domain.usecase.UpdateProgress
+import app.otium.domain.usecase.ReadingTracker
 import app.otium.ui.navigation.DetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -31,9 +29,7 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
 class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: BookRepository,
-    private val updateProgress: UpdateProgress,
-    private val markFinished: MarkFinished,
-    private val setTotalPages: SetTotalPages,
+    private val reading: ReadingTracker,
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.toRoute<DetailRoute>().bookId
@@ -60,11 +56,13 @@ class DetailViewModel @Inject constructor(
         initialValue = DetailUiState(),
     )
 
-    fun onProgressConfirmed(page: Int) = perform { updateProgress(bookId, page) }
+    fun onProgressConfirmed(page: Int) = perform { reading.setPage(bookId, page) }
 
-    fun onMarkFinished() = perform { markFinished(bookId) }
+    fun onMarkFinished() = perform { reading.finish(bookId) }
 
-    fun onTotalPagesConfirmed(totalPages: Int) = perform { setTotalPages(bookId, totalPages) }
+    fun onTotalPagesConfirmed(totalPages: Int) = perform {
+        reading.setTotalPages(bookId, totalPages)
+    }
 
     fun onDelete() {
         viewModelScope.launch {

@@ -16,7 +16,6 @@ import app.otium.domain.model.BackupSlot
 import app.otium.domain.model.DriveAuthState
 import app.otium.domain.model.RestorePreview
 import app.otium.ui.theme.OtiumTheme
-import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -49,6 +48,24 @@ class BackupContentTest {
                 encryptionActions = encryptionActions,
             )
         }
+    }
+
+    @Test
+    fun `the library section opens import and export`() {
+        var opened = 0
+        rule.setContent {
+            OtiumTheme(darkTheme = false) {
+                BackupContent(
+                    state = BackupUiState(),
+                    actions = BackupActions(),
+                    onOpenImportExport = { opened++ },
+                )
+            }
+        }
+
+        rule.onNodeWithText("Import and export").performScrollTo().performClick()
+
+        assertEquals(1, opened)
     }
 
     // --- Google Drive ---
@@ -151,7 +168,7 @@ class BackupContentTest {
     @Test
     fun `the confirm dialog says what will replace the library`() {
         var confirmed = 0
-        val preview = RestorePreview(BackupSlot.LATEST, backupInfo(bookCount = 12), File("x"))
+        val preview = RestorePreview(BackupSlot.LATEST, backupInfo(bookCount = 12))
         show(
             signedIn.copy(restorePreview = preview),
             BackupActions(onRestoreConfirmed = { confirmed++ }),
@@ -167,7 +184,7 @@ class BackupContentTest {
     @Test
     fun `cancelling the confirm dialog reports it`() {
         var dismissed = 0
-        val preview = RestorePreview(BackupSlot.LATEST, backupInfo(), File("x"))
+        val preview = RestorePreview(BackupSlot.LATEST, backupInfo())
         show(
             signedIn.copy(restorePreview = preview),
             BackupActions(onRestoreDismissed = { dismissed++ }),

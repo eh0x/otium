@@ -46,6 +46,11 @@ internal data class EditionDto(
     val isbn13: List<String> = emptyList(),
     /** A plain string or a `{"type": "/type/text", "value": "..."}` object. */
     val description: JsonElement? = null,
+    /**
+     * Free text, not in the Books API documentation but present in recorded editions, such as
+     * `["Dune (1); Dune Chronicles, Book 1"]`.
+     */
+    @Serializable(with = LenientStringList::class) val series: List<String> = emptyList(),
 )
 
 /** A work's author entry: `{"author": {"key": "/authors/OL26320A"}}`. */

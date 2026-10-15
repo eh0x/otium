@@ -73,7 +73,6 @@ updates:
           - "androidx.compose.ui:ui-test*"
           - "org.robolectric*"
           - "app.cash.turbine*"
-          - "io.mockk*"
           - "com.lemonappdev*"
         update-types:
           - "minor"

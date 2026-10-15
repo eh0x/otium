@@ -67,6 +67,29 @@ class RetryPendingLookupsTest {
     }
 
     @Test
+    fun `a found cover replaces the one the book had, which is removed`() = runTest {
+        pending(dune) { copy(coverPath = "covers/old.jpg") }
+        metadata.isbnResult = found("Dune", cover = "https://covers/dune.jpg")
+
+        retry()
+
+        assertEquals(covers.stored.single(), repo.all.single().coverPath)
+        assertEquals(listOf("covers/old.jpg"), repo.deletedCovers)
+    }
+
+    @Test
+    fun `a found cover is removed again when the book cannot be saved`() = runTest {
+        pending(dune)
+        metadata.isbnResult = found("Dune", cover = "https://covers/dune.jpg")
+        repo.failWith = AppError.Storage("disk full")
+
+        val result = retry()
+
+        assertEquals(Try.Success(PendingLookups(resolved = 0, remaining = 1)), result)
+        assertEquals(covers.stored, repo.deletedCovers)
+    }
+
+    @Test
     fun `a book nobody knows stops waiting and keeps what it has`() = runTest {
         pending(dune)
         metadata.isbnResult = Try.Failure(AppError.NotFound)
@@ -80,7 +103,7 @@ class RetryPendingLookupsTest {
     }
 
     @Test
-    fun `a lookup that cannot reach the services stays pending for a later try`() = runTest {
+    fun `a lookup that cannot reach the services ends the run and stays pending`() = runTest {
         pending(dune)
         pending(emma)
         metadata.isbnResults[dune] = Try.Failure(AppError.Offline)
@@ -88,9 +111,49 @@ class RetryPendingLookupsTest {
 
         val result = retry()
 
+        assertEquals(Try.Success(PendingLookups(resolved = 0, remaining = 2)), result)
+        assertEquals("the next book is not asked for", listOf(dune), metadata.lookedUp)
+        assertTrue(repo.all.all { it.needsLookup })
+    }
+
+    @Test
+    fun `a rate limited service is not asked again in the same run`() = runTest {
+        pending(dune)
+        pending(emma)
+        metadata.isbnResults[dune] = found("Dune")
+        metadata.isbnResults[emma] = Try.Failure(AppError.RateLimited)
+        pending("9780306406157")
+
+        val result = retry()
+
+        assertEquals(Try.Success(PendingLookups(resolved = 1, remaining = 2)), result)
+        assertEquals(listOf(dune, emma), metadata.lookedUp)
+    }
+
+    @Test
+    fun `any other failure keeps that book waiting and moves on`() = runTest {
+        pending(dune)
+        pending(emma)
+        metadata.isbnResults[dune] = Try.Failure(AppError.Unexpected("bad answer"))
+        metadata.isbnResults[emma] = found("Emma")
+
+        val result = retry()
+
         assertEquals(Try.Success(PendingLookups(resolved = 1, remaining = 1)), result)
         assertTrue(repo.all.single { it.isbn13 == dune }.needsLookup)
         assertEquals("Emma", repo.all.single { it.isbn13 == emma }.title)
+    }
+
+    @Test
+    fun `a finished book stays finished when the lookup changes its page count`() = runTest {
+        pending(dune) { copy(totalPages = 300, currentPage = 300) }
+        metadata.isbnResult = found("Dune", pages = 412)
+
+        retry()
+
+        val saved = repo.all.single()
+        assertEquals(412, saved.totalPages)
+        assertEquals(412, saved.currentPage)
     }
 
     @Test
@@ -125,5 +188,33 @@ class RetryPendingLookupsTest {
 
         assertEquals(Try.Success(PendingLookups(resolved = 0, remaining = 0)), result)
         assertTrue(metadata.lookedUp.isEmpty())
+    }
+
+    @Test
+    fun `a found series fills a book that has none`() = runTest {
+        pending(dune)
+        metadata.isbnResult = Try.Success(
+            found("Dune").value.copy(series = "Dune Chronicles", seriesIndex = 1.0),
+        )
+
+        retry()
+
+        val saved = repo.all.single()
+        assertEquals("Dune Chronicles", saved.series)
+        assertEquals(1.0, saved.seriesIndex)
+    }
+
+    @Test
+    fun `a series the book already has is kept`() = runTest {
+        pending(dune) { copy(series = "Dune", seriesIndex = 1.0) }
+        metadata.isbnResult = Try.Success(
+            found("Dune").value.copy(series = "Dune Chronicles", seriesIndex = 2.0),
+        )
+
+        retry()
+
+        val saved = repo.all.single()
+        assertEquals("Dune", saved.series)
+        assertEquals(1.0, saved.seriesIndex)
     }
 }

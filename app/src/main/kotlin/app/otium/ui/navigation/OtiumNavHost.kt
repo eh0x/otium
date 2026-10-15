@@ -37,6 +37,7 @@ import app.otium.ui.detail.DetailScreen
 import app.otium.ui.library.LibraryScreen
 import app.otium.ui.reading.ReadingScreen
 import app.otium.ui.theme.otiumFade
+import app.otium.ui.transfer.ImportExportScreen
 
 /**
  * The app shell and its navigation graph. The three tabs (Library, Reading, Settings) share a
@@ -117,7 +118,10 @@ private fun NavGraphBuilder.tabs(navController: NavHostController, onOpenAddShee
     composable<ReadingRoute> {
         ReadingScreen(onOpenBook = { navController.navigate(DetailRoute(it)) })
     }
-    composable<SettingsRoute> { BackupScreen() }
+    composable<SettingsRoute> {
+        BackupScreen(onOpenImportExport = { navController.navigate(ImportExportRoute) })
+    }
+    composable<ImportExportRoute> { ImportExportScreen(onBack = { navController.popBackStack() }) }
 }
 
 /** Switches tabs the standard way: one copy of each tab, each keeping its own state. */

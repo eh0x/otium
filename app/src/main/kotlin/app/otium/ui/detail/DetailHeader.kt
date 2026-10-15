@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.otium.R
 import app.otium.domain.model.Book
+import app.otium.ui.common.formatSeriesNumber
 import app.otium.ui.common.rememberCoverPainter
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
@@ -98,6 +99,13 @@ private fun HeaderText(book: Book, authors: String, modifier: Modifier = Modifie
         book.subtitle?.takeIf { it.isNotBlank() }?.let {
             Text(text = it, style = MaterialTheme.typography.bodyMedium)
         }
+        seriesLine(book)?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
         if (authors.isNotBlank()) {
             Text(
                 text = authors,
@@ -111,6 +119,19 @@ private fun HeaderText(book: Book, authors: String, modifier: Modifier = Modifie
                 color = MaterialTheme.otiumColors.muted,
             )
         }
+    }
+}
+
+/** "Dune Chronicles · Book 1": the series and the book's number in it, whichever are known. */
+@Composable
+private fun seriesLine(book: Book): String? {
+    val name = book.series?.takeIf(String::isNotBlank)
+    val number = book.seriesIndex?.let {
+        stringResource(R.string.series_book_number, formatSeriesNumber(it))
+    }
+    return when {
+        name != null && number != null -> stringResource(R.string.dot_joined, name, number)
+        else -> name ?: number
     }
 }
 

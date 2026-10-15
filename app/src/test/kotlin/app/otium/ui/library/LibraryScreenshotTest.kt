@@ -8,7 +8,9 @@ import androidx.compose.ui.test.onRoot
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryViewMode
+import app.otium.domain.model.SeriesProgress
 import app.otium.domain.model.SortKeys
+import app.otium.domain.model.SortOrder
 import app.otium.domain.usecase.DeriveStatus
 import app.otium.ui.theme.OtiumTheme
 import java.io.File
@@ -97,6 +99,67 @@ class LibraryScreenshotTest {
     @Test
     fun `list in the dark theme`() =
         render("library-list-dark", dark = true, state = state(LibraryViewMode.LIST))
+
+    private val seriesBooks = listOf(
+        Triple("Dune", "Dune", 1.0),
+        Triple("Dune Messiah", "Dune", 2.0),
+        Triple("Children of Dune", "Dune", 3.0),
+        Triple("A Wizard of Earthsea", "Earthsea", 1.0),
+        Triple("The Tombs of Atuan", "Earthsea", 2.0),
+        Triple("Emma", null, null),
+    ).mapIndexed { index, (title, series, number) ->
+        val current = listOf(300, 120, 0, 300, 0, 45)[index]
+        BookSummary(
+            id = index + 1L,
+            title = title,
+            authors = if (series == "Dune") "Frank Herbert" else "Ursula K. Le Guin",
+            coverPath = null,
+            coverSourceUrl = null,
+            currentPage = current,
+            totalPages = 300,
+            status = DeriveStatus(current, 300),
+            series = series,
+            seriesIndex = number,
+        )
+    }.sortedWith(SortKeys.bySeries)
+
+    private fun seriesState(mode: LibraryViewMode, series: String? = null) = LibraryUiState(
+        // As the repository returns them: by series when grouped, by title when one is chosen.
+        books = if (series == null) {
+            seriesBooks
+        } else {
+            seriesBooks.filter { it.series == series }.sortedWith(SortKeys.byTitle)
+        },
+        totalBooks = seriesBooks.size,
+        isLoading = false,
+        viewMode = mode,
+        sort = if (series == null) SortOrder.SERIES else SortOrder.TITLE,
+        series = series,
+        knownSeries = seriesBooks.filter { it.series != null }
+            .groupBy { it.series!! }
+            .map { (name, books) -> SeriesProgress.of(name, books) },
+    )
+
+    @Test
+    fun `list grouped by series`() = render(
+        "library-series-list-light",
+        dark = false,
+        state = seriesState(LibraryViewMode.LIST),
+    )
+
+    @Test
+    fun `shelves grouped by series in the dark theme`() = render(
+        "library-series-shelf-dark",
+        dark = true,
+        state = seriesState(LibraryViewMode.SHELF),
+    )
+
+    @Test
+    fun `one series chosen`() = render(
+        "library-series-filtered-light",
+        dark = false,
+        state = seriesState(LibraryViewMode.LIST, series = "Dune"),
+    )
 
     @Test
     fun `empty library`() = render(

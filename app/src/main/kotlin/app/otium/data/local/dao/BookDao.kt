@@ -16,6 +16,7 @@ import app.otium.data.local.entity.BookTagCrossRef
 import app.otium.data.local.entity.CategoryEntity
 import app.otium.data.local.entity.TagEntity
 import app.otium.data.local.row.BookListRow
+import app.otium.data.local.row.SeriesProgressRow
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -86,6 +87,22 @@ abstract class BookDao {
     )
     abstract suspend fun tagNames(bookId: Long): List<String>
 
+    // --- Covers ---
+
+    /**
+     * Whether any book names the cover file [name]. Rows from before names were stored hold a
+     * full path, so a path ending in `/name` counts as well.
+     */
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM book WHERE coverPath = :name " +
+            "OR substr(coverPath, -length(:name) - 1) = '/' || :name)",
+    )
+    abstract suspend fun isCoverNamed(name: String): Boolean
+
+    /** What every book with a cover keeps for it: a file name, or a full path in older rows. */
+    @Query("SELECT coverPath FROM book WHERE coverPath IS NOT NULL")
+    abstract suspend fun coverPaths(): List<String>
+
     // --- All labels (for filter pickers) ---
 
     @Query("SELECT name FROM author ORDER BY name COLLATE NOCASE")
@@ -96,6 +113,22 @@ abstract class BookDao {
 
     @Query("SELECT name FROM tag ORDER BY name COLLATE NOCASE")
     abstract fun observeAllTags(): Flow<List<String>>
+
+    /**
+     * Each series with its book count, read count and average progress. The CASE expressions
+     * must stay in sync with the domain DeriveStatus and SeriesProgress rules (covered by a
+     * boundary test in BookRepositoryTest).
+     */
+    @Query(
+        "SELECT series AS name, COUNT(*) AS books, " +
+            "SUM(CASE WHEN totalPages > 0 AND currentPage >= totalPages THEN 1 ELSE 0 END) " +
+            "AS read, " +
+            "AVG(CASE WHEN currentPage <= 0 OR totalPages <= 0 THEN 0.0 " +
+            "WHEN currentPage >= totalPages THEN 1.0 " +
+            "ELSE currentPage * 1.0 / totalPages END) AS fraction " +
+            "FROM book WHERE series IS NOT NULL GROUP BY series",
+    )
+    abstract fun observeSeriesProgress(): Flow<List<SeriesProgressRow>>
 
     // --- Writes ---
 
@@ -123,25 +156,30 @@ abstract class BookDao {
         return id
     }
 
-    /** Returns false when no book has the entity's id. */
+    /** Returns the book as it was before, or null when no book has the entity's id. */
     @Transaction
     open suspend fun updateBook(
         entity: BookEntity,
         authors: List<String>,
         categories: List<String>,
         tags: List<String>,
-    ): Boolean {
-        if (updateBookEntity(entity) == 0) return false
+    ): BookEntity? {
+        val before = getBookEntity(entity.id) ?: return null
+        updateBookEntity(entity)
         replaceLabels(entity.id, authors, categories, tags)
-        return true
+        return before
     }
 
-    /** Returns false when no book has the id. Labels left unused are removed. */
+    /**
+     * Returns the book that was deleted, or null when no book has the id. Labels left unused are
+     * removed.
+     */
     @Transaction
-    open suspend fun deleteBook(id: Long): Boolean {
-        if (deleteBookEntity(id) == 0) return false
+    open suspend fun deleteBook(id: Long): BookEntity? {
+        val before = getBookEntity(id) ?: return null
+        deleteBookEntity(id)
         deleteUnusedLabels()
-        return true
+        return before
     }
 
     // --- Label plumbing ---

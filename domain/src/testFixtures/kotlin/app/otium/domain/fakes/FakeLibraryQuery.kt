@@ -17,13 +17,19 @@ internal fun Book.matches(filter: LibraryFilter): Boolean {
         (filter.status == null || status == filter.status) &&
         (filter.categories.isEmpty() || categories.any { it in filter.categories }) &&
         (filter.tags.isEmpty() || tags.any { it in filter.tags }) &&
-        (filter.author == null || filter.author in authors)
+        (filter.author == null || filter.author in authors) &&
+        (filter.series == null || series == filter.series)
 }
 
 internal fun SortOrder.comparator(): Comparator<Book> = when (this) {
     SortOrder.TITLE -> compareBy { it.title.lowercase() }
 
     SortOrder.AUTHOR -> compareBy { it.authors.joinToString().lowercase() }
+
+    SortOrder.SERIES -> compareBy<Book> { it.series == null }
+        .thenBy { it.series?.lowercase() }
+        .thenBy { it.seriesIndex ?: Double.MAX_VALUE }
+        .thenBy { it.title.lowercase() }
 
     SortOrder.RECENTLY_ADDED -> compareByDescending { it.addedAt }
 

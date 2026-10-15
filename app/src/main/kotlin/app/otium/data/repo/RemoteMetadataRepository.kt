@@ -7,9 +7,11 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.error.errorOrNull
 import app.otium.domain.error.getOrNull
+import app.otium.domain.error.map
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.usecase.MergeMetadata
+import app.otium.domain.usecase.withSeriesGuess
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
@@ -65,7 +67,7 @@ class RemoteMetadataRepository internal constructor(
                 }
             }
         val results = listOfNotNull(fromGoogle, fromOpenLibrary).firstOrNull { it.hasResults() }
-        if (results != null) return results
+        if (results != null) return results.map { found -> found.map { it.withSeriesGuess() } }
 
         // Neither found anything. That is an empty list only if both services said so.
         val error =

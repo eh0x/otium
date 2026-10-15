@@ -4,8 +4,11 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookSource
+import app.otium.domain.model.BookStatus
 import app.otium.domain.model.BookSummary
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.SeriesProgress
+import app.otium.domain.model.SortKeys
 import app.otium.domain.port.Clock
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.usecase.DeriveStatus
@@ -14,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /** In-memory [BookRepository] for use case tests. Filtering and sorting are not simulated. */
+@Suppress("TooManyFunctions") // Every BookRepository method, plus the cover rule they share.
 class FakeBookRepository : BookRepository {
     private val books = MutableStateFlow<Map<Long, Book>>(emptyMap())
     private var nextId = 1L
@@ -28,6 +32,9 @@ class FakeBookRepository : BookRepository {
     val filters = mutableListOf<LibraryFilter>()
     var lastProgressUpdate: Triple<Long, Int, Long>? = null
         private set
+
+    /** Covers deleted because no book named them after a write, oldest first. */
+    val deletedCovers = mutableListOf<String>()
 
     fun seed(book: Book): Book {
         val stored = if (book.id == 0L) book.copy(id = nextId++) else book
@@ -60,6 +67,8 @@ class FakeBookRepository : BookRepository {
                         status = DeriveStatus(it.currentPage, it.totalPages),
                         shelf = it.categories.firstOrNull(),
                         updatedAt = it.updatedAt,
+                        series = it.series,
+                        seriesIndex = it.seriesIndex,
                     )
                 }
         }
@@ -79,18 +88,25 @@ class FakeBookRepository : BookRepository {
         Try.Success(books.value.values.filter { it.needsLookup }.sortedBy { it.id })
 
     override suspend fun add(book: Book): Try<Long> {
-        failWith?.let { return Try.Failure(it) }
         val existing = book.isbn13?.let { isbn ->
             books.value.values.firstOrNull { it.isbn13 == isbn }
         }
-        if (existing != null) return Try.Failure(AppError.Duplicate(existing.id))
+        val error = failWith ?: existing?.let { AppError.Duplicate(it.id) }
+        if (error != null) {
+            release(book.coverPath)
+            return Try.Failure(error)
+        }
         return Try.Success(seed(book).id)
     }
 
     override suspend fun update(book: Book): Try<Unit> {
-        failWith?.let { return Try.Failure(it) }
-        if (book.id !in books.value) return Try.Failure(AppError.NotFound)
+        val before = books.value[book.id]
+        if (failWith != null || before == null) {
+            release(book.coverPath)
+            return Try.Failure(failWith ?: AppError.NotFound)
+        }
         books.value = books.value + (book.id to book)
+        release(before.coverPath)
         return Try.Success(Unit)
     }
 
@@ -105,9 +121,15 @@ class FakeBookRepository : BookRepository {
 
     override suspend fun delete(id: Long): Try<Unit> {
         failWith?.let { return Try.Failure(it) }
-        if (id !in books.value) return Try.Failure(AppError.NotFound)
+        val before = books.value[id] ?: return Try.Failure(AppError.NotFound)
         books.value = books.value - id
+        release(before.coverPath)
         return Try.Success(Unit)
+    }
+
+    /** Deletes [path] when no book names it, as the real store does after every write. */
+    private fun release(path: String?) {
+        if (path != null && books.value.values.none { it.coverPath == path }) deletedCovers += path
     }
 
     override fun observeCategories(): Flow<List<String>> =
@@ -118,6 +140,22 @@ class FakeBookRepository : BookRepository {
 
     override fun observeAuthors(): Flow<List<String>> =
         books.map { map -> map.values.flatMap { it.authors }.distinct().sorted() }
+
+    override fun observeSeries(): Flow<List<SeriesProgress>> = books.map { map ->
+        map.values.filter { it.series != null }
+            .groupBy { it.series!! }
+            .map { (name, inSeries) ->
+                SeriesProgress(
+                    name = name,
+                    books = inSeries.size,
+                    read = inSeries.count { it.status == BookStatus.READ },
+                    fraction = inSeries.sumOf {
+                        SeriesProgress.bookProgress(it.currentPage, it.totalPages)
+                    } / inSeries.size,
+                )
+            }
+            .sortedWith(compareBy(SortKeys.bySeriesName) { it.name })
+    }
 }
 
 class FixedClock(var now: Long = 1_000L) : Clock {
@@ -132,12 +170,16 @@ fun book(
     currentPage: Int = 0,
     categories: List<String> = emptyList(),
     tags: List<String> = emptyList(),
+    series: String? = null,
+    seriesIndex: Double? = null,
 ) = Book(
     id = id,
     isbn13 = isbn13,
     isbn10 = null,
     title = title,
     subtitle = null,
+    series = series,
+    seriesIndex = seriesIndex,
     authors = listOf("Some Author"),
     publisher = null,
     publishedYear = null,

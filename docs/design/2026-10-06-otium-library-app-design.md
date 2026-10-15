@@ -31,6 +31,7 @@ Status: Validated through brainstorming, ready for implementation planning
   network; offline ISBN entries are queued.
 - Privacy: data stays on the device. Outbound calls are limited to the book APIs (ISBN or
   title/author only) and the user's own Google Drive. No analytics, no developer-held accounts.
+  Import and export read and write only files the owner picks in the system file picker.
 - Backup is stored in the Drive `appDataFolder` (scope `drive.appdata` only).
 - Solo hobby project, maintained by the owner.
 
@@ -62,6 +63,11 @@ Status: Validated through brainstorming, ready for implementation planning
 | D22 | Domain interfaces for scanner, Drive client, cover store, backup archiver and restorer, and dispatchers | Concrete classes injected directly | Keeps `:domain` pure and lets tests use fakes (see 4.5) |
 | D23 | Optional passphrase encryption of the backup file (Argon2id, then Tink streaming AES-256-GCM), key kept wrapped by the Android Keystore for scheduled runs | SQLCipher for the database; no encryption; a key held only in the Keystore | The backup is the only copy that leaves the phone. A Keystore-only key would be lost with the phone; a passphrase lets a new phone restore (review S4) |
 | D24 | Direction B "Catalogue" redesign: the single-accent Classical palette, Cormorant Garamond and Lora, a bottom bar (Library, Reading, Add, Settings) and shelves by first category | Keep Earth & Ink with EB Garamond and Source Sans 3; Direction A "Plates" | Warmer and more academic while staying modern; one accent reads calmer than two hues; Backup becomes a destination instead of a menu item. Spec: the design handoff (2026-10) |
+| D25 | Reading progress has one use case, `ReadingTracker` (set the page, finish, set the total), built on the shared rules `ClampPage` and `DeriveStatus` | Separate `UpdateProgress`, `MarkFinished` and `SetTotalPages` use cases | Refines D21: one module owns the progress rules and fetches the book once per change; ViewModels depend on one interface. The two pure rules stay separate because `Book.status`, the mappers and `SaveBook` use them too (architecture review 2026-10-11) |
+| D26 | Restore is one use case, `LibraryRestore` (prepare, confirm, cancel), that keeps the downloaded backup file to itself; `RestorePreview` carries only the slot and what the backup holds | `PrepareRestore` and `RestoreBackup` passing a `RestorePreview` that held the `File`, with the ViewModel deleting it | No file handle reaches UI state; the download is deleted in one place on confirm, cancel or a new prepare. The archiver and restorer ports stay separate: their data-layer implementations are separate and separately tested (architecture review 2026-10-11) |
+| D27 | The book repository owns the cover files its books name: after any write it deletes a cover no book names any more (replaced, its book deleted, or brought by a write that failed). `CoverStore` only stores covers (download, gallery or camera); covers a dead process left behind are purged at start-up once a day old | Use cases deleting covers themselves through `CoverStore.delete`; moving downloads and picks into the repository too | Deleting a book used to leave its cover on disk forever, and rollback code was repeated in `SaveBook` and `RetryPendingLookups`. Downloads stay out of the Room repository, which would otherwise need the HTTP client and image decoding (architecture review 2026-10-11) |
+| D28 | Import and export through files the owner picks: Goodreads and StoryGraph CSV in, Goodreads-format CSV and Otium JSON (versioned, every field but the cover file) out. `ImportLibrary` previews the file, then adds every new book straight away from what the file holds; books with an ISBN also wait for a lookup (D11). Books whose ISBN is already in the library are skipped. Progress comes from the shelf: read means finished, reading means page 1, and without a page count the shelf becomes a tag | Each row through the confirm screen; an automatic title search for rows without an ISBN; replacing the library as a restore does | Ranked first for v2 in the team session of 2026-10-10: it brings existing libraries in and lets the owner leave freely. A confirm screen per row does not scale to hundreds of books, and a title search picks wrong editions without anyone checking. `RetryPendingLookups` now ends a run at the first offline, rate-limit or timeout failure, so a large import does not keep asking a service that refuses |
+| D29 | The library database stays unencrypted by the app in v1: it is protected by the Android sandbox and file-based encryption of user storage. What leaves the phone is protected where it leaves (passphrase-encrypted backups, D23); exports are plain files and the screen says so. The threat model is in 4.8 | SQLCipher now; SQLCipher in v2 with a migration; encrypting chosen fields | SQLCipher adds a native library per ABI and its own key: a lost or invalidated key would lose the whole library, a worse outcome for one owner than the threats it answers. Against a locked phone, other apps and the network, the platform already protects the file; against an unlocked phone, an app lock helps where database encryption does not. Revisit when private notes arrive or the threat model changes (team session 2026-10-10, open decision 2; review S4) |
 
 ## 4. Final Design
 
@@ -78,11 +84,13 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
   repo/        BookRepository, MetadataRepository                     (interfaces)
   port/        BarcodeScanner, CoverStore, DispatcherProvider,
                DriveBackupClient, DriveAuth, BackupArchiver,
-               LibraryRestorer, BackupPreferences, BackupScheduler    (interfaces)
+               LibraryRestorer, BackupPreferences, BackupScheduler,
+               LibraryFiles, LibraryJson, LibrarySnapshot              (interfaces)
+  transfer/    Csv, GoodreadsCsv, StoryGraphCsv, ImportRow (library file formats)
   usecase/     DeriveStatus, MergeMetadata, ValidateIsbn13, ClampPage,
-               ObserveLibrary, AddBookFromIsbn, AddBookManually,
-               UpdateProgress, RunBackup, PrepareRestore, RestoreBackup,
-               ConfigureAutoBackup, RunScheduledBackup
+               AddBookFromIsbn, SaveBook, SaveIsbnForLater, RetryPendingLookups,
+               ReadingTracker, ReadLibraryFile, ImportLibrary, ExportLibrary, RunBackup,
+               LibraryRestore, ConfigureAutoBackup, RunScheduledBackup
 
 :app
   ui/          Compose screens + ViewModels + UI state
@@ -90,6 +98,7 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
     add/         scan, manual ISBN, title search, result picker
     detail/      book detail, progress update, edit
     backup/      backup/restore, schedule settings
+    transfer/    import and export
     theme/       OtiumTheme, OtiumColors, typography, shapes
   data/
     local/       Room: entities, FTS table, DAOs, row projections, mappers
@@ -98,8 +107,9 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
     backup/      GoogleDriveBackupClient, BackupZip, ZipBackupArchiver, RoomLibraryRestorer,
                  GoogleAuthManager
     prefs/       DataStoreLibraryPreferences, DataStoreBackupPreferences
-    cover/       FileCoverStore (files directory, Coil)
+    cover/       FileCoverStore (files directory, Coil), CoverFiles, OrphanedCovers
     scan/        MlKitBarcodeScanner
+    transfer/    ContentResolverLibraryFiles, JsonLibraryFormat, RoomLibrarySnapshot
   auth/        DriveConsent (what the screen does to give Drive access)
   work/        BackupWorker, BackupNotifier, LookupRetryWorker (WorkManager entry points)
   di/          Hilt modules (@Binds for every domain interface)
@@ -151,7 +161,7 @@ section 3. Rules that can be tested are enforced by `ArchitectureTest`.
   (implemented in `:app/data`) opens the downloaded database in a temporary Room instance, which
   runs any migrations, and imports its books into the live database in one transaction. The change
   is all or nothing, repositories never hold a stale instance, and the screens update on their own
-  because the same database stays open. `:domain` only sees `RunBackup`, `RestoreBackup` and their
+  because the same database stays open. `:domain` only sees `RunBackup`, `LibraryRestore` and their
   `AppError` results.
 - **A damaged backup can look empty.** Room's default error handler deletes a database it finds
   damaged and starts an empty one, so opening a corrupt `library.db` succeeds with no books. The
@@ -203,14 +213,33 @@ Tables:
   string), `publisher`, `publishedYear`, `language`, `description`, `totalPages`, `currentPage`
   (default 0), `coverPath` (the cover's file name in the covers directory), `coverSourceUrl`,
   `source` (google/openlibrary/manual), `addedAt`,
-  `updatedAt`, `userEdited`, `needsLookup`.
+  `updatedAt`, `userEdited`, `needsLookup`, `series` (free text, nullable) and `seriesIndex`
+  (`REAL`, nullable, so a novella can be 1.5). The series columns arrived in schema version 2.
 - `author`, `book_author`; `category`, `book_category`; `tag`, `book_tag`.
-- `book_fts`: FTS4 over title, subtitle, authors.
+- `book_fts`: FTS4 over title, subtitle, authors, series.
+
+Series:
+
+- Neither metadata service has a structured series field. Open Library editions carry a free-text
+  `series` list (seen in the recorded `edition-dune.json`: `"Dune (1); Dune Chronicles, Book 1"`);
+  `ParseSeries` reads it, and otherwise guesses from the subtitle, then the title. In a subtitle
+  or title a number only counts after a keyword ("Book 2", "Vol. 3", "#3"), so "1984" is never a
+  series number. The guess only prefills the confirm form, which the owner edits; the subtitle is
+  left as it is.
+- Series names match exactly; "Dune" and "dune" are two series until the owner edits one.
+- Progress through a series counts only the books in the library: "2 of 5 read", and a bar that
+  averages each book's progress (a read book counts as 1, a book in progress as its share of
+  pages). `BookDao.observeSeriesProgress` computes it in SQL, ignoring filters, and must agree with
+  the domain `SeriesProgress` (a boundary test checks it).
+- Cover files belong to the book repository (D27). A write that leaves a cover no book names
+  deletes it; `OrphanedCovers` deletes, at start-up, any cover file older than a day that no book
+  names, holding the backup lock so a restore never loses a cover it has just copied in.
 
 Search and filters:
 
 - FTS prefix match on the text input, debounced about 200 ms.
-- Filters combine with AND: status, categories (multi), tags (multi), optional author. Within the
+- Filters combine with AND: status, categories (multi), tags (multi), optional author, optional
+  series. Within the
   categories group and within the tags group a book matches when it has any of the selected values
   (OR inside a group, AND between groups).
 - Text input becomes an FTS4 prefix query over letters and digits only (`the hobb` becomes
@@ -221,7 +250,9 @@ Search and filters:
   by any book are deleted.
 - Status in SQL: not started = `currentPage = 0`; in progress = `0 < currentPage < totalPages`; read
   = `currentPage >= totalPages` (with `totalPages > 0`).
-- Sort: title, author, recently added, last updated, progress.
+- Sort: title, author, series, recently added, last updated, progress. By author, an author's
+  series stay together in reading order. By series, shelves and the index stand under one heading
+  per series with its progress, books outside a series last.
 - A single DAO query is built from a `LibraryFilter` object and returns `Flow<List<BookListRow>>` (a
   Room projection kept in `data/local/`). `RoomBookRepository` maps rows to the domain
   `BookSummary`, so the UI never sees Room types.
@@ -269,6 +300,26 @@ Errors:
 - Google Books API key in `local.properties` exposed via `BuildConfig`, restricted by package name
   and SHA-1, never committed. Keyless access is the low-quota fallback.
 
+#### Importing and exporting a library
+
+Settings, Import and export (D28). The owner picks a file; `ImportLibrary` works out its format
+from the header row (Goodreads: `Exclusive Shelf`; StoryGraph: `Read Status`) or from Otium's JSON
+`format` field, and previews it: new books, books already in the library, books without a usable
+ISBN, rows without a title. Nothing is written until the owner confirms. Then:
+
+- Each book is added from the file under the backup lock, so a restore never runs alongside.
+- A book with an ISBN, unless the file is Otium's own, gets `needsLookup`; one lookup run is
+  scheduled for all of them and fills in covers and details as offline entries are (D11).
+- Ratings, reviews and reading dates have no place in Otium and are not read.
+- An import cut short (the screen left, the process killed) keeps what it added; importing the
+  file again skips those books by ISBN.
+
+Export writes every book to a file the owner creates: CSV in Goodreads' columns (categories and
+tags become shelves) or Otium JSON. Covers are not exported; the JSON keeps each cover's source
+address. The Goodreads and StoryGraph columns were written from their documented exports, not
+checked against fresh ones; the readers look columns up by name and skip the ones they do not
+know.
+
 ### 4.4 UI and backup
 
 Screens:
@@ -302,10 +353,10 @@ Drive backup:
   than upload in the clear. Drive records the key id, so a restore on a phone without the key
   asks for the passphrase before downloading. Plain backups made before stay readable; the zip
   inside and its manifest format are unchanged.
-- Restore: two steps. `PrepareRestore` downloads, verifies the checksum and the manifest, and
-  refuses a schema newer than the app's (before and after the download). The confirm dialog
-  ("replaces current library") shows what will be restored. `RestoreBackup` then imports the
-  books in one transaction and copies the covers in under their own names. The database names a
+- Restore: two steps of `LibraryRestore`. `prepare` downloads, verifies the checksum and the
+  manifest, and refuses a schema newer than the app's (before and after the download). The
+  confirm dialog ("replaces current library") shows what will be restored. `confirm` then imports
+  the books in one transaction and copies the covers in under their own names. The database names a
   cover by its file name only, resolved against this install's covers directory when a book is
   read, so restored rows need no rewriting.
 - Auto backup: `PeriodicWorkRequest` using the user's constraints. Failures retry with backoff; a
@@ -383,7 +434,7 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 
 - **Unit (JUnit, Turbine, MockK):** `DeriveStatus`, ISBN-13 validation, `MergeMetadata` (gap fill,
   placeholder cover rejection), `LibraryFilter` to query, page clamping, and the use cases
-  (`AddBookFromIsbn`, `UpdateProgress`, `RunBackup`, `RestoreBackup`) against fake repositories and
+  (`AddBookFromIsbn`, `ReadingTracker`, `RunBackup`, `LibraryRestore`) against fake repositories and
   ports. `:domain` tests run on the plain JVM with no Android dependencies. ViewModel tests assert
   `AppError` to UI-state mapping.
 - **Data (Room in-memory, instrumented):** FTS search, combined filter and sort, duplicate ISBN
@@ -398,12 +449,62 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 
 ### 4.6 Play Store readiness
 
-- Privacy policy page: data stays on device; Drive appdata only; book APIs receive ISBN or
-  title/author only.
-- Data safety form: no data collected by the developer.
+- Privacy policy page, written from 4.8 so that it claims only what the app does:
+  - The library stays on the device. The developer runs no server and receives nothing.
+  - Google Books and Open Library receive the ISBN, or the title and author typed in a search,
+    together with the device's IP address, as any web request does. Their own privacy policies
+    apply to that request.
+  - Backups go to the user's own Google Drive app data folder, and only when the user connects
+    Drive. They are encrypted only when the user sets a passphrase.
+  - Import and export read and write only files the user picks; an export is not encrypted.
+- Data safety form: no data collected or shared by the developer. The book lookups are requests
+  the user starts to a third-party service over https; say so in the form's notes rather than
+  declaring them as developer collection.
 - Release build with R8, signing config kept out of git, Play App Signing.
 - Permissions: camera (justified in-app), `INTERNET`, `POST_NOTIFICATIONS` (backup failure notice).
 - Follow Google Books terms: required attribution, cover caching limited to the user's own library.
+
+### 4.8 Threat model and data protection
+
+Otium keeps one person's catalogue of their own books: titles, authors, tags, shelves, reading
+progress and dates. It is not health or payment data, but reading choices can reveal beliefs,
+health or politics, so it is treated as private. Protection follows from the threats a solo,
+offline app actually faces (D29).
+
+Where the data is and how it is protected:
+
+| Data | Where | Protection | Revisit when |
+|------|-------|------------|--------------|
+| Library database (Room) | App sandbox | Android sandbox; file-based encryption of user storage, which keeps it unreadable until the first unlock after a restart | Private notes (Marginalia) arrive, or the threat model changes |
+| Cover pictures | App sandbox | As the database | As the database |
+| Backup settings, Drive account email | DataStore in the sandbox | As the database; excluded from Android backup and device transfer | — |
+| Backup key | DataStore in the sandbox | Only stored wrapped by an AES-256-GCM key in the Android Keystore that cannot be read out; never stored with or as the passphrase | — |
+| Drive backup | The user's Drive `appDataFolder` (`drive.appdata` scope) | Only Otium can open the folder. With a passphrase: Argon2id (64 MiB, 3 passes), then Tink streaming AES-256-GCM, before upload | Offering encryption by default (open) |
+| Export file (CSV, JSON) | Wherever the user saves it | None: a plain file for other apps. The screen says so, and CSV cells are escaped against formula injection | An encrypted Otium JSON export (open) |
+| Network traffic | Google Books, Open Library, Google Drive | https only, system certificate authorities, no cleartext (network security config) | — |
+
+Threats and how they are met:
+
+- **Lost or stolen phone, locked.** Covered by the lock screen, the sandbox and file-based
+  encryption. Nothing in Otium weakens them: Android's cloud backup and device transfer exclude
+  all app data.
+- **Other apps on the phone.** Covered by the sandbox. Every exported component other than the
+  launcher must be guarded by a permission, and the file provider shares only the camera's cache
+  folder; `ManifestPolicyTest` checks both on the merged manifest.
+- **Someone watching the network.** Covered by https everywhere. There are no certificate pins,
+  on purpose: Google rotates its certificates, and a stale pin would break lookups and backups.
+- **Someone with the user's Google account.** Covered for backups with a passphrase set. A backup
+  without one can be read by anyone who signs in as the user and restores with Otium.
+- **Leaks through the developer.** None possible: no backend, accounts, analytics, crash reporting
+  or logging of library data.
+
+Not covered, and accepted for v1:
+
+- **An unlocked phone in someone else's hands.** They can browse and export the library. An
+  optional app lock (biometric or device credential) is the next step.
+- **A rooted or compromised phone.** Out of scope: no app-level measure holds once the sandbox
+  is gone.
+- **Export files once they leave the app.** The user chose where they went.
 
 ## 5. Risks
 

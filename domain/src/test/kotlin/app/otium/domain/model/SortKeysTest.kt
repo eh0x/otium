@@ -5,10 +5,18 @@ import org.junit.Test
 
 class SortKeysTest {
 
-    private fun book(id: Long, title: String, authors: String = "") = BookSummary(
+    private fun book(
+        id: Long,
+        title: String,
+        authors: String = "",
+        series: String? = null,
+        seriesIndex: Double? = null,
+    ) = BookSummary(
         id = id,
         title = title,
         authors = authors,
+        series = series,
+        seriesIndex = seriesIndex,
         coverPath = null,
         coverSourceUrl = null,
         currentPage = 0,
@@ -86,5 +94,53 @@ class SortKeysTest {
         val books = listOf(book(2, "Dune"), book(1, "dune"))
 
         assertEquals(listOf(1L, 2L), books.sortedWith(SortKeys.byTitle).map { it.id })
+    }
+
+    @Test
+    fun `by author keeps an author's series in reading order`() {
+        val books = listOf(
+            book(1, "Abaddon's Gate", "James S. A. Corey", "The Expanse", 3.0),
+            book(2, "Leviathan Wakes", "James S. A. Corey", "The Expanse", 1.0),
+            book(3, "Caliban's War", "James S. A. Corey", "The Expanse", 2.0),
+        )
+
+        assertEquals(
+            listOf("Leviathan Wakes", "Caliban's War", "Abaddon's Gate"),
+            books.sortedWith(SortKeys.byAuthor).map { it.title },
+        )
+    }
+
+    @Test
+    fun `by series groups each series in number order, books outside a series last`() {
+        val books = listOf(
+            book(1, "Emma"),
+            book(2, "Children of Dune", series = "Dune", seriesIndex = 3.0),
+            book(3, "Caliban's War", series = "The Expanse", seriesIndex = 2.0),
+            book(4, "Dune", series = "Dune", seriesIndex = 1.0),
+            book(5, "Dune Messiah", series = "Dune", seriesIndex = 2.0),
+            book(6, "Leviathan Wakes", series = "The Expanse", seriesIndex = 1.0),
+            book(7, "Unnumbered", series = "Dune"),
+            book(8, "Interlude", series = "Dune", seriesIndex = 1.5),
+        )
+
+        assertEquals(
+            listOf(
+                "Dune",
+                "Interlude",
+                "Dune Messiah",
+                "Children of Dune",
+                "Unnumbered",
+                "Leviathan Wakes",
+                "Caliban's War",
+                "Emma",
+            ),
+            books.sortedWith(SortKeys.bySeries).map { it.title },
+        )
+    }
+
+    @Test
+    fun `series names file like titles`() {
+        assertEquals("Expanse", SortKeys.series("The Expanse"))
+        assertEquals("Discworld", SortKeys.series(" Discworld "))
     }
 }

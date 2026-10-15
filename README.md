@@ -1,13 +1,22 @@
+<!-- markdownlint-disable-next-line MD041 -- the title block is centred (docs/MARKDOWN_GUIDE.md) -->
+<div align="center">
+
 # Otium
 
 ![The Otium app icon: a gold ring with a ribbon bookmark](docs/media/readme/otium-icon.svg)
 
 Your personal Alexandria library.
 
+[![Latest release](https://img.shields.io/github/v/release/eh0x/otium?label=release)](https://github.com/eh0x/otium/releases/latest)
 [![CI](https://github.com/eh0x/otium/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/eh0x/otium/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3ddc84.svg)](#requirements)
 [![Kotlin and Compose](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7f52ff.svg)](#tech-stack)
+
+[![Get it on GitHub](https://img.shields.io/badge/Get%20it%20on-GitHub-181717?logo=github)](https://github.com/eh0x/otium/releases/latest)
+[![Get it on Obtainium](https://img.shields.io/badge/Get%20it%20on-Obtainium-6f3fd1)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/eh0x/otium)
+
+</div>
 
 Otium is an Android app for cataloguing and tracking your own physical books. Scan an ISBN, let it
 fetch the details, keep your place by page, and find any book in your library in an instant. It is
@@ -16,9 +25,8 @@ built to feel like a quiet study rather than a utility, and it keeps your data o
 > [!NOTE]
 > Otium is in active development and not on Google Play yet. The version 1 features are built and
 > tested on the JVM; device checks, the Google Drive setup, and the accessibility and Play Store
-> polish are still to do. See [Status](#status). Releases are on
-> [GitHub Releases](https://github.com/eh0x/otium/releases), with the changes in
-> [CHANGELOG.md](CHANGELOG.md); you can also build it from source.
+> polish are still to do. See [Status](#status). To try it, see [Install](#install); the changes
+> are in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contents
 
@@ -26,6 +34,7 @@ built to feel like a quiet study rather than a utility, and it keeps your data o
 - [Features](#features)
 - [Privacy](#privacy)
 - [Status](#status)
+- [Install](#install)
 - [Getting started](#getting-started)
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack)
@@ -64,6 +73,8 @@ by the headless screenshot tests (`app/build/screenshots`).
   offline wait for a connection.
 - **Backup to your own Google Drive.** A manual backup and an optional scheduled one, stored in
   your private app folder in Drive, with optional passphrase encryption.
+- **Import and export.** Bring a library in from a Goodreads or StoryGraph export, and take yours
+  out as CSV (in Goodreads' columns, which most reading apps import) or as Otium JSON.
 
 Not in version 1: iOS, syncing between devices, accounts or a backend, ratings and notes, reading
 statistics, social features, and several copies of the same ISBN.
@@ -76,6 +87,7 @@ statistics, social features, and several copies of the same ISBN.
 - Backups use the private app data folder of your Drive (the `drive.appdata` scope), which the app
   alone can read. With a passphrase set, the backup is encrypted (Argon2id and AES-256-GCM) before
   it leaves the phone.
+- Import and export read and write only the files you pick.
 
 ## Status
 
@@ -92,6 +104,33 @@ which holds the detail and is kept current. This table is a summary.
 | 5 | Add flow: scan, ISBN, title search | Done (device scan check still to do) |
 | 6 | Backup and restore with Google Drive | Built (Drive setup and device check still to do) |
 | 7 | Polish, accessibility, Play Store release | Planned |
+
+## Install
+
+Otium runs on Android 8.0 or later.
+
+| Source | Status | Updates |
+|--------|--------|---------|
+| [GitHub Releases](https://github.com/eh0x/otium/releases/latest) | Available: the signed APK of every release | By hand: download each new release |
+| [Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/eh0x/otium) | Available: installs the same APK from GitHub Releases | Automatic: Obtainium checks GitHub for new releases |
+| F-Droid | Not available | F-Droid accepts only free software; Otium uses Google Play services (Drive sign-in) and ML Kit (barcode scanning) |
+| Google Play | Planned | See [Status](#status) |
+
+The [Obtainium](https://obtainium.imranr.dev/) link opens the app if it is installed and adds
+Otium, or offers to install Obtainium first. GitHub Releases and Obtainium install the same APK,
+so either can update the other. A later Google Play install is signed with a different key and
+cannot replace them: back up, uninstall, then install from Play.
+
+To check a download, compare it with `SHA256SUMS` from the same release, and verify where it was
+built with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+sha256sum --check --ignore-missing SHA256SUMS
+gh attestation verify otium-<version>.apk --repo eh0x/otium
+```
+
+To build it yourself instead, see [Getting started](#getting-started). How releases are made is in
+the [release guide](docs/RELEASING.md).
 
 ## Getting started
 
