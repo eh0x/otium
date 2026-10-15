@@ -1,7 +1,12 @@
 package app.otium.ui.detail
 
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import app.otium.domain.fakes.book
+import app.otium.domain.model.Note
+import app.otium.domain.model.NoteKind
 import app.otium.ui.saveScreenshot
 import app.otium.ui.theme.OtiumTheme
 import org.junit.Rule
@@ -47,4 +52,31 @@ class DetailScreenshotTest {
 
     @Test
     fun `detail in the dark theme`() = render("detail-dark", dark = true)
+
+    private val notes = listOf(
+        Note(1, 0, NoteKind.QUOTE, "You have power over your mind, not outside events.", 31, 1, 1),
+        Note(2, 0, NoteKind.NOTE, "Reread book II on a slow afternoon.", 74, 2, 2),
+        Note(3, 0, NoteKind.NOTE, "Compare with the Enchiridion.", null, 3, 3),
+    )
+
+    private fun renderNotes(name: String, dark: Boolean, editor: Boolean = false) {
+        rule.setContent {
+            OtiumTheme(darkTheme = dark) {
+                val state = DetailUiState(isLoading = false, book = meditations, notes = notes)
+                DetailContent(state, DetailActions())
+            }
+        }
+        rule.onNodeWithText("NOTES").performScrollTo()
+        if (editor) rule.onNodeWithText("Add").performClick()
+        rule.saveScreenshot(name)
+    }
+
+    @Test
+    fun `notes in the light theme`() = renderNotes("detail-notes-light", dark = false)
+
+    @Test
+    fun `notes in the dark theme`() = renderNotes("detail-notes-dark", dark = true)
+
+    @Test
+    fun `the note editor`() = renderNotes("detail-note-editor-light", dark = false, editor = true)
 }

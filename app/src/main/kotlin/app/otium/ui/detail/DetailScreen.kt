@@ -36,6 +36,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
 import app.otium.domain.model.Book
+import app.otium.domain.model.Note
 import app.otium.ui.common.messageRes
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
@@ -63,6 +64,8 @@ fun DetailScreen(
             onMarkFinished = viewModel::onMarkFinished,
             onTotalPagesConfirmed = viewModel::onTotalPagesConfirmed,
             onDelete = viewModel::onDelete,
+            onNoteSaved = viewModel::onNoteSaved,
+            onNoteDeleted = viewModel::onNoteDeleted,
             onErrorShown = viewModel::onErrorShown,
         )
     }
@@ -87,7 +90,7 @@ fun DetailContent(state: DetailUiState, actions: DetailActions, modifier: Modifi
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             TopRow(hasBook = book != null, actions = actions, onDelete = { confirmDelete = true })
             when {
-                book != null -> BookDetails(book, actions)
+                book != null -> BookDetails(book, state.notes, actions)
 
                 !state.isLoading -> Text(
                     text = stringResource(R.string.detail_not_found),
@@ -173,7 +176,7 @@ private fun OverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun BookDetails(book: Book, actions: DetailActions) {
+private fun BookDetails(book: Book, notes: List<Note>, actions: DetailActions) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -184,6 +187,14 @@ private fun BookDetails(book: Book, actions: DetailActions) {
         DetailHeader(book)
         ProgressSection(
             book = book,
+            actions = actions,
+            modifier = Modifier
+                .padding(top = 26.dp)
+                .hairlineTop(MaterialTheme.otiumColors.divider)
+                .padding(top = 16.dp),
+        )
+        NotesSection(
+            notes = notes,
             actions = actions,
             modifier = Modifier
                 .padding(top = 26.dp)

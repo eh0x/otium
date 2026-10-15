@@ -8,7 +8,9 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.NoteRepository
 import app.otium.domain.usecase.ReadingTracker
+import app.otium.domain.usecase.SaveNote
 import app.otium.ui.navigation.DetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -30,6 +32,8 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: BookRepository,
     private val reading: ReadingTracker,
+    private val noteRepository: NoteRepository,
+    private val saveNote: SaveNote,
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.toRoute<DetailRoute>().bookId
@@ -43,10 +47,15 @@ class DetailViewModel @Inject constructor(
         .map<Book?, Pair<Book?, Boolean>> { it to false }
         .onStart { emit(null to true) }
 
-    val uiState: StateFlow<DetailUiState> = combine(book, outcome) { (loaded, loading), result ->
+    val uiState: StateFlow<DetailUiState> = combine(
+        book,
+        noteRepository.observeNotes(bookId),
+        outcome,
+    ) { (loaded, loading), notes, result ->
         DetailUiState(
             isLoading = loading,
             book = loaded,
+            notes = notes,
             deleted = result.deleted,
             error = result.error,
         )
@@ -72,6 +81,18 @@ class DetailViewModel @Inject constructor(
             }
         }
     }
+
+    /** Adds the note, or changes the one being edited. */
+    fun onNoteSaved(draft: NoteDraft) = perform {
+        val editing = draft.editing
+        if (editing == null) {
+            saveNote.add(bookId, draft.kind, draft.text, draft.page)
+        } else {
+            saveNote.update(editing, draft.kind, draft.text, draft.page)
+        }
+    }
+
+    fun onNoteDeleted(id: Long) = perform { noteRepository.delete(id) }
 
     fun onErrorShown() = outcome.update { it.copy(error = null) }
 

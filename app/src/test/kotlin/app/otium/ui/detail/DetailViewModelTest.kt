@@ -4,9 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.toRoute
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.FakeBookRepository
+import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
+import app.otium.domain.model.NoteKind
 import app.otium.domain.usecase.ReadingTracker
+import app.otium.domain.usecase.SaveNote
 import app.otium.testing.MainDispatcherRule
 import app.otium.ui.navigation.DetailRoute
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,11 +38,14 @@ class DetailViewModelTest {
 
     private val repo = FakeBookRepository()
     private val clock = FixedClock(now = 5_000L)
+    private val notes = FakeNoteRepository(knownBooks = setOf(1L))
 
     private fun viewModel(id: Long) = DetailViewModel(
         savedStateHandle = SavedStateHandle(mapOf("bookId" to id)),
         repository = repo,
         reading = ReadingTracker(repo, clock),
+        noteRepository = notes,
+        saveNote = SaveNote(notes, clock),
     )
 
     private fun TestScope.screenOpen(vm: DetailViewModel) {
@@ -182,6 +188,92 @@ class DetailViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.uiState.value.error)
+    }
+
+    // --- Notes ---
+
+    @Test
+    fun `a new note is stored on the book and shows in state`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        vm.onNoteSaved(NoteDraft(null, NoteKind.QUOTE, " A passage ", page = 42))
+        advanceUntilIdle()
+
+        val note = vm.uiState.value.notes.single()
+        assertEquals(NoteKind.QUOTE, note.kind)
+        assertEquals("A passage", note.text)
+        assertEquals(42, note.page)
+        assertEquals(stored.id, note.bookId)
+        assertEquals(5_000L, note.createdAt)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `editing a note changes it and keeps when it was written`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+        vm.onNoteSaved(NoteDraft(null, NoteKind.NOTE, "first", page = null))
+        advanceUntilIdle()
+        val original = vm.uiState.value.notes.single()
+
+        vm.onNoteSaved(NoteDraft(original, NoteKind.QUOTE, "second", page = 7))
+        advanceUntilIdle()
+
+        val changed = vm.uiState.value.notes.single()
+        assertEquals(original.id, changed.id)
+        assertEquals("second", changed.text)
+        assertEquals(NoteKind.QUOTE, changed.kind)
+        assertEquals(7, changed.page)
+        assertEquals(original.createdAt, changed.createdAt)
+    }
+
+    @Test
+    fun `blank text is reported and nothing is stored`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        vm.onNoteSaved(NoteDraft(null, NoteKind.NOTE, "   ", page = null))
+        advanceUntilIdle()
+
+        assertEquals(AppError.InvalidInput("text"), vm.uiState.value.error)
+        assertTrue(vm.uiState.value.notes.isEmpty())
+    }
+
+    @Test
+    fun `deleting a note removes it and leaves the book`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+        vm.onNoteSaved(NoteDraft(null, NoteKind.NOTE, "gone soon", page = null))
+        advanceUntilIdle()
+
+        vm.onNoteDeleted(vm.uiState.value.notes.single().id)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.notes.isEmpty())
+        assertNotNull(vm.uiState.value.book)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `deleting a note that is already gone is reported`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        vm.onNoteDeleted(404L)
+        advanceUntilIdle()
+
+        assertEquals(AppError.NotFound, vm.uiState.value.error)
     }
 
     // --- Delete ---

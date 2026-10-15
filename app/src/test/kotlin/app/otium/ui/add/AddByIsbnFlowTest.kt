@@ -18,6 +18,7 @@ import app.otium.domain.fakes.FakeBackupScheduler
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeCoverStore
 import app.otium.domain.fakes.FakeMetadataRepository
+import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
 import app.otium.domain.model.BookCandidate
@@ -29,6 +30,7 @@ import app.otium.domain.port.CoverStore
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
+import app.otium.domain.repo.NoteRepository
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -76,6 +78,9 @@ class AddByIsbnFlowTest {
 
     @BindValue @JvmField
     val books: BookRepository = library
+
+    @BindValue @JvmField
+    val notes: NoteRepository = FakeNoteRepository()
 
     @BindValue @JvmField
     val metadata: MetadataRepository = services

@@ -7,6 +7,12 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
 
 ## [Unreleased]
 
+### Added
+
+- Notes and quotes on a book, with an optional page number. Add, edit and delete them from the
+  book's page; a book with six or more notes can be searched. Notes stay on the phone and are
+  part of your Drive backup, so set a backup passphrase if you want them encrypted there.
+
 ## [1.1.0] - 2026-10-15
 
 Known issues: Otium is not on Google Play yet, and backup to Google Drive works only once the

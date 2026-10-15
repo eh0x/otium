@@ -9,6 +9,7 @@ import app.otium.domain.port.LibrarySnapshot
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.MetadataRepository
+import app.otium.domain.repo.NoteRepository
 import app.otium.domain.usecase.AddBookFromIsbn
 import app.otium.domain.usecase.BackupLock
 import app.otium.domain.usecase.ExportLibrary
@@ -18,6 +19,7 @@ import app.otium.domain.usecase.ReadingTracker
 import app.otium.domain.usecase.RetryPendingLookups
 import app.otium.domain.usecase.SaveBook
 import app.otium.domain.usecase.SaveIsbnForLater
+import app.otium.domain.usecase.SaveNote
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,6 +41,9 @@ object UseCaseModule {
     @Provides
     fun provideSaveBook(repository: BookRepository, covers: CoverStore, clock: Clock) =
         SaveBook(repository, covers, clock)
+
+    @Provides
+    fun provideSaveNote(notes: NoteRepository, clock: Clock) = SaveNote(notes, clock)
 
     @Provides
     fun provideSaveIsbnForLater(

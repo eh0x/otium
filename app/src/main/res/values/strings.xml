@@ -116,6 +116,30 @@
     <string name="detail_tags">Tags</string>
     <string name="detail_isbn">ISBN-13</string>
 
+    <!-- Notes and quotes on a book -->
+    <string name="notes_title">Notes</string>
+    <string name="notes_add">Add</string>
+    <string name="notes_empty">Nothing written yet. Keep a thought, or a passage worth returning to.</string>
+    <string name="notes_search">Search these notes</string>
+    <string name="notes_no_match">No note mentions “%1$s”.</string>
+    <string name="notes_kind_note">Note</string>
+    <string name="notes_kind_quote">Quote</string>
+    <string name="notes_page_short">p. %1$d</string>
+    <string name="notes_edit">Edit</string>
+    <string name="notes_delete">Delete</string>
+    <string name="notes_edit_description">Edit note: %1$s</string>
+    <string name="notes_delete_description">Delete note: %1$s</string>
+    <string name="notes_new_title">New note</string>
+    <string name="notes_edit_title">Edit note</string>
+    <string name="notes_text_label">Text</string>
+    <string name="notes_page_label">Page (optional)</string>
+    <plurals name="notes_counter">
+        <item quantity="one">%1$d of %2$d character</item>
+        <item quantity="other">%1$d of %2$d characters</item>
+    </plurals>
+    <string name="notes_delete_title">Delete this note?</string>
+    <string name="notes_delete_message">It will be removed from your library. This cannot be undone.</string>
+
     <!-- Add book -->
     <string name="add_book_title">Add a book</string>
     <string name="add_kicker">Acquisition</string>
