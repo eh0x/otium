@@ -5,6 +5,7 @@ import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeLibraryFiles
 import app.otium.domain.fakes.FakeLibraryJson
 import app.otium.domain.fakes.FakeLibrarySnapshot
+import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
 import app.otium.domain.transfer.ExportFormat
@@ -40,6 +41,7 @@ class ImportExportViewModelTest {
     private fun viewModel() = ImportExportViewModel(
         importLibrary = ImportLibrary(
             books = repo,
+            notes = FakeNoteRepository(repo),
             readFile = ReadLibraryFile(files, FakeLibraryJson(), Dispatchers.Unconfined),
             clock = FixedClock(),
             scheduler = { scheduled++ },

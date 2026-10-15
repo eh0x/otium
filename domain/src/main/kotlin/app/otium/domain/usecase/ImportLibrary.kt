@@ -4,9 +4,12 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.error.flatMap
 import app.otium.domain.model.Book
+import app.otium.domain.model.Note
 import app.otium.domain.port.Clock
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.NoteRepository
+import app.otium.domain.transfer.ImportNote
 import app.otium.domain.transfer.ImportRow
 import app.otium.domain.transfer.LibraryFormat
 import app.otium.domain.transfer.Shelf
@@ -24,14 +27,22 @@ data class ImportPreview(
     val withoutIsbn: Int,
     /** Rows without a title: left out. */
     val unreadable: Int,
+    /** Notes and quotes that come with the new books; the ones that cannot be kept are left out. */
+    val notes: Int = 0,
 )
 
-/** How an import went. [waitingForLookup] books get their details later, as D11 describes. */
+/**
+ * How an import went. [waitingForLookup] books get their details later, as D11 describes.
+ * [notesSkipped] counts the notes of added books that could not be kept: blank, too long, with a
+ * page below 1, or not saved.
+ */
 data class ImportResult(
     val added: Int,
     val skipped: Int,
     val failed: Int,
     val waitingForLookup: Int,
+    val notesAdded: Int = 0,
+    val notesSkipped: Int = 0,
 )
 
 /**
@@ -39,13 +50,16 @@ data class ImportResult(
  * [preview] the owner confirms, then the [import] itself. Books are added straight away from what
  * the file holds; a book with an ISBN, unless the file is Otium's own, also waits for a lookup
  * that fills in its cover and details later, as offline ISBN entries do (D11). Books already in
- * the library are left as they are, so importing the same file twice adds nothing.
+ * the library are left as they are, with their notes, so importing the same file twice adds
+ * nothing. The notes of an Otium file come with the books it adds, checked as the editor checks
+ * them and keeping the times they were written.
  *
  * Progress comes from the shelf the book was on: read books are finished and books being read are
  * at their first page. Without a page count a shelf cannot show as progress, so it becomes a tag.
  */
 class ImportLibrary(
     private val books: BookRepository,
+    private val notes: NoteRepository,
     private val readFile: ReadLibraryFile,
     private val clock: Clock,
     private val scheduler: LookupScheduler,
@@ -68,12 +82,17 @@ class ImportLibrary(
         var skipped = 0
         var failed = 0
         var waiting = 0
+        var notesAdded = 0
+        var notesSkipped = 0
         preview.rows.forEachIndexed { index, row ->
             val book = row.toBook(now)
             when (val result = books.add(book)) {
                 is Try.Success -> {
                     added++
                     if (book.needsLookup) waiting++
+                    val kept = addNotes(result.value, row.notes, now)
+                    notesAdded += kept
+                    notesSkipped += row.notes.size - kept
                 }
 
                 is Try.Failure -> if (result.error is AppError.Duplicate) skipped++ else failed++
@@ -81,23 +100,48 @@ class ImportLibrary(
             onProgress(index + 1, preview.rows.size)
         }
         if (waiting > 0) scheduler.schedule()
-        ImportResult(added, skipped, failed, waiting)
+        ImportResult(added, skipped, failed, waiting, notesAdded, notesSkipped)
     }
+
+    /** Saves the acceptable notes of [rows] on book [bookId] and returns how many were saved. */
+    private suspend fun addNotes(bookId: Long, rows: List<ImportNote>, now: Long): Int =
+        rows.count { row ->
+            val note = row.toNote(bookId, now)
+            note != null && notes.add(note) is Try.Success
+        }
+
+    /** The note as the editor would keep it, or null when the editor would refuse it. */
+    private fun ImportNote.toNote(bookId: Long, now: Long): Note? {
+        val cleaned = Note.cleanText(text)
+        if (cleaned == null || !Note.isValidPage(page)) return null
+        val created = createdAt?.takeIf { it > 0 } ?: now
+        val updated = maxOf(updatedAt?.takeIf { it > 0 } ?: created, created)
+        return Note(0L, bookId, kind, cleaned, page, createdAt = created, updatedAt = updated)
+    }
+
+    private fun ImportNote.isAcceptable() = toNote(0L, 0L) != null
 
     private suspend fun preview(format: LibraryFormat, rows: List<ImportRow>): Try<ImportPreview> {
         val readable = rows.filter { it.title.isNotBlank() }
         val seen = HashSet<String>()
         var duplicates = 0
         var withoutIsbn = 0
+        var noteCount = 0
         for (row in readable) {
             val isbn13 = row.validIsbn13()
             if (isbn13 == null) {
                 withoutIsbn++
+                noteCount += row.notes.count { it.isAcceptable() }
                 continue
             }
             when (val existing = books.findByIsbn13(isbn13)) {
                 is Try.Failure -> return existing
-                is Try.Success -> if (existing.value != null || !seen.add(isbn13)) duplicates++
+
+                is Try.Success -> if (existing.value != null || !seen.add(isbn13)) {
+                    duplicates++
+                } else {
+                    noteCount += row.notes.count { it.isAcceptable() }
+                }
             }
         }
         return Try.Success(
@@ -108,6 +152,7 @@ class ImportLibrary(
                 alreadyInLibrary = duplicates,
                 withoutIsbn = withoutIsbn,
                 unreadable = rows.size - readable.size,
+                notes = noteCount,
             ),
         )
     }

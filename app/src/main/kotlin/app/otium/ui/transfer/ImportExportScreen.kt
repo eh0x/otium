@@ -212,6 +212,14 @@ private fun ImportDone(result: ImportResult, onDismiss: () -> Unit) {
         if (result.failed > 0) {
             Note(pluralStringResource(R.plurals.import_done_failed, result.failed, result.failed))
         }
+        if (result.notesAdded > 0) {
+            val count = result.notesAdded
+            Note(pluralStringResource(R.plurals.import_done_notes, count, count))
+        }
+        if (result.notesSkipped > 0) {
+            val count = result.notesSkipped
+            Note(pluralStringResource(R.plurals.import_done_notes_skipped, count, count))
+        }
     }
     OtiumButton(
         text = stringResource(R.string.import_done_dismiss),

@@ -2,7 +2,7 @@ package app.otium.domain.fakes
 
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
-import app.otium.domain.model.Book
+import app.otium.domain.model.LibraryEntry
 import app.otium.domain.port.LibraryFiles
 import app.otium.domain.port.LibraryJson
 import app.otium.domain.port.LibrarySnapshot
@@ -35,14 +35,28 @@ class FakeLibraryFiles : LibraryFiles {
 class FakeLibraryJson(var rows: List<ImportRow> = emptyList()) : LibraryJson {
     override fun read(text: String): Try<List<ImportRow>> = Try.Success(rows)
 
-    override fun write(books: List<Book>, exportedAt: Long): String =
-        "{\"books\":${books.size},\"exportedAt\":$exportedAt}"
+    /** The entries of the last file written. */
+    var written: List<LibraryEntry> = emptyList()
+        private set
+
+    override fun write(entries: List<LibraryEntry>, exportedAt: Long): String {
+        written = entries
+        return "{\"books\":${entries.size},\"exportedAt\":$exportedAt}"
+    }
 }
 
-/** The books of a [FakeBookRepository], or [failWith]. */
-class FakeLibrarySnapshot(private val repo: FakeBookRepository) : LibrarySnapshot {
+/**
+ * The books of a [FakeBookRepository] with their notes from [notes], or [failWith]. A book's notes
+ * are in reading order, as the real snapshot gives them.
+ */
+class FakeLibrarySnapshot(
+    private val repo: FakeBookRepository,
+    private val notes: FakeNoteRepository = FakeNoteRepository(),
+) : LibrarySnapshot {
     var failWith: AppError? = null
 
-    override suspend fun books(): Try<List<Book>> =
-        failWith?.let { Try.Failure(it) } ?: Try.Success(repo.all.sortedBy { it.id })
+    override suspend fun entries(): Try<List<LibraryEntry>> =
+        failWith?.let { Try.Failure(it) } ?: Try.Success(
+            repo.all.sortedBy { it.id }.map { book -> LibraryEntry(book, notes.of(book.id)) },
+        )
 }

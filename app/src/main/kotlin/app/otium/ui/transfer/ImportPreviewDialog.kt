@@ -59,6 +59,10 @@ internal fun PreviewDialog(preview: ImportPreview, actions: ImportExportActions)
                 val count = preview.unreadable
                 Note(pluralStringResource(R.plurals.import_preview_unreadable, count, count))
             }
+            if (preview.notes > 0) {
+                val count = preview.notes
+                Note(pluralStringResource(R.plurals.import_preview_notes, count, count))
+            }
             if (canImport && preview.format != LibraryFormat.OTIUM) {
                 Note(stringResource(R.string.import_preview_dropped))
             }

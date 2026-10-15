@@ -59,14 +59,16 @@ object UseCaseModule {
         dispatchers: DispatcherProvider,
     ) = ReadLibraryFile(files, json, dispatchers.default)
 
+    @Suppress("LongParameterList") // One argument per port ImportLibrary coordinates.
     @Provides
     fun provideImportLibrary(
         books: BookRepository,
+        notes: NoteRepository,
         readFile: ReadLibraryFile,
         clock: Clock,
         scheduler: LookupScheduler,
         lock: BackupLock,
-    ) = ImportLibrary(books, readFile, clock, scheduler, lock)
+    ) = ImportLibrary(books, notes, readFile, clock, scheduler, lock)
 
     @Provides
     fun provideExportLibrary(

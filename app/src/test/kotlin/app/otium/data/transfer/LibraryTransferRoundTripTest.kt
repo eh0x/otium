@@ -6,11 +6,15 @@ import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.local.testBook
 import app.otium.data.repo.RoomBookRepository
+import app.otium.data.repo.RoomNoteRepository
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeLibraryFiles
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookStatus
+import app.otium.domain.model.LibraryEntry
+import app.otium.domain.model.Note
+import app.otium.domain.model.NoteKind
 import app.otium.domain.transfer.ExportFormat
 import app.otium.domain.transfer.LibraryFormat
 import app.otium.domain.usecase.BackupLock
@@ -82,9 +86,16 @@ class LibraryTransferRoundTripTest {
         ),
     )
 
-    private suspend fun exportThenImport(format: ExportFormat): List<Book> {
+    private val quote = Note(0L, 0L, NoteKind.QUOTE, "“Fear”\nis the mind-killer.", 12, 100L, 300L)
+    private val thought = Note(0L, 0L, NoteKind.NOTE, "Reread this.", null, 200L, 200L)
+
+    private suspend fun exportThenImport(format: ExportFormat): List<LibraryEntry> {
         val from = source.repository()
-        books.forEach { from.add(it) }
+        val ids = books.map { (from.add(it) as Try.Success).value }
+        val fromNotes = RoomNoteRepository(source.noteDao())
+        fromNotes.add(thought.copy(bookId = ids[0]))
+        fromNotes.add(quote.copy(bookId = ids[0]))
+        fromNotes.add(quote.copy(bookId = ids[2], text = "Halfway there", page = 150))
         val export = ExportLibrary(
             RoomLibrarySnapshot(source, covers),
             files,
@@ -97,6 +108,7 @@ class LibraryTransferRoundTripTest {
         val to = target.repository()
         val import = ImportLibrary(
             books = to,
+            notes = RoomNoteRepository(target.noteDao()),
             readFile = ReadLibraryFile(files, JsonLibraryFormat(), Dispatchers.Unconfined),
             clock = FixedClock(now = 9L),
             scheduler = {},
@@ -108,20 +120,46 @@ class LibraryTransferRoundTripTest {
             preview.format,
         )
         assertEquals(3, import.import(preview).added)
-        return (RoomLibrarySnapshot(target, covers).books() as Try.Success).value
+        return (RoomLibrarySnapshot(target, covers).entries() as Try.Success).value
     }
 
     @Test
     fun `the json export brings every book back whole`() = runTest {
-        val back = exportThenImport(ExportFormat.JSON)
+        val back = exportThenImport(ExportFormat.JSON).map { it.book }
 
         val comparable = { book: Book -> book.copy(id = 0L, updatedAt = 0L) }
         assertEquals(books.map(comparable), back.map(comparable))
     }
 
     @Test
-    fun `the csv export brings titles, authors, isbns, progress and labels back`() = runTest {
+    fun `the json export brings every note back with its book, page and times`() = runTest {
+        val back = exportThenImport(ExportFormat.JSON)
+
+        val comparable = { note: Note -> note.copy(id = 0L, bookId = 0L) }
+        assertEquals(
+            listOf(
+                listOf(quote, thought).map(comparable),
+                emptyList(),
+                listOf(quote.copy(text = "Halfway there", page = 150)).map(comparable),
+            ),
+            back.map { entry -> entry.notes.map(comparable) },
+        )
+        assertTrue(
+            "each note belongs to the new copy of its book",
+            back.all { entry -> entry.notes.all { it.bookId == entry.book.id } },
+        )
+    }
+
+    @Test
+    fun `the csv export leaves the notes behind`() = runTest {
         val back = exportThenImport(ExportFormat.CSV)
+
+        assertTrue(back.all { it.notes.isEmpty() })
+    }
+
+    @Test
+    fun `the csv export brings titles, authors, isbns, progress and labels back`() = runTest {
+        val back = exportThenImport(ExportFormat.CSV).map { it.book }
 
         assertEquals(books.map { it.title }, back.map { it.title })
         assertEquals(books.map { it.authors }, back.map { it.authors })
@@ -139,7 +177,8 @@ class LibraryTransferRoundTripTest {
     fun `the snapshot keeps labels in the order they were given`() = runTest {
         books.forEach { source.repository().add(it) }
 
-        val read = (RoomLibrarySnapshot(source, covers).books() as Try.Success).value
+        val read = (RoomLibrarySnapshot(source, covers).entries() as Try.Success).value
+            .map { it.book }
 
         assertEquals(listOf("Frank Herbert", "Brian Herbert"), read[0].authors)
         assertEquals(listOf("Fiction", "Classics"), read[0].categories)

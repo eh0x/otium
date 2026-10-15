@@ -9,24 +9,30 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
 /**
- * In-memory [NoteRepository] for use case tests. Only the books in [knownBooks] exist, as a
+ * In-memory [NoteRepository] for use case tests. Only the books [knownBooks] names exist, as a
  * foreign key would enforce in Room.
  */
-class FakeNoteRepository(private val knownBooks: Set<Long> = emptySet()) : NoteRepository {
+class FakeNoteRepository(private val knownBooks: () -> Set<Long>) : NoteRepository {
+
+    constructor(knownBooks: Set<Long> = emptySet()) : this({ knownBooks })
+
+    /** The notes of the books in [books], as that repository holds them now. */
+    constructor(books: FakeBookRepository) : this({ books.all.map { it.id }.toSet() })
+
     private val notes = MutableStateFlow<Map<Long, Note>>(emptyMap())
     private var nextId = 1L
 
-    override fun observeNotes(bookId: Long): Flow<List<Note>> = notes.map { all ->
-        all.values.filter { it.bookId == bookId }
-            .sortedWith(
-                compareBy<Note> {
-                    it.page == null
-                }.thenBy { it.page }.thenBy { it.createdAt }.thenBy { it.id },
-            )
-    }
+    /** Every note, in the order they were added. */
+    val all: List<Note> get() = notes.value.values.toList()
+
+    /** A book's notes in reading order, as a snapshot. */
+    fun of(bookId: Long): List<Note> = notes.value.values.filter { it.bookId == bookId }
+        .sortedWith(Note.READING_ORDER)
+
+    override fun observeNotes(bookId: Long): Flow<List<Note>> = notes.map { of(bookId) }
 
     override suspend fun add(note: Note): Try<Long> {
-        if (note.bookId !in knownBooks) return Try.Failure(AppError.NotFound)
+        if (note.bookId !in knownBooks()) return Try.Failure(AppError.NotFound)
         val id = nextId++
         notes.value += (id to note.copy(id = id))
         return Try.Success(id)

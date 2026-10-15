@@ -112,6 +112,30 @@ class ImportExportContentTest {
     }
 
     @Test
+    fun `the preview says how many notes come with the new books`() {
+        show(
+            ImportExportUiState(
+                step = ImportStep.Previewing(
+                    preview(4).copy(format = LibraryFormat.OTIUM, notes = 7),
+                ),
+            ),
+        )
+
+        rule.onNodeWithText("7 notes and quotes come with them.").assertIsDisplayed()
+        rule.onNodeWithText("Ratings, reviews and reading dates are not imported.")
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun `the preview of a file without notes does not mention them`() {
+        show(ImportExportUiState(step = ImportStep.Previewing(preview(4))))
+
+        rule.onNodeWithText("Import 4 books?").assertIsDisplayed()
+        rule.onNodeWithText("notes and quotes come with them.", substring = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun `a file with nothing new can only be closed`() {
         var dismissed = 0
         show(
@@ -161,5 +185,42 @@ class ImportExportContentTest {
         rule.onNodeWithText("Done").performClick()
 
         assertEquals(1, dismissed)
+    }
+
+    @Test
+    fun `the result says how many notes were added and how many were left out`() {
+        show(
+            ImportExportUiState(
+                step = ImportStep.Done(
+                    ImportResult(
+                        added = 2,
+                        skipped = 0,
+                        failed = 0,
+                        waitingForLookup = 0,
+                        notesAdded = 6,
+                        notesSkipped = 1,
+                    ),
+                ),
+            ),
+        )
+
+        rule.onNodeWithText("6 notes and quotes added.").assertIsDisplayed()
+        rule.onNodeWithText("1 note was left out: it was empty, too long or could not be saved.")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun `the result of a file without notes does not mention them`() {
+        show(
+            ImportExportUiState(
+                step = ImportStep.Done(
+                    ImportResult(added = 2, skipped = 0, failed = 0, waitingForLookup = 0),
+                ),
+            ),
+        )
+
+        rule.onNodeWithText("2 books added.").assertIsDisplayed()
+        rule.onNodeWithText("notes and quotes added.", substring = true).assertDoesNotExist()
+        rule.onNodeWithText("left out", substring = true).assertDoesNotExist()
     }
 }
