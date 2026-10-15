@@ -38,6 +38,7 @@ import app.otium.R
 import app.otium.domain.model.Book
 import app.otium.domain.model.Note
 import app.otium.ui.common.messageRes
+import app.otium.ui.components.LocalContentHidden
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumDialog
@@ -151,7 +152,7 @@ private fun OverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
             )
         }
         DropdownMenu(
-            expanded = open,
+            expanded = open && !LocalContentHidden.current,
             onDismissRequest = { open = false },
             shape = MaterialTheme.shapes.small,
             containerColor = colors.sheet,

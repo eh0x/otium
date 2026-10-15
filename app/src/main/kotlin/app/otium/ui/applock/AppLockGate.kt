@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.withResumed
 import app.otium.R
 import app.otium.applock.LockState
+import app.otium.ui.components.LocalContentHidden
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumDialog
 import app.otium.ui.components.OtiumMark
@@ -40,7 +42,8 @@ import app.otium.ui.theme.otiumColors
 /**
  * Shows [content] only while the gate is unlocked. Locked or still checking, the content stays
  * composed, so every screen keeps its place, but it is not drawn, not read by TalkBack, cannot
- * take focus, and the screen above it takes every touch.
+ * take focus, and the screen above it takes every touch. Dialogs, sheets and menus are windows of
+ * their own, so they are told to stay out through [LocalContentHidden].
  *
  * The system prompt opens by itself once per prompt request, and only while the activity is
  * resumed, as the prompt needs.
@@ -59,7 +62,10 @@ fun AppLockGate(
     LaunchedEffect(hidden) { if (hidden) focusManager.clearFocus(force = true) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        Box(modifier = if (hidden) Modifier.hiddenContent() else Modifier) { content() }
+        Box(modifier = if (hidden) Modifier.hiddenContent() else Modifier) {
+            // Windows of their own (dialogs, sheets, menus) ignore the modifiers above.
+            CompositionLocalProvider(LocalContentHidden provides hidden) { content() }
+        }
         when (state) {
             LockState.CHECKING ->
                 PaperBackground(modifier = Modifier.fillMaxSize().blockTouches()) {}

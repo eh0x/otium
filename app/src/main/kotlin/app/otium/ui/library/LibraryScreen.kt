@@ -27,6 +27,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
 import app.otium.domain.model.SortOrder
+import app.otium.ui.components.LocalContentHidden
 import app.otium.ui.components.OtiumMasthead
 import app.otium.ui.theme.PaperBackground
 
@@ -124,7 +125,10 @@ private fun MoreMenu(actions: LibraryActions, modifier: Modifier = Modifier) {
                 contentDescription = stringResource(R.string.library_more_options),
             )
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(
+            expanded = open && !LocalContentHidden.current,
+            onDismissRequest = { open = false },
+        ) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.library_debug_seed)) },
                 onClick = {
