@@ -67,7 +67,8 @@ Status: Validated through brainstorming, ready for implementation planning
 | D26 | Restore is one use case, `LibraryRestore` (prepare, confirm, cancel), that keeps the downloaded backup file to itself; `RestorePreview` carries only the slot and what the backup holds | `PrepareRestore` and `RestoreBackup` passing a `RestorePreview` that held the `File`, with the ViewModel deleting it | No file handle reaches UI state; the download is deleted in one place on confirm, cancel or a new prepare. The archiver and restorer ports stay separate: their data-layer implementations are separate and separately tested (architecture review 2026-10-11) |
 | D27 | The book repository owns the cover files its books name: after any write it deletes a cover no book names any more (replaced, its book deleted, or brought by a write that failed). `CoverStore` only stores covers (download, gallery or camera); covers a dead process left behind are purged at start-up once a day old | Use cases deleting covers themselves through `CoverStore.delete`; moving downloads and picks into the repository too | Deleting a book used to leave its cover on disk forever, and rollback code was repeated in `SaveBook` and `RetryPendingLookups`. Downloads stay out of the Room repository, which would otherwise need the HTTP client and image decoding (architecture review 2026-10-11) |
 | D28 | Import and export through files the owner picks: Goodreads and StoryGraph CSV in, Goodreads-format CSV and Otium JSON (versioned, every field but the cover file) out. `ImportLibrary` previews the file, then adds every new book straight away from what the file holds; books with an ISBN also wait for a lookup (D11). Books whose ISBN is already in the library are skipped. Progress comes from the shelf: read means finished, reading means page 1, and without a page count the shelf becomes a tag | Each row through the confirm screen; an automatic title search for rows without an ISBN; replacing the library as a restore does | Ranked first for v2 in the team session of 2026-10-10: it brings existing libraries in and lets the owner leave freely. A confirm screen per row does not scale to hundreds of books, and a title search picks wrong editions without anyone checking. `RetryPendingLookups` now ends a run at the first offline, rate-limit or timeout failure, so a large import does not keep asking a service that refuses |
-| D29 | The library database stays unencrypted by the app in v1: it is protected by the Android sandbox and file-based encryption of user storage. What leaves the phone is protected where it leaves (passphrase-encrypted backups, D23); exports are plain files and the screen says so. The threat model is in 4.8 | SQLCipher now; SQLCipher in v2 with a migration; encrypting chosen fields | SQLCipher adds a native library per ABI and its own key: a lost or invalidated key would lose the whole library, a worse outcome for one owner than the threats it answers. Against a locked phone, other apps and the network, the platform already protects the file; against an unlocked phone, an app lock helps where database encryption does not. Revisit when private notes arrive or the threat model changes (team session 2026-10-10, open decision 2; review S4) |
+| D29 | The library database stays unencrypted by the app in v1: it is protected by the Android sandbox and file-based encryption of user storage. What leaves the phone is protected where it leaves (passphrase-encrypted backups, D23); exports are plain files and the screen says so. The threat model is in 4.8 | SQLCipher now; SQLCipher in v2 with a migration; encrypting chosen fields | SQLCipher adds a native library per ABI and its own key: a lost or invalidated key would lose the whole library, a worse outcome for one owner than the threats it answers. Against a locked phone, other apps and the network, the platform already protects the file; against an unlocked phone, an app lock helps where database encryption does not. Revisit when private notes arrive or the threat model changes (team session 2026-10-10, open decision 2; review S4). Revisited for notes in D31: unchanged |
+| D31 | Marginalia (notes and quotes) is stored in the same unencrypted Room database as the library, in its own `note` table; D29 stands. Notes are covered by the Android sandbox, the app lock and, once they leave the phone, the backup passphrase. Notes are released together with or after the app lock. The backup screen suggests a passphrase before the first Drive backup, because the notes are what makes an unencrypted backup costly. Notes are searchable per book first; the optional private 1 to 5 mark is not built | SQLCipher for the whole database; encrypting only the note text; a separate encrypted notes database | Notes are more personal than reading status, but they add no new threat: the threats left uncovered by D29 (an unlocked phone, a rooted phone) are met by the app lock or are out of scope, and SQLCipher answers none of them. Its cost is unchanged: a native library per ABI, and a lost or invalidated key loses the whole library, not only the notes. The one new cost of notes is on the path out of the phone, an unencrypted Drive backup, which a passphrase covers and the exports already say they do not. A separate notes database or field encryption would add a second key to lose without covering a threat. Revisit when the threat model changes, for example if notes could be shared (team session 2026-10-15) |
 
 ## 4. Final Design
 
@@ -467,15 +468,16 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 ### 4.8 Threat model and data protection
 
 Otium keeps one person's catalogue of their own books: titles, authors, tags, shelves, reading
-progress and dates. It is not health or payment data, but reading choices can reveal beliefs,
-health or politics, so it is treated as private. Protection follows from the threats a solo,
-offline app actually faces (D29).
+progress and dates, and, with Marginalia, their notes and quotes. It is not health or payment
+data, but reading choices and the thoughts written beside them can reveal beliefs, health or
+politics, so it is treated as private. Protection follows from the threats a solo, offline app
+actually faces (D29, D31).
 
 Where the data is and how it is protected:
 
 | Data | Where | Protection | Revisit when |
 |------|-------|------------|--------------|
-| Library database (Room) | App sandbox | Android sandbox; file-based encryption of user storage, which keeps it unreadable until the first unlock after a restart | Private notes (Marginalia) arrive, or the threat model changes |
+| Library database (Room), notes and quotes included | App sandbox | Android sandbox; file-based encryption of user storage, which keeps it unreadable until the first unlock after a restart (D31: notes change nothing here) | The threat model changes, for example if notes could be shared |
 | Cover pictures | App sandbox | As the database | As the database |
 | Backup settings, Drive account email | DataStore in the sandbox | As the database; excluded from Android backup and device transfer | — |
 | Backup key | DataStore in the sandbox | Only stored wrapped by an AES-256-GCM key in the Android Keystore that cannot be read out; never stored with or as the passphrase | — |
@@ -494,7 +496,9 @@ Threats and how they are met:
 - **Someone watching the network.** Covered by https everywhere. There are no certificate pins,
   on purpose: Google rotates its certificates, and a stale pin would break lookups and backups.
 - **Someone with the user's Google account.** Covered for backups with a passphrase set. A backup
-  without one can be read by anyone who signs in as the user and restores with Otium.
+  without one can be read by anyone who signs in as the user and restores with Otium, notes and
+  quotes included. This is the one risk notes add, so the backup screen suggests a passphrase
+  before the first Drive backup (D31).
 - **Leaks through the developer.** None possible: no backend, accounts, analytics, crash reporting
   or logging of library data.
 
