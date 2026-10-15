@@ -45,6 +45,8 @@ fun OtiumSheet(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // A window of its own: while the app lock hides the screens it must not be on screen.
+    if (LocalContentHidden.current) return
     val colors = MaterialTheme.otiumColors
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -89,6 +91,8 @@ fun OtiumDialog(
     body: String? = null,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
+    // A window of its own: while the app lock hides the screens it must not be on screen.
+    if (LocalContentHidden.current) return
     // Sized by its content rather than the platform default width, with the page gutter at the
     // sides. Robolectric also never finishes laying out a platform-width dialog holding a field.
     Dialog(

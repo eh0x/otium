@@ -75,6 +75,8 @@ by the headless screenshot tests (`app/build/screenshots`).
   your private app folder in Drive, with optional passphrase encryption.
 - **Import and export.** Bring a library in from a Goodreads or StoryGraph export, and take yours
   out as CSV (in Goodreads' columns, which most reading apps import) or as Otium JSON.
+- **App lock.** Optionally ask for your face, fingerprint or screen lock when Otium opens and when
+  you come back to it.
 
 Not in version 1: iOS, syncing between devices, accounts or a backend, ratings and notes, reading
 statistics, social features, and several copies of the same ISBN.
@@ -88,6 +90,9 @@ statistics, social features, and several copies of the same ISBN.
   alone can read. With a passphrase set, the backup is encrypted (Argon2id and AES-256-GCM) before
   it leaves the phone. Otium suggests a passphrase once you connect Drive.
 - Import and export read and write only the files you pick.
+- With the app lock on, someone holding your unlocked phone cannot open your library, and Android
+  13 and later leave it out of the recent apps preview. Face and fingerprint checks stay with
+  Android; Otium only learns whether they passed.
 
 ## Status
 

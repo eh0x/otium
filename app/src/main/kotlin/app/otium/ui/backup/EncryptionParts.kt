@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.otium.R
+import app.otium.ui.components.LocalContentHidden
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumDialog
@@ -94,6 +95,8 @@ private fun PassphraseDialog(
     onSubmit: (passphrase: CharArray, confirmation: CharArray) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    // A window of its own: while the app lock hides the screens it must not be on screen.
+    if (LocalContentHidden.current) return
     Dialog(
         onDismissRequest = { if (!busy) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false),

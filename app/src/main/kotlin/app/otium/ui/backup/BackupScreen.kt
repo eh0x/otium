@@ -1,8 +1,10 @@
 package app.otium.ui.backup
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,13 +36,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
+import app.otium.applock.AuthPrompt
+import app.otium.applock.findFragmentActivity
 import app.otium.auth.ConsentResult
 import app.otium.domain.error.AppError
 import app.otium.domain.model.BackupFrequency
 import app.otium.domain.model.BackupSlot
 import app.otium.domain.model.RestorePreview
+import app.otium.ui.applock.AppLockActions
+import app.otium.ui.applock.AppLockSection
+import app.otium.ui.applock.AppLockUiState
+import app.otium.ui.applock.AppLockViewModel
+import app.otium.ui.applock.rememberAppLockActions
 import app.otium.ui.common.messageRes
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
@@ -61,10 +71,17 @@ fun BackupScreen(
     onOpenImportExport: () -> Unit = {},
     viewModel: BackupViewModel = hiltViewModel(),
     encryptionViewModel: EncryptionViewModel = hiltViewModel(),
+    appLockViewModel: AppLockViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val encryption by encryptionViewModel.uiState.collectAsStateWithLifecycle()
+    val appLock by appLockViewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    // A screen lock set in Android settings while Otium waited in the background shows at once.
+    LifecycleResumeEffect(appLockViewModel) {
+        appLockViewModel.refresh()
+        onPauseOrDispose {}
+    }
     val consentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { viewModel.onConsentResult(ConsentResult(it.data)) }
@@ -109,6 +126,8 @@ fun BackupScreen(
         encryptionActions = rememberEncryptionActions(encryptionViewModel),
         modifier = modifier,
         onOpenImportExport = onOpenImportExport,
+        appLock = appLock,
+        appLockActions = rememberAppLockActions(appLockViewModel),
     )
 }
 
@@ -138,6 +157,8 @@ fun BackupContent(
     encryption: EncryptionUiState = EncryptionUiState(),
     encryptionActions: EncryptionActions = EncryptionActions(),
     onOpenImportExport: () -> Unit = {},
+    appLock: AppLockUiState = AppLockUiState(),
+    appLockActions: AppLockActions = AppLockActions(),
 ) {
     val snackbar = remember { SnackbarHostState() }
     Notices(snackbar, state.message, state.error, actions.onMessageShown, actions.onErrorShown)
@@ -162,6 +183,7 @@ fun BackupContent(
             Section { EncryptionSection(encryption, state.isBusy, encryptionActions) }
             Section { RestoreSection(state, actions) }
             Section { AutoBackupSection(state, actions) }
+            Section { AppLockSection(appLock, appLockActions, enabled = !state.isBusy) }
             Section { LibrarySection(enabled = !state.isBusy, onOpen = onOpenImportExport) }
         }
         OtiumSnackbarHost(hostState = snackbar, modifier = Modifier.align(Alignment.BottomCenter))

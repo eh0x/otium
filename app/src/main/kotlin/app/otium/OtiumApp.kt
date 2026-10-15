@@ -2,7 +2,9 @@ package app.otium
 
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.Configuration
+import app.otium.applock.AppLockController
 import app.otium.data.cover.CameraPhotoFiles
 import app.otium.data.cover.OrphanedCovers
 import app.otium.domain.port.LookupScheduler
@@ -36,6 +38,9 @@ class OtiumApp :
     @Inject
     lateinit var orphanedCovers: OrphanedCovers
 
+    @Inject
+    lateinit var appLock: AppLockController
+
     override fun onCreate() {
         super.onCreate()
         // Books saved offline wait for a lookup; a run left over from an earlier session (or
@@ -45,6 +50,8 @@ class OtiumApp :
         cameraPhotos.purgeStale()
         // Covers no book names, such as those of a save whose process died before the book was.
         orphanedCovers.purge()
+        // The app lock counts time away for the whole app, not per screen.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(appLock)
     }
 
     /** Workers get their dependencies from Hilt; the default initializer is off in the manifest. */

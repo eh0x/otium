@@ -126,6 +126,10 @@ class ManifestPolicyTest {
             "android.permission.CAMERA",
             // The notice after repeated backup failures.
             "android.permission.POST_NOTIFICATIONS",
+            // App lock: the system face and fingerprint prompt (androidx.biometric). Fingerprint
+            // on Android 8 goes through the older permission. Both are granted without asking.
+            "android.permission.USE_BIOMETRIC",
+            "android.permission.USE_FINGERPRINT",
             // WorkManager: waiting for a network and running scheduled work after a reboot.
             "android.permission.ACCESS_NETWORK_STATE",
             "android.permission.RECEIVE_BOOT_COMPLETED",

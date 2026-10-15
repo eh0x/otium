@@ -7,6 +7,15 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
 
 ## [Unreleased]
 
+### Security
+
+- An optional app lock, off by default (in Settings). When it is on, Otium asks for your face,
+  fingerprint or screen lock when it opens and when you come back after a minute away (or five, as
+  you choose), so someone holding your unlocked phone cannot open your library. Turning the lock on
+  or off asks first. While it is locked nothing of your library is drawn or read aloud, and a dialog
+  or menu that was open is hidden too. On Android 13 and later the recent apps preview is blank.
+  If the phone loses its screen lock, the app lock turns itself off and tells you.
+
 ### Added
 
 - Notes and quotes on a book, with an optional page number. Add, edit and delete them from the

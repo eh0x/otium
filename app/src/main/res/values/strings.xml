@@ -334,6 +334,26 @@
     <string name="reading_open">Open</string>
     <string name="reading_open_description">Open %1$s</string>
 
+    <!-- App lock -->
+    <string name="app_lock_heading">App lock</string>
+    <string name="app_lock_note_off">Ask for your face, fingerprint or screen lock when you open Otium.</string>
+    <string name="app_lock_note_on">Otium asks for your face, fingerprint or screen lock when it opens, and when you come back to it.</string>
+    <string name="app_lock_no_screen_lock">Set a screen lock in Android settings first. App lock uses it, and your face or fingerprint if you have set them up.</string>
+    <string name="app_lock_open_settings">Open security settings</string>
+    <string name="app_lock_timeout_label">Ask again after</string>
+    <string name="app_lock_timeout_one_minute">1 minute</string>
+    <string name="app_lock_timeout_five_minutes">5 minutes</string>
+    <string name="app_lock_prompt_title">Unlock Otium</string>
+    <string name="app_lock_prompt_on_title">Turn on app lock</string>
+    <string name="app_lock_prompt_off_title">Turn off app lock</string>
+    <string name="app_lock_prompt_subtitle">Use your face, fingerprint or screen lock</string>
+    <string name="app_lock_locked_title">Otium is locked</string>
+    <string name="app_lock_locked_note">Unlock with your face, fingerprint or screen lock.</string>
+    <string name="app_lock_unlock">Unlock</string>
+    <string name="app_lock_turned_off_title">App lock turned off</string>
+    <string name="app_lock_turned_off_body">This phone no longer has a screen lock, so Otium cannot ask who you are. Set a screen lock, then turn app lock on again in Settings.</string>
+    <string name="app_lock_ok">OK</string>
+
     <!-- Import and export -->
     <string name="transfer_title">Import and export</string>
     <string name="transfer_settings_heading">Your library</string>
