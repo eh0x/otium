@@ -28,6 +28,7 @@ import app.otium.domain.usecase.LibraryRestore
 import app.otium.domain.usecase.RunBackup
 import app.otium.domain.usecase.RunScheduledBackup
 import app.otium.domain.usecase.SetBackupPassphrase
+import app.otium.domain.usecase.SyncLoanReminders
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -108,6 +109,7 @@ internal abstract class BackupModule {
             restorer: LibraryRestorer,
             encryption: BackupEncryption,
             lookups: LookupScheduler,
+            loanReminders: SyncLoanReminders,
             lock: BackupLock,
         ) = LibraryRestore(
             drive,
@@ -115,6 +117,7 @@ internal abstract class BackupModule {
             restorer,
             encryption,
             lookups,
+            loanReminders,
             lock,
             OtiumDatabase.VERSION,
         )

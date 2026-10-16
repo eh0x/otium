@@ -15,6 +15,9 @@ import app.otium.domain.fakes.FakeBackupPreferences
 import app.otium.domain.fakes.FakeBackupScheduler
 import app.otium.domain.fakes.FakeDriveBackupClient
 import app.otium.domain.fakes.FakeLibraryRestorer
+import app.otium.domain.fakes.FakeLoanReminderScheduler
+import app.otium.domain.fakes.FakeLoanRepository
+import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.backupInfo
 import app.otium.domain.model.BackupSettings
 import app.otium.domain.model.BackupSlot
@@ -23,6 +26,7 @@ import app.otium.domain.usecase.BackupLock
 import app.otium.domain.usecase.ConfigureAutoBackup
 import app.otium.domain.usecase.LibraryRestore
 import app.otium.domain.usecase.RunBackup
+import app.otium.domain.usecase.SyncLoanReminders
 import app.otium.testing.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -93,6 +97,11 @@ class BackupViewModelTest {
                 restorer = restorer,
                 encryption = encryption,
                 lookups = { lookupsPlanned++ },
+                loanReminders = SyncLoanReminders(
+                    FakeLoanRepository(),
+                    FakeLoanReminderScheduler(),
+                    FixedClock(),
+                ),
                 lock = lock,
                 appSchemaVersion = 1,
             ),
