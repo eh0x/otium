@@ -242,6 +242,7 @@ class ImportLibrary(
             updatedAt = now,
             userEdited = userEdited,
             needsLookup = isbn13 != null && !complete,
+            format = format,
         )
     }
 

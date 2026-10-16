@@ -112,6 +112,10 @@
     <string name="detail_publisher">Publisher</string>
     <string name="detail_published">Published</string>
     <string name="detail_pages">Pages</string>
+    <string name="detail_format">Format</string>
+    <string name="format_print">Print</string>
+    <string name="format_ebook">Ebook</string>
+    <string name="format_audiobook">Audiobook</string>
     <string name="detail_language">Language</string>
     <string name="detail_tags">Tags</string>
     <string name="detail_isbn">ISBN-13</string>
@@ -206,6 +210,7 @@
     <string name="confirm_field_description">Description</string>
     <string name="confirm_tags">Tags</string>
     <string name="confirm_shelf">Shelf</string>
+    <string name="confirm_format">Format</string>
     <string name="confirm_more_details">More details</string>
     <string name="confirm_fewer_details">Fewer details</string>
     <string name="confirm_tag_add">Add a tag</string>

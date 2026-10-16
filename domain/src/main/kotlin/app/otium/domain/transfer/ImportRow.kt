@@ -1,5 +1,6 @@
 package app.otium.domain.transfer
 
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.NoteKind
@@ -45,6 +46,8 @@ data class ImportRow(
     /** True when the file already holds full details, so no lookup is needed. */
     val complete: Boolean = false,
     val userEdited: Boolean = false,
+    /** How the owner has the book, when the file says (Otium's own file, or a Goodreads Binding). */
+    val format: BookFormat? = null,
     /** The book's notes. Only Otium's own file (version 2 and later) carries them. */
     val notes: List<ImportNote> = emptyList(),
     /** The book's loans. Only Otium's own file (version 3 and later) carries them. */

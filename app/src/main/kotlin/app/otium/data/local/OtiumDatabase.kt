@@ -46,8 +46,9 @@ abstract class OtiumDatabase : RoomDatabase() {
 
     companion object {
         /** Bump with every schema change and add the matching entry to [migrations]. */
-        const val VERSION = 4
+        const val VERSION = 5
 
-        val migrations: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        val migrations: Array<Migration> =
+            arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
     }
 }

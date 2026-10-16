@@ -1,6 +1,8 @@
 package app.otium.ui.add.confirm
 
+import app.otium.domain.fakes.book
 import app.otium.domain.model.BookCandidate
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -36,6 +38,33 @@ class BookFormTest {
         assertEquals("Dune Chronicles", form.series)
         assertEquals("Dune Chronicles", back.series)
         assertEquals(1.5, back.seriesIndex)
+    }
+
+    @Test
+    fun `a format round trips through the form, from a candidate and from a book`() {
+        val candidate = BookCandidate(
+            title = "Dune",
+            source = BookSource.MANUAL,
+            format = BookFormat.AUDIOBOOK,
+        )
+
+        val form = BookForm.from(candidate)
+
+        assertEquals(BookFormat.AUDIOBOOK, form.format)
+        assertEquals(
+            BookFormat.AUDIOBOOK,
+            form.toCandidate(BookSource.MANUAL, isbn10 = null).format,
+        )
+        assertEquals(
+            BookFormat.EBOOK,
+            BookForm.from(book(title = "Dune").copy(format = BookFormat.EBOOK)).format,
+        )
+    }
+
+    @Test
+    fun `a form with no format saves none`() {
+        assertNull(BookForm(title = "Dune").toCandidate(BookSource.MANUAL, isbn10 = null).format)
+        assertNull(BookForm.from(book(title = "Dune")).format)
     }
 
     @Test

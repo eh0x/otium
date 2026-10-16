@@ -79,3 +79,13 @@ internal val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_bookId` ON `loan` (`bookId`)")
     }
 }
+
+/**
+ * Version 5 adds the format label (D35): one nullable column on the book, so every book already
+ * in the library keeps no format. The search index does not cover it and is left alone.
+ */
+internal val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `book` ADD COLUMN `format` TEXT")
+    }
+}

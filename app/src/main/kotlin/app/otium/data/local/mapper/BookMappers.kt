@@ -4,6 +4,7 @@ import app.otium.data.cover.CoverFiles
 import app.otium.data.local.entity.BookEntity
 import app.otium.data.local.row.BookListRow
 import app.otium.domain.model.Book
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.BookSummary
 import app.otium.domain.usecase.DeriveStatus
@@ -39,6 +40,7 @@ fun BookEntity.toDomain(
     updatedAt = updatedAt,
     userEdited = userEdited,
     needsLookup = needsLookup,
+    format = BookFormat.entries.firstOrNull { it.name == format },
 )
 
 fun Book.toEntity(covers: CoverFiles) = BookEntity(
@@ -63,6 +65,7 @@ fun Book.toEntity(covers: CoverFiles) = BookEntity(
     needsLookup = needsLookup,
     series = series,
     seriesIndex = seriesIndex,
+    format = format?.name,
 )
 
 fun BookListRow.toSummary(covers: CoverFiles) = BookSummary(

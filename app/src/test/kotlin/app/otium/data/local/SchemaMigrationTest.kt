@@ -127,6 +127,47 @@ class SchemaMigrationTest {
     }
 
     @Test
+    fun `version 4 books and loans survive the move to formats, with no format set`() {
+        helper.createDatabase("formats-migration", 4).use { db ->
+            db.execSQL(
+                "INSERT INTO book (id, isbn13, isbn10, title, subtitle, authors, publisher, " +
+                    "publishedYear, language, description, totalPages, currentPage, coverPath, " +
+                    "coverSourceUrl, source, addedAt, updatedAt, userEdited, needsLookup, " +
+                    "series, seriesIndex) VALUES (7, '9780261103344', NULL, 'The Hobbit', NULL, " +
+                    "'J. R. R. Tolkien', NULL, 1937, 'en', NULL, 310, 12, NULL, NULL, " +
+                    "'MANUAL', 1, 2, 0, 0, 'Middle-earth', 1.0)",
+            )
+            db.execSQL(
+                "INSERT INTO loan (bookId, counterparty, direction, lentOn, remindOn, " +
+                    "returnedOn) VALUES (7, 'Sam', 'LENT', 20000, NULL, NULL)",
+            )
+        }
+
+        helper.runMigrationsAndValidate("formats-migration", 5, true, *OtiumDatabase.migrations)
+            .use { db ->
+                db.query("SELECT title, currentPage, format FROM book").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("The Hobbit", it.getString(0))
+                    assertEquals(12, it.getInt(1))
+                    assertTrue(it.isNull(2))
+                }
+                db.query("SELECT COUNT(*) FROM loan").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals(1, it.getInt(0))
+                }
+                db.query("SELECT rowid FROM book_fts WHERE book_fts MATCH 'hobbit*'").use {
+                    assertTrue("search still finds the book", it.moveToFirst())
+                }
+
+                db.execSQL("UPDATE book SET format = 'AUDIOBOOK' WHERE id = 7")
+                db.query("SELECT format FROM book").use {
+                    assertTrue(it.moveToFirst())
+                    assertEquals("AUDIOBOOK", it.getString(0))
+                }
+            }
+    }
+
+    @Test
     fun `version 3 books and notes survive the move to lending, and a book's loans go with it`() {
         helper.createDatabase("loans-migration", 3).use { db ->
             db.execSQL(

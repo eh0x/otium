@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import app.otium.R
 import app.otium.domain.model.Book
 import app.otium.ui.common.formatSeriesNumber
+import app.otium.ui.common.labelRes
 import app.otium.ui.common.rememberCoverPainter
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
@@ -209,6 +210,7 @@ private fun Facts(book: Book) {
         book.categories.firstOrNull()?.let { R.string.detail_collection to it },
         book.publishedYear?.let { R.string.detail_published to it.toString() },
         book.publisher?.let { R.string.detail_publisher to it },
+        book.format?.let { R.string.detail_format to stringResource(it.labelRes()) },
         book.totalPages.takeIf { it > 0 }?.let { R.string.detail_pages to it.toString() },
         book.language?.let { R.string.detail_language to it },
         book.tags.takeIf { it.isNotEmpty() }?.let { R.string.detail_tags to it.joinToString(", ") },

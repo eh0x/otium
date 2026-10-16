@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import app.otium.domain.error.AppError
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookCandidate
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.CoverChoice
 import app.otium.ui.common.formatSeriesNumber
@@ -29,6 +30,8 @@ data class BookForm(
     val categories: String = "",
     val description: String = "",
     val tags: List<String> = emptyList(),
+    /** How the owner has the book; null when not said. */
+    val format: BookFormat? = null,
 ) {
     /** The shelf the book will stand on: its first category, or null when it has none. */
     val shelf: String? get() = categories.splitList().firstOrNull()
@@ -59,6 +62,7 @@ data class BookForm(
         categories = categories.splitList(),
         tags = tags,
         source = source,
+        format = format,
     )
 
     companion object {
@@ -76,6 +80,7 @@ data class BookForm(
             categories = candidate.categories.joinToString(LIST_SEPARATOR),
             description = candidate.description.orEmpty(),
             tags = candidate.tags,
+            format = candidate.format,
         )
 
         fun from(book: Book) = BookForm(
@@ -92,6 +97,7 @@ data class BookForm(
             categories = book.categories.joinToString(LIST_SEPARATOR),
             description = book.description.orEmpty(),
             tags = book.tags,
+            format = book.format,
         )
 
         private const val LIST_SEPARATOR = ", "

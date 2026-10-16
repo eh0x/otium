@@ -7,6 +7,7 @@ import app.otium.domain.fakes.FakeCoverStore
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
 import app.otium.domain.model.BookCandidate
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.CoverChoice
 import kotlinx.coroutines.test.runTest
@@ -46,6 +47,50 @@ class SaveBookTest {
         cover: CoverChoice = CoverChoice.None,
         edited: Boolean = false,
     ): Try<Long> = saveBook.add(candidate, cover, edited)
+
+    // --- Format ---
+
+    @Test
+    fun `the format the owner chose is saved, and none stays unset`() = runTest {
+        val withFormat = (add(candidate().copy(format = BookFormat.AUDIOBOOK)) as Try.Success).value
+        val without = (add(candidate(isbn13 = "9780141439518")) as Try.Success).value
+
+        assertEquals(BookFormat.AUDIOBOOK, repo.all.single { it.id == withFormat }.format)
+        assertNull(repo.all.single { it.id == without }.format)
+    }
+
+    @Test
+    fun `editing a book can set, change and clear its format`() = runTest {
+        val id = (add() as Try.Success).value
+
+        saveBook.update(id, candidate().copy(format = BookFormat.EBOOK), CoverChoice.Unchanged)
+        assertEquals(BookFormat.EBOOK, repo.all.single().format)
+
+        saveBook.update(id, candidate().copy(format = BookFormat.PRINT), CoverChoice.Unchanged)
+        assertEquals(BookFormat.PRINT, repo.all.single().format)
+
+        saveBook.update(id, candidate().copy(format = null), CoverChoice.Unchanged)
+        assertNull(repo.all.single().format)
+    }
+
+    @Test
+    fun `another format of the same title is its own book with its own isbn`() = runTest {
+        add(candidate(isbn13 = "9780306406157").copy(format = BookFormat.PRINT))
+
+        val audio = add(candidate(isbn13 = "9780141439518").copy(format = BookFormat.AUDIOBOOK))
+
+        assertTrue(audio is Try.Success)
+        assertEquals(listOf(BookFormat.PRINT, BookFormat.AUDIOBOOK), repo.all.map { it.format })
+    }
+
+    @Test
+    fun `the same isbn is still one copy, whatever the format`() = runTest {
+        val first = (add(candidate().copy(format = BookFormat.PRINT)) as Try.Success).value
+
+        val second = add(candidate().copy(format = BookFormat.AUDIOBOOK))
+
+        assertEquals(Try.Failure(AppError.Duplicate(first)), second)
+    }
 
     // --- Adding ---
 

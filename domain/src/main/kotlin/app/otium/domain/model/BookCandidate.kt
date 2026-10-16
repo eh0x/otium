@@ -25,4 +25,6 @@ data class BookCandidate(
     /** Other covers the services offer for this book, which the user can pick instead. */
     val alternateCoverUrls: List<String> = emptyList(),
     val source: BookSource,
+    /** How the owner has this book. No lookup knows it, so it is set on the confirm form. */
+    val format: BookFormat? = null,
 )

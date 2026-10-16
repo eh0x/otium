@@ -33,4 +33,6 @@ data class BookEntity(
     /** Added in schema version 2, so the columns sit after the version 1 ones. */
     val series: String? = null,
     val seriesIndex: Double? = null,
+    /** Added in schema version 5: the name of a [app.otium.domain.model.BookFormat], or null. */
+    val format: String? = null,
 )

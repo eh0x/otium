@@ -44,6 +44,12 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
   names of the people you lent books to, so keep it somewhere private. An older Otium that only
   knows version 2 will refuse the new file instead of importing it without loans.
 
+- A format label for a book: print, ebook or audiobook. Choose it when you add or edit a book; it
+  shows among the facts on the book's page. Books already in your library keep none. A title you
+  own in two formats is two books, as before, because each has its own ISBN; the label tells them
+  apart. Importing a Goodreads file reads its Binding column as the format, and the CSV export
+  writes it back there. The Otium JSON and your Drive backup carry it too.
+
 ### Changed
 
 - Backup encryption is now recommended. The first time you open Settings with Drive connected and
