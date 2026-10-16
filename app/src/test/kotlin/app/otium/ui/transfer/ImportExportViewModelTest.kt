@@ -5,6 +5,8 @@ import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeLibraryFiles
 import app.otium.domain.fakes.FakeLibraryJson
 import app.otium.domain.fakes.FakeLibrarySnapshot
+import app.otium.domain.fakes.FakeLoanReminderScheduler
+import app.otium.domain.fakes.FakeLoanRepository
 import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
@@ -15,6 +17,7 @@ import app.otium.domain.usecase.ExportLibrary
 import app.otium.domain.usecase.ImportLibrary
 import app.otium.domain.usecase.ImportResult
 import app.otium.domain.usecase.ReadLibraryFile
+import app.otium.domain.usecase.SyncLoanReminders
 import app.otium.testing.MainDispatcherRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,14 +40,17 @@ class ImportExportViewModelTest {
     private val repo = FakeBookRepository()
     private val files = FakeLibraryFiles()
     private var scheduled = 0
+    private val loans = FakeLoanRepository(repo)
 
     private fun viewModel() = ImportExportViewModel(
         importLibrary = ImportLibrary(
             books = repo,
             notes = FakeNoteRepository(repo),
+            loans = loans,
             readFile = ReadLibraryFile(files, FakeLibraryJson(), Dispatchers.Unconfined),
             clock = FixedClock(),
             scheduler = { scheduled++ },
+            loanReminders = SyncLoanReminders(loans, FakeLoanReminderScheduler(), FixedClock()),
             lock = BackupLock(),
         ),
         exportLibrary = ExportLibrary(

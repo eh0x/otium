@@ -5,8 +5,11 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.LibraryEntry
+import app.otium.domain.model.Loan
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.Note
 import app.otium.domain.model.NoteKind
+import app.otium.domain.transfer.ImportLoan
 import app.otium.domain.transfer.ImportNote
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -73,7 +76,7 @@ class JsonLibraryFormatTest {
         val text = format.write(emptyList(), exportedAt = 5L)
 
         assertTrue(text.contains("\"format\": \"otium-library\""))
-        assertTrue(text.contains("\"version\": 2"))
+        assertTrue(text.contains("\"version\": 3"))
         assertTrue(text.contains("\"exportedAt\": 5"))
     }
 
@@ -101,8 +104,8 @@ class JsonLibraryFormatTest {
     @Test
     fun `a file from a newer version is refused rather than read in part`() {
         assertEquals(
-            Try.Failure(AppError.IncompatibleBackup(backupSchema = 3, appSchema = 2)),
-            format.read("""{"format":"otium-library","version":3,"books":[]}"""),
+            Try.Failure(AppError.IncompatibleBackup(backupSchema = 4, appSchema = 3)),
+            format.read("""{"format":"otium-library","version":4,"books":[]}"""),
         )
     }
 
@@ -160,6 +163,74 @@ class JsonLibraryFormatTest {
             ),
             row.notes,
         )
+    }
+
+    @Test
+    fun `loans are written with their book, oldest first, and read back`() {
+        val loans = listOf(
+            Loan(1L, 7L, "Ana", LoanDirection.BORROWED, 19_000L, null, 19_010L),
+            Loan(2L, 7L, "Sam", LoanDirection.LENT, 20_000L, 20_030L, null),
+        )
+
+        val text = format.write(listOf(LibraryEntry(testBook(), loans = loans)), 1L)
+
+        assertEquals(
+            listOf(
+                ImportLoan(LoanDirection.BORROWED, "Ana", 19_000L, null, 19_010L),
+                ImportLoan(LoanDirection.LENT, "Sam", 20_000L, 20_030L, null),
+            ),
+            rows(text).single().loans,
+        )
+    }
+
+    @Test
+    fun `a book without loans writes none and reads back none`() {
+        val text = format.write(listOf(LibraryEntry(testBook())), exportedAt = 1L)
+
+        assertFalse(text.contains("loans"))
+        assertTrue(rows(text).single().loans.isEmpty())
+    }
+
+    @Test
+    fun `a version 2 file still reads, with its notes and without loans`() {
+        val row = rows(
+            """{"format":"otium-library","version":2,"books":[{"title":"Old",
+                "notes":[{"text":"Kept"}]}]}""",
+        ).single()
+
+        assertEquals("Old", row.title)
+        assertEquals(1, row.notes.size)
+        assertTrue(row.loans.isEmpty())
+    }
+
+    @Test
+    fun `a loan with missing or unknown parts is read as far as it goes`() {
+        val row = rows(
+            """{"format":"otium-library","version":3,"books":[{"title":"B","loans":[
+                {"counterparty":"No direction or days"},
+                {"direction":"GIFTED","counterparty":"Unknown direction","lentOn":5,"extra":1},
+                {"direction":"BORROWED"}
+            ]}]}""",
+        ).single()
+
+        assertEquals(
+            listOf(
+                ImportLoan(LoanDirection.LENT, "No direction or days"),
+                ImportLoan(LoanDirection.LENT, "Unknown direction", lentOn = 5L),
+                ImportLoan(LoanDirection.BORROWED, ""),
+            ),
+            row.loans,
+        )
+    }
+
+    @Test
+    fun `a name with quotes, newlines and unicode survives the round trip`() {
+        val name = "Zoë “Z” O'Brien\n(next door) \\ 山田"
+        val loans = listOf(Loan(1L, 1L, name, LoanDirection.LENT, 1L))
+
+        val row = rows(format.write(listOf(LibraryEntry(testBook(), loans = loans)), 1L)).single()
+
+        assertEquals(name, row.loans.single().counterparty)
     }
 
     @Test

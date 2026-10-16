@@ -4,11 +4,14 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.error.flatMap
 import app.otium.domain.model.Book
+import app.otium.domain.model.Loan
 import app.otium.domain.model.Note
 import app.otium.domain.port.Clock
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.LoanRepository
 import app.otium.domain.repo.NoteRepository
+import app.otium.domain.transfer.ImportLoan
 import app.otium.domain.transfer.ImportNote
 import app.otium.domain.transfer.ImportRow
 import app.otium.domain.transfer.LibraryFormat
@@ -29,12 +32,15 @@ data class ImportPreview(
     val unreadable: Int,
     /** Notes and quotes that come with the new books; the ones that cannot be kept are left out. */
     val notes: Int = 0,
+    /** Loans that come with the new books; the ones that cannot be kept are left out. */
+    val loans: Int = 0,
 )
 
 /**
  * How an import went. [waitingForLookup] books get their details later, as D11 describes.
  * [notesSkipped] counts the notes of added books that could not be kept: blank, too long, with a
- * page below 1, or not saved.
+ * page below 1, or not saved. [loansSkipped] counts the loans that could not be kept: without a
+ * usable name, with dates that do not fit, a second open loan on one book, or not saved.
  */
 data class ImportResult(
     val added: Int,
@@ -43,6 +49,8 @@ data class ImportResult(
     val waitingForLookup: Int,
     val notesAdded: Int = 0,
     val notesSkipped: Int = 0,
+    val loansAdded: Int = 0,
+    val loansSkipped: Int = 0,
 )
 
 /**
@@ -52,17 +60,23 @@ data class ImportResult(
  * that fills in its cover and details later, as offline ISBN entries do (D11). Books already in
  * the library are left as they are, with their notes, so importing the same file twice adds
  * nothing. The notes of an Otium file come with the books it adds, checked as the editor checks
- * them and keeping the times they were written.
+ * them and keeping the times they were written. So do its loans, checked as the ledger checks
+ * them; a book comes in with at most one open loan, and the reminders still ahead are planned.
  *
  * Progress comes from the shelf the book was on: read books are finished and books being read are
  * at their first page. Without a page count a shelf cannot show as progress, so it becomes a tag.
  */
+// Every port an import writes to or arranges work through, so the class takes all of them;
+// bundling them into a holder type would only hide the dependencies.
+@Suppress("LongParameterList")
 class ImportLibrary(
     private val books: BookRepository,
     private val notes: NoteRepository,
+    private val loans: LoanRepository,
     private val readFile: ReadLibraryFile,
     private val clock: Clock,
     private val scheduler: LookupScheduler,
+    private val loanReminders: SyncLoanReminders,
     private val lock: BackupLock,
 ) {
     /** Reads the file at [uri] and works out what importing it would do. Nothing is written. */
@@ -78,12 +92,15 @@ class ImportLibrary(
         onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
     ): ImportResult = lock.withLock {
         val now = clock.nowMillis()
+        val today = clock.todayEpochDay()
         var added = 0
         var skipped = 0
         var failed = 0
         var waiting = 0
         var notesAdded = 0
         var notesSkipped = 0
+        var loansAdded = 0
+        var loansSkipped = 0
         preview.rows.forEachIndexed { index, row ->
             val book = row.toBook(now)
             when (val result = books.add(book)) {
@@ -93,6 +110,9 @@ class ImportLibrary(
                     val kept = addNotes(result.value, row.notes, now)
                     notesAdded += kept
                     notesSkipped += row.notes.size - kept
+                    val lent = addLoans(result.value, row.loans, today)
+                    loansAdded += lent
+                    loansSkipped += row.loans.size - lent
                 }
 
                 is Try.Failure -> if (result.error is AppError.Duplicate) skipped++ else failed++
@@ -100,7 +120,42 @@ class ImportLibrary(
             onProgress(index + 1, preview.rows.size)
         }
         if (waiting > 0) scheduler.schedule()
-        ImportResult(added, skipped, failed, waiting, notesAdded, notesSkipped)
+        if (loansAdded > 0) loanReminders()
+        ImportResult(
+            added,
+            skipped,
+            failed,
+            waiting,
+            notesAdded,
+            notesSkipped,
+            loansAdded,
+            loansSkipped,
+        )
+    }
+
+    /** Saves the acceptable loans of [rows] on book [bookId] and returns how many were saved. */
+    private suspend fun addLoans(bookId: Long, rows: List<ImportLoan>, today: Long): Int =
+        rows.acceptedAs(bookId, today).count { loans.add(it) is Try.Success }
+
+    /**
+     * The loans the ledger would keep: with a usable name and dates that fit, and at most one
+     * open. A loan without a day it began is taken to have begun [today].
+     */
+    private fun List<ImportLoan>.acceptedAs(bookId: Long, today: Long): List<Loan> {
+        var hasOpen = false
+        return mapNotNull { row ->
+            val name = Loan.cleanName(row.counterparty)
+            val began = row.lentOn ?: today
+            if (name == null || !Loan.areDatesValid(began, row.remindOn, row.returnedOn)) {
+                return@mapNotNull null
+            }
+            val loan = Loan(0L, bookId, name, row.direction, began, row.remindOn, row.returnedOn)
+            when {
+                !loan.isOpen -> loan
+                hasOpen -> null
+                else -> loan.also { hasOpen = true }
+            }
+        }
     }
 
     /** Saves the acceptable notes of [rows] on book [bookId] and returns how many were saved. */
@@ -127,11 +182,14 @@ class ImportLibrary(
         var duplicates = 0
         var withoutIsbn = 0
         var noteCount = 0
+        var loanCount = 0
+        val today = clock.todayEpochDay()
         for (row in readable) {
             val isbn13 = row.validIsbn13()
             if (isbn13 == null) {
                 withoutIsbn++
                 noteCount += row.notes.count { it.isAcceptable() }
+                loanCount += row.loans.acceptedAs(0L, today).size
                 continue
             }
             when (val existing = books.findByIsbn13(isbn13)) {
@@ -141,6 +199,7 @@ class ImportLibrary(
                     duplicates++
                 } else {
                     noteCount += row.notes.count { it.isAcceptable() }
+                    loanCount += row.loans.acceptedAs(0L, today).size
                 }
             }
         }
@@ -153,6 +212,7 @@ class ImportLibrary(
                 withoutIsbn = withoutIsbn,
                 unreadable = rows.size - readable.size,
                 notes = noteCount,
+                loans = loanCount,
             ),
         )
     }

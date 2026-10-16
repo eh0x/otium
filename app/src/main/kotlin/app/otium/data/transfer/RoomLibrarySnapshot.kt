@@ -7,6 +7,7 @@ import app.otium.data.backup.readAll
 import app.otium.data.cover.CoverFiles
 import app.otium.data.cover.coversDirectory
 import app.otium.data.local.OtiumDatabase
+import app.otium.data.local.entity.LoanEntity
 import app.otium.data.local.entity.NoteEntity
 import app.otium.data.local.mapper.toDomain
 import app.otium.domain.error.AppError
@@ -42,12 +43,17 @@ class RoomLibrarySnapshot internal constructor(
 
 /**
  * The books in [this], oldest first, each with its labels in the order the owner gave them and
- * its notes in reading order.
+ * its notes in reading order and its loans, oldest first.
  */
 internal fun LibraryRows.toEntries(covers: CoverFiles): List<LibraryEntry> {
     val notesOf = notes.map(NoteEntity::toDomain).groupBy { it.bookId }
+    val loansOf = loans.map(LoanEntity::toDomain).groupBy { it.bookId }
     return toBooks(covers).map { book ->
-        LibraryEntry(book, notesOf[book.id].orEmpty().sortedWith(Note.READING_ORDER))
+        LibraryEntry(
+            book,
+            notesOf[book.id].orEmpty().sortedWith(Note.READING_ORDER),
+            loansOf[book.id].orEmpty().sortedWith(compareBy({ it.lentOn }, { it.id })),
+        )
     }
 }
 

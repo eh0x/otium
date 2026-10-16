@@ -5,8 +5,8 @@ import app.otium.domain.model.LibraryEntry
 import app.otium.domain.transfer.ImportRow
 
 /**
- * Otium's own library file: every field of every book and its notes, in JSON, with a format
- * version. Covers are kept as the address they came from, not as pictures. The JSON library lives
+ * Otium's own library file: every field of every book with its notes and loans, in JSON, with a
+ * format version. Covers are kept as the address they came from, not as pictures. The JSON library lives
  * in the app module, so this is a port.
  */
 interface LibraryJson {

@@ -6,9 +6,12 @@ import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeLibraryFiles
 import app.otium.domain.fakes.FakeLibraryJson
 import app.otium.domain.fakes.FakeLibrarySnapshot
+import app.otium.domain.fakes.FakeLoanRepository
 import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
+import app.otium.domain.model.Loan
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.Note
 import app.otium.domain.model.NoteKind
 import app.otium.domain.transfer.CsvTable
@@ -24,7 +27,8 @@ class ExportLibraryTest {
 
     private val repo = FakeBookRepository()
     private val notes = FakeNoteRepository(repo)
-    private val snapshot = FakeLibrarySnapshot(repo, notes)
+    private val loans = FakeLoanRepository(repo)
+    private val snapshot = FakeLibrarySnapshot(repo, notes, loans)
     private val files = FakeLibraryFiles()
     private val json = FakeLibraryJson()
     private val export = ExportLibrary(
@@ -85,6 +89,40 @@ class ExportLibraryTest {
         export("content://out.csv", ExportFormat.CSV)
 
         assertTrue("private thought" !in files.files.getValue("content://out.csv"))
+    }
+
+    @Test
+    fun `the json export hands each book its loans, oldest first`() = runTest {
+        val first = repo.seed(book(title = "One"))
+        val second = repo.seed(book(title = "Two"))
+        loans.add(Loan(0L, first.id, "Newer", LoanDirection.LENT, lentOn = 20_000L))
+        loans.add(
+            Loan(
+                0L,
+                first.id,
+                "Older",
+                LoanDirection.BORROWED,
+                lentOn = 19_000L,
+                returnedOn = 19_100L,
+            ),
+        )
+
+        export("content://out.json", ExportFormat.JSON)
+
+        val written = json.written
+        assertEquals(listOf("Older", "Newer"), written[0].loans.map { it.counterparty })
+        assertTrue(written[1].loans.isEmpty())
+        assertEquals(second.id, written[1].book.id)
+    }
+
+    @Test
+    fun `the csv export has no loans`() = runTest {
+        val saved = repo.seed(book(title = "One"))
+        loans.add(Loan(0L, saved.id, "Sam Private", LoanDirection.LENT, lentOn = 20_000L))
+
+        export("content://out.csv", ExportFormat.CSV)
+
+        assertTrue("Sam Private" !in files.files.getValue("content://out.csv"))
     }
 
     @Test

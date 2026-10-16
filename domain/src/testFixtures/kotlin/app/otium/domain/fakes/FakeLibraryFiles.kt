@@ -52,11 +52,18 @@ class FakeLibraryJson(var rows: List<ImportRow> = emptyList()) : LibraryJson {
 class FakeLibrarySnapshot(
     private val repo: FakeBookRepository,
     private val notes: FakeNoteRepository = FakeNoteRepository(),
+    private val loans: FakeLoanRepository = FakeLoanRepository(),
 ) : LibrarySnapshot {
     var failWith: AppError? = null
 
     override suspend fun entries(): Try<List<LibraryEntry>> =
         failWith?.let { Try.Failure(it) } ?: Try.Success(
-            repo.all.sortedBy { it.id }.map { book -> LibraryEntry(book, notes.of(book.id)) },
+            repo.all.sortedBy { it.id }.map { book ->
+                LibraryEntry(
+                    book,
+                    notes.of(book.id),
+                    loans.of(book.id).sortedWith(compareBy({ it.lentOn }, { it.id })),
+                )
+            },
         )
 }

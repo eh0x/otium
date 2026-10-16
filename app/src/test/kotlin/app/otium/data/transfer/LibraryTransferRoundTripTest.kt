@@ -6,13 +6,17 @@ import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.local.testBook
 import app.otium.data.repo.RoomBookRepository
+import app.otium.data.repo.RoomLoanRepository
 import app.otium.data.repo.RoomNoteRepository
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeLibraryFiles
+import app.otium.domain.fakes.FakeLoanReminderScheduler
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryEntry
+import app.otium.domain.model.Loan
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.Note
 import app.otium.domain.model.NoteKind
 import app.otium.domain.transfer.ExportFormat
@@ -21,6 +25,7 @@ import app.otium.domain.usecase.BackupLock
 import app.otium.domain.usecase.ExportLibrary
 import app.otium.domain.usecase.ImportLibrary
 import app.otium.domain.usecase.ReadLibraryFile
+import app.otium.domain.usecase.SyncLoanReminders
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -43,6 +48,7 @@ class LibraryTransferRoundTripTest {
     private lateinit var source: OtiumDatabase
     private lateinit var target: OtiumDatabase
     private val files = FakeLibraryFiles()
+    private val loanReminders = FakeLoanReminderScheduler()
     private val covers by lazy { CoverFiles(temp.newFolder("covers")) }
 
     private fun database() = Room.inMemoryDatabaseBuilder(
@@ -88,6 +94,9 @@ class LibraryTransferRoundTripTest {
 
     private val quote = Note(0L, 0L, NoteKind.QUOTE, "“Fear”\nis the mind-killer.", 12, 100L, 300L)
     private val thought = Note(0L, 0L, NoteKind.NOTE, "Reread this.", null, 200L, 200L)
+    private val earlier = Loan(0L, 0L, "Ana", LoanDirection.BORROWED, 19_000L, null, 19_010L)
+    private val lentOut = Loan(0L, 0L, "Sam", LoanDirection.LENT, 20_000L, 20_030L)
+    private val borrowed = Loan(0L, 0L, "Mira O'Neil", LoanDirection.BORROWED, 20_100L)
 
     private suspend fun exportThenImport(format: ExportFormat): List<LibraryEntry> {
         val from = source.repository()
@@ -96,6 +105,10 @@ class LibraryTransferRoundTripTest {
         fromNotes.add(thought.copy(bookId = ids[0]))
         fromNotes.add(quote.copy(bookId = ids[0]))
         fromNotes.add(quote.copy(bookId = ids[2], text = "Halfway there", page = 150))
+        val fromLoans = RoomLoanRepository(source.loanDao(), covers)
+        fromLoans.add(earlier.copy(bookId = ids[0]))
+        fromLoans.add(lentOut.copy(bookId = ids[0]))
+        fromLoans.add(borrowed.copy(bookId = ids[2]))
         val export = ExportLibrary(
             RoomLibrarySnapshot(source, covers),
             files,
@@ -106,12 +119,15 @@ class LibraryTransferRoundTripTest {
         assertEquals(Try.Success(3), export("content://library", format))
 
         val to = target.repository()
+        val toLoans = RoomLoanRepository(target.loanDao(), covers)
         val import = ImportLibrary(
             books = to,
             notes = RoomNoteRepository(target.noteDao()),
+            loans = toLoans,
             readFile = ReadLibraryFile(files, JsonLibraryFormat(), Dispatchers.Unconfined),
             clock = FixedClock(now = 9L),
             scheduler = {},
+            loanReminders = SyncLoanReminders(toLoans, loanReminders, FixedClock(now = 9L)),
             lock = BackupLock(),
         )
         val preview = (import.preview("content://library") as Try.Success).value
@@ -155,6 +171,40 @@ class LibraryTransferRoundTripTest {
         val back = exportThenImport(ExportFormat.CSV)
 
         assertTrue(back.all { it.notes.isEmpty() })
+    }
+
+    @Test
+    fun `the json export brings every loan back with its book, history and days`() = runTest {
+        val back = exportThenImport(ExportFormat.JSON)
+
+        val comparable = { loan: Loan -> loan.copy(id = 0L, bookId = 0L) }
+        assertEquals(
+            listOf(
+                listOf(earlier, lentOut).map(comparable),
+                emptyList(),
+                listOf(borrowed).map(comparable),
+            ),
+            back.map { entry -> entry.loans.map(comparable) },
+        )
+        assertTrue(
+            "each loan belongs to the new copy of its book",
+            back.all { entry -> entry.loans.all { it.bookId == entry.book.id } },
+        )
+    }
+
+    @Test
+    fun `an imported loan with a reminder still ahead is reminded on its day`() = runTest {
+        val back = exportThenImport(ExportFormat.JSON)
+
+        val sams = back[0].loans.single { it.counterparty == "Sam" }
+        assertEquals(mapOf(sams.id to 20_030L), loanReminders.planned)
+    }
+
+    @Test
+    fun `the csv export leaves the loans behind`() = runTest {
+        val back = exportThenImport(ExportFormat.CSV)
+
+        assertTrue(back.all { it.loans.isEmpty() })
     }
 
     @Test

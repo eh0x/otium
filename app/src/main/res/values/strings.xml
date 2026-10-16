@@ -409,7 +409,7 @@
     <string name="transfer_settings_note">Bring in books from Goodreads or StoryGraph, or take a copy of your library elsewhere.</string>
     <string name="transfer_settings_action">Import and export</string>
     <string name="import_heading">Import a library</string>
-    <string name="import_note">Choose a library export from Goodreads, StoryGraph or Otium. Books already in your library are left as they are, with their notes. Books with an ISBN get their cover and details later, when you are online. An Otium file also brings back your notes and quotes.</string>
+    <string name="import_note">Choose a library export from Goodreads, StoryGraph or Otium. Books already in your library are left as they are, with their notes. Books with an ISBN get their cover and details later, when you are online. An Otium file also brings back your notes, quotes and loans.</string>
     <string name="import_action">Choose a file</string>
     <string name="import_reading">Reading the file…</string>
     <string name="import_progress">Adding books: %1$d of %2$d</string>
@@ -442,6 +442,10 @@
         <item quantity="one">%1$d note or quote comes with them.</item>
         <item quantity="other">%1$d notes and quotes come with them.</item>
     </plurals>
+    <plurals name="import_preview_loans">
+        <item quantity="one">%1$d loan comes with them.</item>
+        <item quantity="other">%1$d loans come with them.</item>
+    </plurals>
     <string name="import_preview_dropped">Ratings, reviews and reading dates are not imported.</string>
     <string name="import_confirm_action">Import</string>
     <string name="import_cancel">Cancel</string>
@@ -470,9 +474,17 @@
         <item quantity="one">%1$d note was left out: it was empty, too long or could not be saved.</item>
         <item quantity="other">%1$d notes were left out: they were empty, too long or could not be saved.</item>
     </plurals>
+    <plurals name="import_done_loans">
+        <item quantity="one">%1$d loan added.</item>
+        <item quantity="other">%1$d loans added.</item>
+    </plurals>
+    <plurals name="import_done_loans_skipped">
+        <item quantity="one">%1$d loan was left out: its name or dates were not usable, the book was already out, or it could not be saved.</item>
+        <item quantity="other">%1$d loans were left out: their names or dates were not usable, the books were already out, or they could not be saved.</item>
+    </plurals>
     <string name="import_done_dismiss">Done</string>
     <string name="export_heading">Export your library</string>
-    <string name="export_note">A CSV file uses the columns of a Goodreads export: it opens in a spreadsheet and imports into most reading apps. A JSON file keeps everything Otium knows, including your notes and quotes, and imports back into Otium. A CSV file has no notes. Cover pictures are not included.</string>
+    <string name="export_note">A CSV file uses the columns of a Goodreads export: it opens in a spreadsheet and imports into most reading apps. A JSON file keeps everything Otium knows, including your notes and quotes and the names of people you lent books to or borrowed from, and imports back into Otium. A CSV file has no notes and no loans: the Goodreads columns have no place for them. Cover pictures are not included.</string>
     <string name="export_unencrypted">Export files are not encrypted. Keep them somewhere private.</string>
     <string name="export_csv_action">Export as CSV</string>
     <string name="export_json_action">Export as JSON</string>

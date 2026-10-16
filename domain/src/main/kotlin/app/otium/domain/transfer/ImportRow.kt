@@ -1,6 +1,7 @@
 package app.otium.domain.transfer
 
 import app.otium.domain.model.BookSource
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.NoteKind
 
 /** The kinds of library file Otium reads. Goodreads is also the format of Otium's CSV export. */
@@ -46,6 +47,20 @@ data class ImportRow(
     val userEdited: Boolean = false,
     /** The book's notes. Only Otium's own file (version 2 and later) carries them. */
     val notes: List<ImportNote> = emptyList(),
+    /** The book's loans. Only Otium's own file (version 3 and later) carries them. */
+    val loans: List<ImportLoan> = emptyList(),
+)
+
+/**
+ * One loan read from an Otium file, before it is checked: the name may be blank or too long, the
+ * dates may not fit together, and a day of null means the file did not say. Days are epoch days.
+ */
+data class ImportLoan(
+    val direction: LoanDirection,
+    val counterparty: String,
+    val lentOn: Long? = null,
+    val remindOn: Long? = null,
+    val returnedOn: Long? = null,
 )
 
 /**
