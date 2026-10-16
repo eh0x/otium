@@ -10,12 +10,16 @@ import app.otium.data.backup.archive.BackupManifest
 import app.otium.data.backup.archive.BackupZip
 import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
+import app.otium.data.local.mapper.toDomain
 import app.otium.data.local.testBook
 import app.otium.data.repo.RoomBookRepository
+import app.otium.data.repo.RoomLoanRepository
 import app.otium.data.repo.RoomNoteRepository
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.LibraryFilter
+import app.otium.domain.model.Loan
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.Note
 import app.otium.domain.model.NoteKind
 import app.otium.domain.port.DispatcherProvider
@@ -223,6 +227,57 @@ class LibraryBackupRoundTripTest {
         assertEquals(listOf("The Hobbit"), titles(targetBooks))
         assertTrue(RoomNoteRepository(target.noteDao()).observeNotes(7L).first().isEmpty())
         assertTrue(RoomNoteRepository(target.noteDao()).observeNotes(keeperId).first().isEmpty())
+    }
+
+    @Test
+    fun `loans come back from the backup and the replaced library's loans are gone`() =
+        runBlocking {
+            val hobbitId = fillSource()
+            val sourceLoans = RoomLoanRepository(source.loanDao(), CoverFiles(sourceCovers))
+            sourceLoans.add(Loan(0L, hobbitId, "Sam", LoanDirection.LENT, 20_000L, 20_030L))
+            sourceLoans.add(
+                Loan(0L, hobbitId, "Ana", LoanDirection.BORROWED, 19_000L, null, 19_010L),
+            )
+            val oldId = (targetBooks.add(testBook(title = "Old Book")) as Try.Success).value
+            val targetLoans = RoomLoanRepository(target.loanDao(), CoverFiles(targetCovers))
+            targetLoans.add(Loan(0L, oldId, "Gone", LoanDirection.LENT, 1L))
+
+            val result = restorer().restore(backupOfSource().file)
+
+            assertEquals(Try.Success(Unit), result)
+            assertEquals(
+                listOf(
+                    Loan(1L, hobbitId, "Sam", LoanDirection.LENT, 20_000L, 20_030L),
+                    Loan(2L, hobbitId, "Ana", LoanDirection.BORROWED, 19_000L, null, 19_010L),
+                ),
+                target.transferDao().loans().map { it.toDomain() },
+            )
+            // The old library's book had the id the Hobbit has now, so look for its loan by name.
+            assertFalse(target.transferDao().loans().any { it.counterparty == "Gone" })
+        }
+
+    @Test
+    fun `a backup made before loans existed restores its books and no loans`() = runBlocking {
+        val keeperId = (targetBooks.add(testBook(title = "Keep Me")) as Try.Success).value
+        val targetLoans = RoomLoanRepository(target.loanDao(), CoverFiles(targetCovers))
+        targetLoans.add(Loan(0L, keeperId, "Replaced", LoanDirection.LENT, 1L))
+        val oldFile = helper.createDatabase("before-loans", 3).use { db ->
+            db.execSQL(
+                "INSERT INTO book (id, isbn13, isbn10, title, subtitle, authors, publisher, " +
+                    "publishedYear, language, description, totalPages, currentPage, coverPath, " +
+                    "coverSourceUrl, source, addedAt, updatedAt, userEdited, needsLookup, " +
+                    "series, seriesIndex) VALUES (7, NULL, NULL, 'The Hobbit', NULL, " +
+                    "'J. R. R. Tolkien', NULL, 1937, 'en', NULL, 310, 12, NULL, NULL, " +
+                    "'MANUAL', 1, 2, 0, 0, NULL, NULL)",
+            )
+            File(requireNotNull(db.path))
+        }
+
+        val result = restorer().restore(craftedBackup(oldFile, schemaVersion = 3, bookCount = 1))
+
+        assertEquals(Try.Success(Unit), result)
+        assertEquals(listOf("The Hobbit"), titles(targetBooks))
+        assertTrue(target.transferDao().loans().isEmpty())
     }
 
     @Test
