@@ -5,6 +5,7 @@ import androidx.room.Room
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.local.dao.BookDao
 import app.otium.data.local.dao.LibraryTransferDao
+import app.otium.data.local.dao.LoanDao
 import app.otium.data.local.dao.NoteDao
 import dagger.Module
 import dagger.Provides
@@ -34,4 +35,7 @@ object DatabaseModule {
 
     @Provides
     fun provideNoteDao(database: OtiumDatabase): NoteDao = database.noteDao()
+
+    @Provides
+    fun provideLoanDao(database: OtiumDatabase): LoanDao = database.loanDao()
 }

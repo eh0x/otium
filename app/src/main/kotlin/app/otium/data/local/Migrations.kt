@@ -62,3 +62,20 @@ internal val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_note_bookId` ON `note` (`bookId`)")
     }
 }
+
+/**
+ * Version 4 adds the lending ledger: one table, deleted with its book. As for version 3, the SQL
+ * must match Room's character for character (see the exported schema 4.json).
+ */
+internal val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `loan` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`bookId` INTEGER NOT NULL, `counterparty` TEXT NOT NULL, " +
+                "`direction` TEXT NOT NULL, `lentOn` INTEGER NOT NULL, `remindOn` INTEGER, " +
+                "`returnedOn` INTEGER, FOREIGN KEY(`bookId`) REFERENCES `book`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_loan_bookId` ON `loan` (`bookId`)")
+    }
+}

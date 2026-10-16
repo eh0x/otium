@@ -237,6 +237,7 @@
     <string name="error_incompatible_backup">That backup was made by a newer version of Otium.</string>
     <string name="error_corrupt_backup">That backup is damaged and could not be read.</string>
     <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
+    <string name="error_already_on_loan">This book is already out. Mark it returned first.</string>
     <string name="error_passphrase_required">This phone no longer holds your backup key. Set your passphrase again under Encrypt backups.</string>
     <string name="error_wrong_passphrase">That passphrase does not open this backup.</string>
     <string name="error_unknown_file_format">Otium cannot read that file. Choose a library export from Goodreads, StoryGraph or Otium.</string>
