@@ -17,6 +17,7 @@ import app.otium.data.repo.RoomLoanRepository
 import app.otium.data.repo.RoomNoteRepository
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.Loan
 import app.otium.domain.model.LoanDirection
@@ -278,6 +279,45 @@ class LibraryBackupRoundTripTest {
         assertEquals(Try.Success(Unit), result)
         assertEquals(listOf("The Hobbit"), titles(targetBooks))
         assertTrue(target.transferDao().loans().isEmpty())
+    }
+
+    @Test
+    fun `formats come back from the backup`() = runBlocking {
+        sourceBooks.add(
+            testBook(title = "Heard", isbn13 = "9780306406157").copy(format = BookFormat.AUDIOBOOK),
+        )
+        sourceBooks.add(testBook(title = "Plain", isbn13 = "9780141439518"))
+
+        val result = restorer().restore(backupOfSource().file)
+
+        assertEquals(Try.Success(Unit), result)
+        val restored = targetBooks.observeLibrary(LibraryFilter()).first()
+            .map { (targetBooks.getBook(it.id) as Try.Success).value }
+        assertEquals(
+            mapOf("Heard" to BookFormat.AUDIOBOOK, "Plain" to null),
+            restored.associate { it.title to it.format },
+        )
+    }
+
+    @Test
+    fun `a backup made before formats existed restores its books with no format`() = runBlocking {
+        val oldFile = helper.createDatabase("before-formats", 4).use { db ->
+            db.execSQL(
+                "INSERT INTO book (id, isbn13, isbn10, title, subtitle, authors, publisher, " +
+                    "publishedYear, language, description, totalPages, currentPage, coverPath, " +
+                    "coverSourceUrl, source, addedAt, updatedAt, userEdited, needsLookup, " +
+                    "series, seriesIndex) VALUES (7, NULL, NULL, 'The Hobbit', NULL, " +
+                    "'J. R. R. Tolkien', NULL, 1937, 'en', NULL, 310, 12, NULL, NULL, " +
+                    "'MANUAL', 1, 2, 0, 0, NULL, NULL)",
+            )
+            File(requireNotNull(db.path))
+        }
+
+        val result = restorer().restore(craftedBackup(oldFile, schemaVersion = 4, bookCount = 1))
+
+        assertEquals(Try.Success(Unit), result)
+        assertEquals(listOf("The Hobbit"), titles(targetBooks))
+        assertEquals(null, (targetBooks.getBook(7L) as Try.Success).value.format)
     }
 
     @Test

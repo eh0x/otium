@@ -1,6 +1,7 @@
 package app.otium.domain.transfer
 
 import app.otium.domain.fakes.book
+import app.otium.domain.model.BookFormat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -104,6 +105,27 @@ class GoodreadsCsvTest {
         assertEquals(listOf("Some Author"), back[0].authors)
         assertNull(back[1].isbn)
         assertEquals(Shelf.TO_READ, back[1].shelf)
+    }
+
+    @Test
+    fun `a binding becomes the format, and an unknown one leaves it unset`() {
+        assertEquals(BookFormat.PRINT, rows[0].format)
+        val text = "Title,Author,Exclusive Shelf,Binding\n" +
+            "A,X,read,Kindle Edition\nB,Y,read,Audible Audio\nC,Z,read,Unknown Binding\n"
+
+        val read = GoodreadsCsv.read(CsvTable.of(text)!!)
+
+        assertEquals(listOf(BookFormat.EBOOK, BookFormat.AUDIOBOOK, null), read.map { it.format })
+    }
+
+    @Test
+    fun `the format is written as the binding and read back`() {
+        val books = BookFormat.entries.map { book(title = it.name).copy(format = it) } +
+            book(title = "None")
+
+        val back = GoodreadsCsv.read(CsvTable.of(GoodreadsCsv.write(books))!!)
+
+        assertEquals(BookFormat.entries.toList() + null, back.map { it.format })
     }
 
     @Test

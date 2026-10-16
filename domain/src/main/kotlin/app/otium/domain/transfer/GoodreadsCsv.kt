@@ -1,6 +1,7 @@
 package app.otium.domain.transfer
 
 import app.otium.domain.model.Book
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookStatus
 
 /**
@@ -16,6 +17,7 @@ object GoodreadsCsv {
     private const val ISBN = "ISBN"
     private const val ISBN13 = "ISBN13"
     private const val PUBLISHER = "Publisher"
+    private const val BINDING = "Binding"
     private const val PAGES = "Number of Pages"
     private const val YEAR = "Year Published"
     private const val ORIGINAL_YEAR = "Original Publication Year"
@@ -32,7 +34,7 @@ object GoodreadsCsv {
     /** Every column of a Goodreads export, in its order. */
     val COLUMNS = listOf(
         "Book Id", TITLE, AUTHOR, AUTHOR_LAST_FIRST, ADDITIONAL_AUTHORS, ISBN, ISBN13, "My Rating",
-        "Average Rating", PUBLISHER, "Binding", PAGES, YEAR, ORIGINAL_YEAR, "Date Read", DATE_ADDED,
+        "Average Rating", PUBLISHER, BINDING, PAGES, YEAR, ORIGINAL_YEAR, "Date Read", DATE_ADDED,
         SHELVES, "Bookshelves with positions", EXCLUSIVE_SHELF, "My Review", "Spoiler",
         "Private Notes", READ_COUNT, OWNED_COPIES,
     )
@@ -67,6 +69,7 @@ object GoodreadsCsv {
                 .filterNot { it.lowercase() in setOf(SHELF_READ, SHELF_READING, SHELF_TO_READ) }
                 .distinct(),
             addedAt = FileValues.parseDate(record[DATE_ADDED]),
+            format = BookFormat.fromBinding(text(BINDING)),
         )
     }
 
@@ -92,6 +95,7 @@ object GoodreadsCsv {
             ISBN to "=\"${book.isbn10.orEmpty()}\"",
             ISBN13 to "=\"${book.isbn13.orEmpty()}\"",
             PUBLISHER to book.publisher.orEmpty(),
+            BINDING to book.format?.binding.orEmpty(),
             PAGES to book.totalPages.takeIf { it > 0 }?.toString().orEmpty(),
             YEAR to book.publishedYear?.toString().orEmpty(),
             DATE_ADDED to FileValues.formatDate(book.addedAt),

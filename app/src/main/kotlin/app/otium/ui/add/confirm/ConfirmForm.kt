@@ -32,6 +32,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.otium.R
+import app.otium.domain.model.BookFormat
+import app.otium.ui.common.labelRes
 import app.otium.ui.components.OtiumButton
 import app.otium.ui.components.OtiumButtonStyle
 import app.otium.ui.components.OtiumChip
@@ -93,6 +95,7 @@ internal fun ConfirmForm(
             keyboardType = KeyboardType.Number,
         )
         ShelfChips(form, knownCategories, onFormChange)
+        FormatChips(form, onFormChange)
         OtiumButton(
             text = stringResource(
                 if (moreDetails) R.string.confirm_fewer_details else R.string.confirm_more_details,
@@ -163,6 +166,36 @@ private fun ShelfChips(
                 label = name,
                 selected = name.equals(current, ignoreCase = true),
                 onClick = { onFormChange(form.withShelf(name)) },
+            )
+        }
+    }
+}
+
+/**
+ * How the owner has the book: print, ebook or audiobook. Choosing the chosen one again clears it,
+ * as a book may be none of them yet. Another format of the same title is another book (D35).
+ */
+@Composable
+private fun FormatChips(form: BookForm, onFormChange: (BookForm) -> Unit) {
+    Text(
+        text = stringResource(R.string.confirm_format).uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.otiumColors.muted,
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .semantics { heading() },
+    )
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        BookFormat.entries.forEach { option ->
+            OtiumChip(
+                label = stringResource(option.labelRes()),
+                selected = form.format == option,
+                onClick = {
+                    onFormChange(form.copy(format = option.takeUnless { form.format == option }))
+                },
             )
         }
     }

@@ -3,6 +3,7 @@ package app.otium.data.transfer
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.model.Book
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.LibraryEntry
 import app.otium.domain.model.Loan
@@ -103,6 +104,7 @@ private data class BookDto(
     val updatedAt: Long? = null,
     val userEdited: Boolean = false,
     val needsLookup: Boolean = false,
+    val format: String? = null,
     val notes: List<NoteDto> = emptyList(),
     val loans: List<LoanDto> = emptyList(),
 ) {
@@ -127,6 +129,7 @@ private data class BookDto(
         addedAt = addedAt,
         complete = !needsLookup,
         userEdited = userEdited,
+        format = BookFormat.entries.firstOrNull { it.name == format },
         notes = notes.map(NoteDto::toImportNote),
         loans = loans.map(LoanDto::toImportLoan),
     )
@@ -210,6 +213,7 @@ private fun Book.toDto(notes: List<NoteDto>, loans: List<LoanDto>) = BookDto(
     updatedAt = updatedAt,
     userEdited = userEdited,
     needsLookup = needsLookup,
+    format = format?.name,
     notes = notes,
     loans = loans,
 )

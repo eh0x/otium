@@ -10,6 +10,7 @@ import app.otium.domain.fakes.FakeLoanRepository
 import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.Loan
 import app.otium.domain.model.LoanDirection
@@ -421,6 +422,21 @@ class ImportLibraryTest {
         assertEquals(0, result.notesAdded)
         assertEquals(0, result.notesSkipped)
         assertTrue(noteRepo.all.isEmpty())
+    }
+
+    // --- Format ---
+
+    @Test
+    fun `the format a file names is kept, and a file that names none leaves it unset`() = runTest {
+        json.rows = listOf(
+            ImportRow(title = "Heard", isbn = "9780306406157", format = BookFormat.AUDIOBOOK),
+            ImportRow(title = "Unsaid", isbn = "9780141439518"),
+        )
+
+        import.import(preview("{}"))
+
+        assertEquals(BookFormat.AUDIOBOOK, titled("Heard").format)
+        assertNull(titled("Unsaid").format)
     }
 
     // --- Loans ---

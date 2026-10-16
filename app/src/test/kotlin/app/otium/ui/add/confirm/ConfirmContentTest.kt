@@ -13,9 +13,11 @@ import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.CoverChoice
 import app.otium.ui.theme.OtiumTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -151,6 +153,34 @@ class ConfirmContentTest {
         rule.onNodeWithText("Philosophy").performScrollTo().assertIsNotSelected().performClick()
 
         assertEquals("Philosophy, Fiction", forms.last().categories)
+    }
+
+    @Test
+    fun `the format is chosen with a chip`() {
+        show(dune)
+
+        rule.onNodeWithText("FORMAT").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Ebook").performScrollTo().assertIsNotSelected().performClick()
+
+        assertEquals(BookFormat.EBOOK, forms.last().format)
+    }
+
+    @Test
+    fun `choosing the chosen format again clears it`() {
+        show(dune.copy(form = dune.form.copy(format = BookFormat.AUDIOBOOK)))
+
+        rule.onNodeWithText("Audiobook").performScrollTo().assertIsSelected().performClick()
+
+        assertNull(forms.last().format)
+    }
+
+    @Test
+    fun `a book with no format shows none chosen`() {
+        show(dune)
+
+        rule.onNodeWithText("Print").performScrollTo().assertIsNotSelected()
+        rule.onNodeWithText("Ebook").performScrollTo().assertIsNotSelected()
+        rule.onNodeWithText("Audiobook").performScrollTo().assertIsNotSelected()
     }
 
     @Test

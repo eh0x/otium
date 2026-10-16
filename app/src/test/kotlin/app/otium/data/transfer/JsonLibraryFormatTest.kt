@@ -3,6 +3,7 @@ package app.otium.data.transfer
 import app.otium.data.local.testBook
 import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
+import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.LibraryEntry
 import app.otium.domain.model.Loan
@@ -13,6 +14,7 @@ import app.otium.domain.transfer.ImportLoan
 import app.otium.domain.transfer.ImportNote
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -181,6 +183,36 @@ class JsonLibraryFormatTest {
             ),
             rows(text).single().loans,
         )
+    }
+
+    @Test
+    fun `a format is written with its book and read back`() {
+        val book = testBook(title = "Heard").copy(format = BookFormat.AUDIOBOOK)
+
+        val text = format.write(listOf(LibraryEntry(book)), exportedAt = 1L)
+
+        assertEquals(BookFormat.AUDIOBOOK, rows(text).single().format)
+    }
+
+    @Test
+    fun `a book without a format writes none and an older file reads as unset`() {
+        val text = format.write(listOf(LibraryEntry(testBook())), exportedAt = 1L)
+
+        assertEquals("only the file's own format key", 1, Regex("\"format\"").findAll(text).count())
+        assertNull(rows(text).single().format)
+        assertNull(
+            rows("""{"format":"otium-library","version":3,"books":[{"title":"Old"}]}""")
+                .single().format,
+        )
+    }
+
+    @Test
+    fun `a format this app does not know reads as unset`() {
+        val row = rows(
+            """{"format":"otium-library","version":3,"books":[{"title":"B","format":"VINYL"}]}""",
+        ).single()
+
+        assertNull(row.format)
     }
 
     @Test

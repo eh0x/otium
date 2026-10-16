@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performTextReplacement
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.book
 import app.otium.domain.model.Book
+import app.otium.domain.model.BookFormat
 import app.otium.ui.theme.OtiumTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -59,6 +60,21 @@ class DetailContentTest {
         DetailUiState(isLoading = false, book = book, error = error)
 
     // --- Content ---
+
+    @Test
+    fun `the format shows among the facts when the owner said it`() {
+        show(loaded(dune.copy(format = BookFormat.AUDIOBOOK)))
+
+        rule.onNodeWithText("Format").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Audiobook").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `a book with no format does not claim one`() {
+        show(loaded())
+
+        rule.onNodeWithText("Format").assertDoesNotExist()
+    }
 
     @Test
     fun `shows what the book is`() {

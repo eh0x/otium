@@ -154,6 +154,7 @@ class SaveBook(
         totalPages = candidate.totalPages?.coerceAtLeast(0) ?: 0,
         categories = candidate.categories,
         tags = candidate.tags,
+        format = candidate.format,
     )
 
     private fun String?.cleaned(): String? = this?.trim()?.takeIf(String::isNotEmpty)

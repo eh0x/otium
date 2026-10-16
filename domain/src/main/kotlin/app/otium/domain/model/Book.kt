@@ -32,6 +32,8 @@ data class Book(
     val userEdited: Boolean = false,
     /** True for ISBN-only entries saved offline that still await a metadata lookup. */
     val needsLookup: Boolean = false,
+    /** How the owner has this book; null when not said (D35). */
+    val format: BookFormat? = null,
 ) {
     val status: BookStatus get() = DeriveStatus(currentPage, totalPages)
 }
