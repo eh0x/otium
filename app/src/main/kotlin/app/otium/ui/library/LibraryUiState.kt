@@ -56,6 +56,8 @@ data class LibraryUiState(
     val series: String? = null,
     /** Every series in the library with progress through it, whatever the filters. */
     val knownSeries: List<SeriesProgress> = emptyList(),
+    /** Books that are out on loan or borrowed in, for the link to the Lent out screen. */
+    val openLoans: Int = 0,
 ) {
     val hasActiveFilters: Boolean get() = query.isNotBlank() || status != null || series != null
 

@@ -23,13 +23,13 @@ class LendingLedgerTest {
     private suspend fun lend(
         bookId: Long = 7L,
         name: String = "Sam",
-        lentOn: Long = today,
-        remindOn: Long? = null,
-    ) = ledger.open(bookId, LoanDirection.LENT, name, lentOn, remindOn)
+        daysAgo: Int = 0,
+        remindInDays: Int? = null,
+    ) = ledger.open(bookId, LoanDirection.LENT, name, daysAgo, remindInDays)
 
     @Test
     fun `lends a book to a name typed by hand`() = runTest {
-        val result = lend(name = "  Sam ", lentOn = today - 3)
+        val result = lend(name = "  Sam ", daysAgo = 3)
 
         assertEquals(Try.Success(1L), result)
         assertEquals(
@@ -40,7 +40,7 @@ class LendingLedgerTest {
 
     @Test
     fun `records a borrowed book in the other direction`() = runTest {
-        ledger.open(7L, LoanDirection.BORROWED, "Ana", today, null)
+        ledger.open(7L, LoanDirection.BORROWED, "Ana", daysAgo = 0, remindInDays = null)
 
         assertEquals(LoanDirection.BORROWED, repo.all.single().direction)
     }
@@ -53,25 +53,25 @@ class LendingLedgerTest {
     }
 
     @Test
-    fun `a book cannot go out before it is lent or from a day to come`() = runTest {
-        assertEquals(Try.Failure(AppError.InvalidInput("lentOn")), lend(lentOn = today + 1))
+    fun `a book cannot go out on a day to come`() = runTest {
+        assertEquals(Try.Failure(AppError.InvalidInput("lentOn")), lend(daysAgo = -1))
         assertTrue(repo.all.isEmpty())
     }
 
     @Test
-    fun `a reminder must be after today and after the loan began`() = runTest {
-        assertEquals(Try.Failure(AppError.InvalidInput("remindOn")), lend(remindOn = today))
-        assertEquals(
-            Try.Failure(AppError.InvalidInput("remindOn")),
-            lend(lentOn = today - 5, remindOn = today - 2),
-        )
+    fun `a reminder must be at least a day ahead`() = runTest {
+        assertEquals(Try.Failure(AppError.InvalidInput("remindOn")), lend(remindInDays = 0))
+        assertEquals(Try.Failure(AppError.InvalidInput("remindOn")), lend(remindInDays = -2))
+        assertTrue(repo.all.isEmpty())
         assertTrue(reminders.planned.isEmpty())
     }
 
     @Test
     fun `a reminder is planned for the day chosen`() = runTest {
-        lend(remindOn = today + 14)
+        lend(daysAgo = 5, remindInDays = 14)
 
+        assertEquals(today - 5, repo.all.single().lentOn)
+        assertEquals(today + 14, repo.all.single().remindOn)
         assertEquals(mapOf(1L to today + 14), reminders.planned)
     }
 
@@ -87,13 +87,22 @@ class LendingLedgerTest {
 
     @Test
     fun `a book that does not exist fails with not found and plans nothing`() = runTest {
-        assertEquals(Try.Failure(AppError.NotFound), lend(bookId = 404L, remindOn = today + 3))
+        assertEquals(Try.Failure(AppError.NotFound), lend(bookId = 404L, remindInDays = 3))
+        assertTrue(reminders.planned.isEmpty())
+    }
+
+    @Test
+    fun `a refused loan plans no reminder`() = runTest {
+        lend()
+
+        lend(name = "Ana", remindInDays = 7)
+
         assertTrue(reminders.planned.isEmpty())
     }
 
     @Test
     fun `returning keeps the loan as history and drops its reminder`() = runTest {
-        lend(lentOn = today - 4, remindOn = today + 7)
+        lend(daysAgo = 4, remindInDays = 7)
 
         assertEquals(Try.Success(Unit), ledger.markReturned(1L))
 
@@ -118,9 +127,9 @@ class LendingLedgerTest {
 
     @Test
     fun `a reminder can be moved and cleared`() = runTest {
-        lend(remindOn = today + 7)
+        lend(remindInDays = 7)
 
-        assertEquals(Try.Success(Unit), ledger.changeReminder(1L, today + 30))
+        assertEquals(Try.Success(Unit), ledger.changeReminder(1L, 30))
         assertEquals(mapOf(1L to today + 30), reminders.planned)
 
         assertEquals(Try.Success(Unit), ledger.changeReminder(1L, null))
@@ -133,19 +142,24 @@ class LendingLedgerTest {
         lend()
         assertEquals(
             Try.Failure(AppError.InvalidInput("remindOn")),
-            ledger.changeReminder(1L, today),
+            ledger.changeReminder(1L, 0),
         )
 
         ledger.markReturned(1L)
         assertEquals(
             Try.Failure(AppError.InvalidInput("loan")),
-            ledger.changeReminder(1L, today + 5),
+            ledger.changeReminder(1L, 5),
         )
     }
 
     @Test
+    fun `changing the reminder of a loan that does not exist fails with not found`() = runTest {
+        assertEquals(Try.Failure(AppError.NotFound), ledger.changeReminder(404L, 5))
+    }
+
+    @Test
     fun `removing a loan drops it and its reminder`() = runTest {
-        lend(remindOn = today + 7)
+        lend(remindInDays = 7)
 
         assertEquals(Try.Success(Unit), ledger.remove(1L))
 

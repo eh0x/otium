@@ -8,11 +8,12 @@ import app.otium.domain.model.LoanDirection
 import app.otium.domain.port.Clock
 import app.otium.domain.port.LoanReminderScheduler
 import app.otium.domain.repo.LoanRepository
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Keeps the owner's lending ledger: who has a book of theirs, and which book they have borrowed.
- * The name is trimmed and must not be blank or longer than [Loan.MAX_NAME_LENGTH]; the day the
- * book went is not in the future; a reminder is on a day after today and after the loan began. A
+ * The name is trimmed and must not be blank or longer than [Loan.MAX_NAME_LENGTH]. Days are
+ * counted from today: the book went today or before, and a reminder is at least a day ahead. A
  * book has one open loan at a time. A reminder is planned only while the loan is open.
  */
 class LendingLedger(
@@ -20,18 +21,30 @@ class LendingLedger(
     private val reminders: LoanReminderScheduler,
     private val clock: Clock,
 ) {
-    /** Opens a loan of book [bookId] and returns its id. */
+    /** A book's loans, open and returned, newest first. */
+    fun loansOf(bookId: Long): Flow<List<Loan>> = loans.observeLoans(bookId)
+
+    /**
+     * Opens a loan of book [bookId], begun [daysAgo] days ago (0 for today), with a reminder
+     * [remindInDays] days from today, or none. Returns the loan's id.
+     */
     suspend fun open(
         bookId: Long,
         direction: LoanDirection,
         name: String,
-        lentOn: Long,
-        remindOn: Long?,
+        daysAgo: Int,
+        remindInDays: Int?,
     ): Try<Long> {
         val cleaned = Loan.cleanName(name) ?: return Try.Failure(AppError.InvalidInput("name"))
-        val invalid = invalidDate(lentOn, remindOn)
+        val invalid = when {
+            daysAgo < 0 -> "lentOn"
+            remindInDays != null && remindInDays < 1 -> "remindOn"
+            else -> null
+        }
         if (invalid != null) return Try.Failure(AppError.InvalidInput(invalid))
-        val loan = Loan(0L, bookId, cleaned, direction, lentOn, remindOn)
+        val today = clock.todayEpochDay()
+        val remindOn = remindInDays?.let { today + it }
+        val loan = Loan(0L, bookId, cleaned, direction, today - daysAgo, remindOn)
         return loans.add(loan).also { added ->
             if (added is Try.Success && remindOn != null) reminders.schedule(added.value, remindOn)
         }
@@ -46,14 +59,18 @@ class LendingLedger(
         }
     }
 
-    /** Sets, moves or (with null) clears the reminder of an open loan. */
-    suspend fun changeReminder(loanId: Long, remindOn: Long?): Try<Unit> =
+    /**
+     * Sets or moves the reminder of an open loan to [remindInDays] days from today, or clears it
+     * with null.
+     */
+    suspend fun changeReminder(loanId: Long, remindInDays: Int?): Try<Unit> =
         loans.getLoan(loanId).flatMap { loan ->
-            val invalid = if (remindOn == null) null else invalidDate(loan.lentOn, remindOn)
+            val remindOn = remindInDays?.let { clock.todayEpochDay() + it }
             when {
                 !loan.isOpen -> Try.Failure(AppError.InvalidInput("loan"))
 
-                invalid != null -> Try.Failure(AppError.InvalidInput(invalid))
+                remindInDays != null && remindInDays < 1 ->
+                    Try.Failure(AppError.InvalidInput("remindOn"))
 
                 else -> loans.update(loan.copy(remindOn = remindOn)).also {
                     if (it is Try.Success) {
@@ -70,12 +87,5 @@ class LendingLedger(
     /** Takes a loan, open or returned, out of the ledger. */
     suspend fun remove(loanId: Long): Try<Unit> = loans.delete(loanId).also {
         if (it is Try.Success) reminders.cancel(loanId)
-    }
-
-    /** The name of the first date that is not acceptable, or null when they all are. */
-    private fun invalidDate(lentOn: Long, remindOn: Long?): String? = when {
-        lentOn > clock.todayEpochDay() -> "lentOn"
-        remindOn != null && (remindOn <= clock.todayEpochDay() || remindOn <= lentOn) -> "remindOn"
-        else -> null
     }
 }

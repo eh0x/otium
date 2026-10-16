@@ -195,6 +195,28 @@ internal fun StatusTabs(selected: BookStatus?, onSelected: (BookStatus?) -> Unit
     }
 }
 
+/**
+ * "Lent out · 2": a quiet link to the books that are out on loan or borrowed in, shown only while
+ * there are some.
+ */
+@Composable
+internal fun LentOutLink(count: Int, onClick: () -> Unit) {
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 44.dp)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(start = 22.dp, end = 22.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.library_lent_out, count),
+            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+            color = MaterialTheme.otiumColors.accent,
+        )
+    }
+}
+
 /** "12 volumes" (with the status when filtered) and, on the right, the sort that opens Arrange. */
 @Composable
 internal fun MetaLine(state: LibraryUiState, onOpenArrange: () -> Unit) {

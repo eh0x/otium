@@ -30,15 +30,14 @@ private const val NOTIFICATION_TAG = "loan"
 class LoanReminderNotifier @Inject constructor(@ApplicationContext private val context: Context) {
 
     fun remind(reminder: LoanReminder) {
-        if (!context.mayNotify()) return
-        val manager = NotificationManagerCompat.from(context)
-        manager.createNotificationChannel(
+        val channel =
             NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(context.getString(R.string.loan_channel_name))
                 .setDescription(context.getString(R.string.loan_channel_description))
-                .build(),
-        )
-        manager.notify(NOTIFICATION_TAG, reminder.loanId.hashCode(), notificationFor(reminder))
+                .build()
+        context.notifyIfAllowed(channel, NOTIFICATION_TAG, reminder.loanId.hashCode()) {
+            notificationFor(reminder)
+        }
     }
 
     private fun notificationFor(reminder: LoanReminder): Notification {

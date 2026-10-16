@@ -1,5 +1,10 @@
 package app.otium.ui.detail
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,13 +34,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.otium.R
 import app.otium.domain.model.Book
+import app.otium.domain.model.Loan
 import app.otium.domain.model.Note
 import app.otium.ui.common.messageRes
 import app.otium.ui.components.LocalContentHidden
@@ -57,6 +65,19 @@ fun DetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(state.deleted) { if (state.deleted) onBack() }
+    val context = LocalContext.current
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {}
+    // A reminder is a notification, which needs permission on newer Android. The loan form has
+    // already said so; asking when a reminder is saved puts the question where its reason is
+    // clear. The loan and its reminder day are kept whatever the answer is.
+    val askForNotifications = {
+        val needsAsking = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        if (needsAsking) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
     val actions = remember(viewModel, onBack, onEdit) {
         DetailActions(
             onBack = onBack,
@@ -67,6 +88,16 @@ fun DetailScreen(
             onDelete = viewModel::onDelete,
             onNoteSaved = viewModel::onNoteSaved,
             onNoteDeleted = viewModel::onNoteDeleted,
+            onLoanOpened = { draft ->
+                viewModel.onLoanOpened(draft)
+                if (draft.remindInDays != null) askForNotifications()
+            },
+            onLoanReturned = viewModel::onLoanReturned,
+            onReminderChanged = { id, inDays ->
+                viewModel.onReminderChanged(id, inDays)
+                if (inDays != null) askForNotifications()
+            },
+            onLoanRemoved = viewModel::onLoanRemoved,
             onErrorShown = viewModel::onErrorShown,
         )
     }
@@ -91,7 +122,7 @@ fun DetailContent(state: DetailUiState, actions: DetailActions, modifier: Modifi
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
             TopRow(hasBook = book != null, actions = actions, onDelete = { confirmDelete = true })
             when {
-                book != null -> BookDetails(book, state.notes, actions)
+                book != null -> BookDetails(book, state.notes, state.loans, actions)
 
                 !state.isLoading -> Text(
                     text = stringResource(R.string.detail_not_found),
@@ -177,7 +208,7 @@ private fun OverflowMenu(onEdit: () -> Unit, onDelete: () -> Unit) {
 }
 
 @Composable
-private fun BookDetails(book: Book, notes: List<Note>, actions: DetailActions) {
+private fun BookDetails(book: Book, notes: List<Note>, loans: List<Loan>, actions: DetailActions) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -188,6 +219,14 @@ private fun BookDetails(book: Book, notes: List<Note>, actions: DetailActions) {
         DetailHeader(book)
         ProgressSection(
             book = book,
+            actions = actions,
+            modifier = Modifier
+                .padding(top = 26.dp)
+                .hairlineTop(MaterialTheme.otiumColors.divider)
+                .padding(top = 16.dp),
+        )
+        LoanSection(
+            loans = loans,
             actions = actions,
             modifier = Modifier
                 .padding(top = 26.dp)

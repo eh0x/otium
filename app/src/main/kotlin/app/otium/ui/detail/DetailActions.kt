@@ -13,5 +13,10 @@ data class DetailActions(
     val onDelete: () -> Unit = {},
     val onNoteSaved: (NoteDraft) -> Unit = {},
     val onNoteDeleted: (Long) -> Unit = {},
+    val onLoanOpened: (LoanDraft) -> Unit = {},
+    val onLoanReturned: (Long) -> Unit = {},
+    /** The loan, and the days from today to remind on, or null for no reminder. */
+    val onReminderChanged: (Long, Int?) -> Unit = { _, _ -> },
+    val onLoanRemoved: (Long) -> Unit = {},
     val onErrorShown: () -> Unit = {},
 )

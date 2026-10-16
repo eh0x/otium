@@ -1,9 +1,12 @@
 package app.otium.work
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Notification
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
@@ -18,4 +21,22 @@ internal fun Context.mayNotify(): Boolean {
         ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
         PackageManager.PERMISSION_GRANTED
     return !denied && NotificationManagerCompat.from(this).areNotificationsEnabled()
+}
+
+/**
+ * Shows the notification [build] makes under [channel], when notifications are allowed (see
+ * [mayNotify]); otherwise does nothing, and builds nothing.
+ */
+// Lint cannot follow the permission check into mayNotify, which runs on the line before notify.
+@SuppressLint("MissingPermission")
+internal fun Context.notifyIfAllowed(
+    channel: NotificationChannelCompat,
+    tag: String?,
+    id: Int,
+    build: () -> Notification,
+) {
+    if (!mayNotify()) return
+    val manager = NotificationManagerCompat.from(this)
+    manager.createNotificationChannel(channel)
+    manager.notify(tag, id, build())
 }

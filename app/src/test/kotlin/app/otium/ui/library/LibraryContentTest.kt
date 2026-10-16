@@ -321,6 +321,26 @@ class LibraryContentTest {
     // --- Developer tools ---
 
     @Test
+    fun `books that are out add a quiet link to the lent out list`() {
+        var opened = 0
+        show(
+            stateOf { copy(openLoans = 2) },
+            LibraryActions(onOpenLoans = { opened++ }),
+        )
+
+        rule.onNodeWithText("Lent out · 2").assertIsDisplayed().performClick()
+
+        assertEquals(1, opened)
+    }
+
+    @Test
+    fun `with nothing out there is no lent out link`() {
+        show(stateOf())
+
+        rule.onNodeWithText("Lent out", substring = true).assertDoesNotExist()
+    }
+
+    @Test
     fun `developer tools appear only when available`() {
         var seeded = 0
         var catalog = 0

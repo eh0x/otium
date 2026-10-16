@@ -37,11 +37,12 @@ fun LibraryScreen(
     onOpenBook: (Long) -> Unit,
     onOpenAddSheet: () -> Unit,
     onOpenCatalog: () -> Unit,
+    onOpenLoans: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val actions = remember(viewModel, onOpenBook, onOpenAddSheet, onOpenCatalog) {
+    val actions = remember(viewModel, onOpenBook, onOpenAddSheet, onOpenCatalog, onOpenLoans) {
         LibraryActions(
             onQueryChange = viewModel::onQueryChange,
             onStatusSelected = viewModel::onStatusSelected,
@@ -50,6 +51,7 @@ fun LibraryScreen(
             onClearFilters = viewModel::onClearFilters,
             onViewModeSelected = viewModel::onViewModeSelected,
             onOpenBook = onOpenBook,
+            onOpenLoans = onOpenLoans,
             onOpenAddSheet = onOpenAddSheet,
             onSeedDebugData = viewModel::onSeedDebugData,
             onOpenCatalog = onOpenCatalog,
@@ -76,6 +78,9 @@ fun LibraryContent(state: LibraryUiState, actions: LibraryActions, modifier: Mod
             }
             SearchRow(state = state, actions = actions, onOpenArrange = { arrangeOpen = true })
             StatusTabs(selected = state.status, onSelected = actions.onStatusSelected)
+            if (state.openLoans > 0) {
+                LentOutLink(count = state.openLoans, onClick = actions.onOpenLoans)
+            }
             MetaLine(state = state, onOpenArrange = { arrangeOpen = true })
             LibraryBody(state = state, actions = actions)
         }

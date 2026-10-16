@@ -25,16 +25,14 @@ private const val FAILURE_NOTIFICATION_ID = 1
 class BackupNotifier @Inject constructor(@ApplicationContext private val context: Context) {
 
     fun backupFailed(error: AppError) {
-        if (!context.mayNotify()) return
-        val manager = NotificationManagerCompat.from(context)
-
-        manager.createNotificationChannel(
+        val channel =
             NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(context.getString(R.string.backup_channel_name))
                 .setDescription(context.getString(R.string.backup_channel_description))
-                .build(),
-        )
-        manager.notify(FAILURE_NOTIFICATION_ID, notificationFor(error))
+                .build()
+        context.notifyIfAllowed(channel, tag = null, FAILURE_NOTIFICATION_ID) {
+            notificationFor(error)
+        }
     }
 
     private fun notificationFor(error: AppError): Notification {

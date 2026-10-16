@@ -19,6 +19,7 @@ data class LibraryActions(
     val onClearFilters: () -> Unit = {},
     val onViewModeSelected: (LibraryViewMode) -> Unit = {},
     val onOpenBook: (Long) -> Unit = {},
+    val onOpenLoans: () -> Unit = {},
     /** Asks the app shell to open the add sheet. */
     val onOpenAddSheet: () -> Unit = {},
     val onSeedDebugData: () -> Unit = {},

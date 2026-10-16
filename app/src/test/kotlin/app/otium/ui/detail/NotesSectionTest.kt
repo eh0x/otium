@@ -221,7 +221,7 @@ class NotesSectionTest {
 
         typeInto("Search these notes", "SPICE")
 
-        rule.onNodeWithText("Something about the spice").assertIsDisplayed()
+        rule.onNodeWithText("Something about the spice").performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("Note about topic", substring = true).assertCountEquals(0)
     }
 
@@ -231,6 +231,6 @@ class NotesSectionTest {
 
         typeInto("Search these notes", "worm")
 
-        rule.onNodeWithText("No note mentions “worm”.").assertIsDisplayed()
+        rule.onNodeWithText("No note mentions “worm”.").performScrollTo().assertIsDisplayed()
     }
 }
