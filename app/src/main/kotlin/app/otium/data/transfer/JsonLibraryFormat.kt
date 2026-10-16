@@ -5,9 +5,12 @@ import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookSource
 import app.otium.domain.model.LibraryEntry
+import app.otium.domain.model.Loan
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.Note
 import app.otium.domain.model.NoteKind
 import app.otium.domain.port.LibraryJson
+import app.otium.domain.transfer.ImportLoan
 import app.otium.domain.transfer.ImportNote
 import app.otium.domain.transfer.ImportRow
 import javax.inject.Inject
@@ -16,18 +19,20 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * Otium's library file, version 2:
+ * Otium's library file, version 3:
  *
  * ```json
- * {"format": "otium-library", "version": 2, "exportedAt": 1760227200000, "books": [{…}]}
+ * {"format": "otium-library", "version": 3, "exportedAt": 1760227200000, "books": [{…}]}
  * ```
  *
- * Each book holds every field of [Book] except its id and cover file, and a `notes` list of its
- * notes and quotes (`kind`, `text`, `page`, `createdAt`, `updatedAt`) in reading order; times are
- * epoch milliseconds. Version 1 files have no notes and are still read. Fields added later must be
- * optional, so older files stay readable; a file from a newer, incompatible version is refused
- * rather than read in part, which is why this one is version 2: an app that only knows version 1
- * says so instead of importing the books and quietly leaving the notes behind.
+ * Each book holds every field of [Book] except its id and cover file, a `notes` list of its notes
+ * and quotes (`kind`, `text`, `page`, `createdAt`, `updatedAt`) in reading order, and a `loans`
+ * list (`direction`, `counterparty`, `lentOn`, `remindOn`, `returnedOn`), oldest first. Times are
+ * epoch milliseconds; the days of a loan are epoch days. Version 1 files have no notes and version
+ * 2 files no loans; both are still read. Fields added later must be optional, so older files stay
+ * readable; a file from a newer, incompatible version is refused rather than read in part, which
+ * is why this one is version 3: an app that only knows version 2 says so instead of importing the
+ * books and quietly leaving the loans behind.
  */
 class JsonLibraryFormat @Inject constructor() : LibraryJson {
 
@@ -57,7 +62,7 @@ class JsonLibraryFormat @Inject constructor() : LibraryJson {
 
     private companion object {
         const val FORMAT = "otium-library"
-        const val VERSION = 2
+        const val VERSION = 3
 
         val json = Json {
             ignoreUnknownKeys = true
@@ -99,6 +104,7 @@ private data class BookDto(
     val userEdited: Boolean = false,
     val needsLookup: Boolean = false,
     val notes: List<NoteDto> = emptyList(),
+    val loans: List<LoanDto> = emptyList(),
 ) {
     fun toRow() = ImportRow(
         title = title,
@@ -122,6 +128,7 @@ private data class BookDto(
         complete = !needsLookup,
         userEdited = userEdited,
         notes = notes.map(NoteDto::toImportNote),
+        loans = loans.map(LoanDto::toImportLoan),
     )
 }
 
@@ -151,9 +158,37 @@ private fun Note.toDto() = NoteDto(
     updatedAt = updatedAt,
 )
 
-private fun LibraryEntry.toDto() = book.toDto(notes.map(Note::toDto))
+/** A direction this app does not know reads as lent, as the database does. */
+@Serializable
+private data class LoanDto(
+    val direction: String = LoanDirection.LENT.name,
+    val counterparty: String = "",
+    val lentOn: Long? = null,
+    val remindOn: Long? = null,
+    val returnedOn: Long? = null,
+) {
+    fun toImportLoan() = ImportLoan(
+        direction = LoanDirection.entries.firstOrNull {
+            it.name == direction
+        } ?: LoanDirection.LENT,
+        counterparty = counterparty,
+        lentOn = lentOn,
+        remindOn = remindOn,
+        returnedOn = returnedOn,
+    )
+}
 
-private fun Book.toDto(notes: List<NoteDto>) = BookDto(
+private fun Loan.toDto() = LoanDto(
+    direction = direction.name,
+    counterparty = counterparty,
+    lentOn = lentOn,
+    remindOn = remindOn,
+    returnedOn = returnedOn,
+)
+
+private fun LibraryEntry.toDto() = book.toDto(notes.map(Note::toDto), loans.map(Loan::toDto))
+
+private fun Book.toDto(notes: List<NoteDto>, loans: List<LoanDto>) = BookDto(
     title = title,
     subtitle = subtitle,
     series = series,
@@ -176,4 +211,5 @@ private fun Book.toDto(notes: List<NoteDto>) = BookDto(
     userEdited = userEdited,
     needsLookup = needsLookup,
     notes = notes,
+    loans = loans,
 )

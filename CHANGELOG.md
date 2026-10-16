@@ -29,6 +29,21 @@ versions follow [Semantic Versioning](https://semver.org/) as described in
   screen says so. Export files are not encrypted, so keep a JSON file somewhere private. An older
   Otium that only knows version 1 will refuse the new file instead of importing it without notes.
 
+- A lending ledger. On a book's page, lend it out or note it as borrowed, with a name you type
+  yourself, when it went and, if you like, a reminder in a week, two weeks or a month. Marking it
+  returned keeps one line of history, which you can remove. A Lent out link appears in the library
+  while any book is out and opens the list, lent and borrowed apart. Nothing is read from your
+  contacts and nothing is sent to anyone. A reminder is one quiet notification that says who has
+  the book and since when, with the name hidden on a locked screen; Otium asks to show
+  notifications when you first set one, and everything works if you say no. Loans are part of your
+  Drive backup.
+
+- The Otium JSON export now includes your loans (file version 3), and importing an Otium file brings
+  them back with the books it adds. The preview and the result say how many loans there are and how
+  many were left out. The CSV export has no loans, and the screen says so. A JSON file holds the
+  names of the people you lent books to, so keep it somewhere private. An older Otium that only
+  knows version 2 will refuse the new file instead of importing it without loans.
+
 ### Changed
 
 - Backup encryption is now recommended. The first time you open Settings with Drive connected and

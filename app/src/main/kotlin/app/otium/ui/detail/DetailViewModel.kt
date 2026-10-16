@@ -9,6 +9,7 @@ import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.repo.BookRepository
 import app.otium.domain.repo.NoteRepository
+import app.otium.domain.usecase.LendingLedger
 import app.otium.domain.usecase.ReadingTracker
 import app.otium.domain.usecase.SaveNote
 import app.otium.ui.navigation.DetailRoute
@@ -34,6 +35,7 @@ class DetailViewModel @Inject constructor(
     private val reading: ReadingTracker,
     private val noteRepository: NoteRepository,
     private val saveNote: SaveNote,
+    private val ledger: LendingLedger,
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.toRoute<DetailRoute>().bookId
@@ -50,12 +52,14 @@ class DetailViewModel @Inject constructor(
     val uiState: StateFlow<DetailUiState> = combine(
         book,
         noteRepository.observeNotes(bookId),
+        ledger.loansOf(bookId),
         outcome,
-    ) { (loaded, loading), notes, result ->
+    ) { (loaded, loading), notes, loans, result ->
         DetailUiState(
             isLoading = loading,
             book = loaded,
             notes = notes,
+            loans = loans,
             deleted = result.deleted,
             error = result.error,
         )
@@ -93,6 +97,18 @@ class DetailViewModel @Inject constructor(
     }
 
     fun onNoteDeleted(id: Long) = perform { noteRepository.delete(id) }
+
+    /** Lends the book out or notes it as borrowed; the draft's days are counted from today. */
+    fun onLoanOpened(draft: LoanDraft) = perform {
+        ledger.open(bookId, draft.direction, draft.name, draft.daysAgo, draft.remindInDays)
+    }
+
+    fun onLoanReturned(id: Long) = perform { ledger.markReturned(id) }
+
+    /** Moves the reminder to [inDays] days from today, or clears it for null. */
+    fun onReminderChanged(id: Long, inDays: Int?) = perform { ledger.changeReminder(id, inDays) }
+
+    fun onLoanRemoved(id: Long) = perform { ledger.remove(id) }
 
     fun onErrorShown() = outcome.update { it.copy(error = null) }
 

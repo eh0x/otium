@@ -4,10 +4,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.toRoute
 import app.otium.domain.error.AppError
 import app.otium.domain.fakes.FakeBookRepository
+import app.otium.domain.fakes.FakeLoanReminderScheduler
+import app.otium.domain.fakes.FakeLoanRepository
 import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.NoteKind
+import app.otium.domain.usecase.LendingLedger
 import app.otium.domain.usecase.ReadingTracker
 import app.otium.domain.usecase.SaveNote
 import app.otium.testing.MainDispatcherRule
@@ -39,6 +43,8 @@ class DetailViewModelTest {
     private val repo = FakeBookRepository()
     private val clock = FixedClock(now = 5_000L)
     private val notes = FakeNoteRepository(knownBooks = setOf(1L))
+    private val loans = FakeLoanRepository(repo)
+    private val reminders = FakeLoanReminderScheduler()
 
     private fun viewModel(id: Long) = DetailViewModel(
         savedStateHandle = SavedStateHandle(mapOf("bookId" to id)),
@@ -46,6 +52,7 @@ class DetailViewModelTest {
         reading = ReadingTracker(repo, clock),
         noteRepository = notes,
         saveNote = SaveNote(notes, clock),
+        ledger = LendingLedger(loans, reminders, clock),
     )
 
     private fun TestScope.screenOpen(vm: DetailViewModel) {
@@ -244,6 +251,95 @@ class DetailViewModelTest {
 
         assertEquals(AppError.InvalidInput("text"), vm.uiState.value.error)
         assertTrue(vm.uiState.value.notes.isEmpty())
+    }
+
+    @Test
+    fun `lending a book counts the days from today and plans the reminder`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        vm.onLoanOpened(LoanDraft(LoanDirection.LENT, " Sam ", daysAgo = 1, remindInDays = 14))
+        advanceUntilIdle()
+
+        val loan = vm.uiState.value.loans.single()
+        assertEquals("Sam", loan.counterparty)
+        assertEquals(LoanDirection.LENT, loan.direction)
+        assertEquals(-1L, loan.lentOn)
+        assertEquals(14L, loan.remindOn)
+        assertEquals(mapOf(loan.id to 14L), reminders.planned)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun `a blank name is reported and nothing is lent`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        vm.onLoanOpened(LoanDraft(LoanDirection.LENT, "  ", daysAgo = 0, remindInDays = null))
+        advanceUntilIdle()
+
+        assertEquals(AppError.InvalidInput("name"), vm.uiState.value.error)
+        assertTrue(vm.uiState.value.loans.isEmpty())
+    }
+
+    @Test
+    fun `a book already out cannot be lent again`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+        vm.onLoanOpened(LoanDraft(LoanDirection.LENT, "Sam", daysAgo = 0, remindInDays = null))
+        advanceUntilIdle()
+
+        vm.onLoanOpened(LoanDraft(LoanDirection.LENT, "Ana", daysAgo = 0, remindInDays = null))
+        advanceUntilIdle()
+
+        assertEquals(AppError.AlreadyOnLoan, vm.uiState.value.error)
+        assertEquals(listOf("Sam"), vm.uiState.value.loans.map { it.counterparty })
+    }
+
+    @Test
+    fun `returning a loan keeps it as history and drops its reminder`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+        vm.onLoanOpened(LoanDraft(LoanDirection.BORROWED, "Ana", daysAgo = 0, remindInDays = 7))
+        advanceUntilIdle()
+
+        vm.onLoanReturned(vm.uiState.value.loans.single().id)
+        advanceUntilIdle()
+
+        val loan = vm.uiState.value.loans.single()
+        assertEquals(0L, loan.returnedOn)
+        assertTrue(reminders.planned.isEmpty())
+    }
+
+    @Test
+    fun `a reminder can be moved, cleared and a loan removed from the history`() = runTest {
+        val stored = repo.seed(book())
+        val vm = viewModel(stored.id)
+        screenOpen(vm)
+        advanceUntilIdle()
+        vm.onLoanOpened(LoanDraft(LoanDirection.LENT, "Sam", daysAgo = 0, remindInDays = null))
+        advanceUntilIdle()
+        val id = vm.uiState.value.loans.single().id
+
+        vm.onReminderChanged(id, 30)
+        advanceUntilIdle()
+        assertEquals(30L, vm.uiState.value.loans.single().remindOn)
+
+        vm.onReminderChanged(id, null)
+        advanceUntilIdle()
+        assertNull(vm.uiState.value.loans.single().remindOn)
+
+        vm.onLoanRemoved(id)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.loans.isEmpty())
     }
 
     @Test

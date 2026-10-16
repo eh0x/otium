@@ -8,6 +8,7 @@ import app.otium.domain.port.LibraryJson
 import app.otium.domain.port.LibrarySnapshot
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.LoanRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.repo.NoteRepository
 import app.otium.domain.usecase.AddBookFromIsbn
@@ -20,6 +21,7 @@ import app.otium.domain.usecase.RetryPendingLookups
 import app.otium.domain.usecase.SaveBook
 import app.otium.domain.usecase.SaveIsbnForLater
 import app.otium.domain.usecase.SaveNote
+import app.otium.domain.usecase.SyncLoanReminders
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -64,11 +66,13 @@ object UseCaseModule {
     fun provideImportLibrary(
         books: BookRepository,
         notes: NoteRepository,
+        loans: LoanRepository,
         readFile: ReadLibraryFile,
         clock: Clock,
         scheduler: LookupScheduler,
+        loanReminders: SyncLoanReminders,
         lock: BackupLock,
-    ) = ImportLibrary(books, notes, readFile, clock, scheduler, lock)
+    ) = ImportLibrary(books, notes, loans, readFile, clock, scheduler, loanReminders, lock)
 
     @Provides
     fun provideExportLibrary(

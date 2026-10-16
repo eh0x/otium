@@ -9,6 +9,7 @@ import app.otium.domain.model.LibraryViewMode
 import app.otium.domain.model.SortOrder
 import app.otium.domain.port.LibraryPreferences
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.LoanRepository
 import app.otium.ui.debug.DebugTools
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,6 +41,7 @@ private const val STOP_TIMEOUT_MILLIS = 5_000L
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val repository: BookRepository,
+    loans: LoanRepository,
     private val preferences: LibraryPreferences,
     private val debugTools: DebugTools,
 ) : ViewModel() {
@@ -76,13 +78,19 @@ class LibraryViewModel @Inject constructor(
         .map<List<BookSummary>, List<BookSummary>?> { it }
         .onStart { emit(null) }
 
+    /** The books in the library, and how many of them are out on loan or borrowed in. */
+    private val counts: Flow<Pair<Int, Int>> = combine(
+        repository.observeCount(),
+        loans.observeOpenLoans().map { it.size },
+    ) { total, out -> total to out }
+
     val uiState: StateFlow<LibraryUiState> = combine(
         controls,
         books,
         preferences.viewMode,
-        repository.observeCount(),
+        counts,
         repository.observeSeries(),
-    ) { current, loaded, viewMode, count, series ->
+    ) { current, loaded, viewMode, (count, lentOut), series ->
         LibraryUiState(
             query = current.query,
             status = current.status,
@@ -94,6 +102,7 @@ class LibraryViewModel @Inject constructor(
             debugToolsAvailable = debugTools.isAvailable,
             series = current.series,
             knownSeries = series,
+            openLoans = lentOut,
         )
     }.stateIn(
         scope = viewModelScope,

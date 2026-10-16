@@ -72,6 +72,7 @@ Status: Validated through brainstorming, ready for implementation planning
 | D31 | Marginalia (notes and quotes) is stored in the same unencrypted Room database as the library, in its own `note` table; D29 stands. Notes are covered by the Android sandbox, the app lock and, once they leave the phone, the backup passphrase. Notes are released together with or after the app lock. The backup screen suggests a passphrase before the first Drive backup, because the notes are what makes an unencrypted backup costly. Notes are searchable per book first; the optional private 1 to 5 mark is not built | SQLCipher for the whole database; encrypting only the note text; a separate encrypted notes database | Notes are more personal than reading status, but they add no new threat: the threats left uncovered by D29 (an unlocked phone, a rooted phone) are met by the app lock or are out of scope, and SQLCipher answers none of them. Its cost is unchanged: a native library per ABI, and a lost or invalidated key loses the whole library, not only the notes. The one new cost of notes is on the path out of the phone, an unencrypted Drive backup, which a passphrase covers and the exports already say they do not. A separate notes database or field encryption would add a second key to lose without covering a threat. Revisit when the threat model changes, for example if notes could be shared (team session 2026-10-15) |
 | D32 | Backup encryption is the suggested default (amends D23). Once Drive is connected while encryption is off, the passphrase panel opens by itself, once, as "Protect your backups", with the reason, the existing warning that a forgotten passphrase cannot be recovered, and **Not now**. The offer is remembered per device and never repeated; while off, the setting says encryption is recommended. Backups are never blocked, and backups made before stay as they are | Encryption on with no way out (forced); asking before every backup; leaving it off and unmentioned | A passphrase is what keeps a backup private if the Google account is compromised (4.8), but it cannot be recovered, so the choice stays with the owner: offered at the moment it matters, once, with the cost stated. Asking again would be nagging, which Otium avoids (four-role security review 2026-10-13) |
 | D33 | Otium JSON export is version 2 and carries notes (extends D28). Each book holds a `notes` list (kind, text, page, created and updated times) in reading order, read from the same transaction as the books. The version is raised, not left at 1 with an optional field, so an app that only knows version 1 refuses the file instead of importing the books and quietly leaving the notes behind; version 1 files are still read. Importing adds the notes of the books it adds and nothing else: a book already in the library keeps what it has, so importing a file twice adds nothing. Notes pass the same checks as the editor (`Note.cleanText`, page 1 or more) and keep their times. The Goodreads CSV stays without notes, and the screen says so | Version 1 plus an optional `notes` field; merging notes into books already in the library; notes in Goodreads' "Private Notes" column; a separate notes file | A refused file is a visible, recoverable failure; a file read in part is a silent loss of the one thing the export was made to keep. Merging notes would need a way to tell a note already there from a new one, and the file holds no stable id, so it would either duplicate or drop; skipping known books keeps D28's rule that importing twice is safe. The Goodreads column holds one string, no pages and no kinds, and the file is meant for other apps. A separate notes file would be easy to lose track of |
+| D34 | Lending ledger. A `loan` table (schema 4) records who has a book of the owner's, or whose book the owner has: a name typed by hand, the direction, the day it went, an optional reminder day and the day it came back. A book has one open loan; returning keeps the loan as one line of history, which the owner can remove. Days are stored as epoch days, so a date means the same wherever the phone is. A reminder is one unique piece of WorkManager work per loan, at 9:00 local time on its day, replaced when the loan changes and planned again after an import or a restore. It is a quiet notification that says who has the book and since when, never "overdue", with the name hidden on a locked screen. The first reminder asks for notification permission, with its reason on the form; the loan and its day are kept whatever the answer. Loans are in the Otium JSON (version 3, extends D33) and in backups. The CSV has none, and the screen says so | Reading contacts, or sending the borrower a message (BookBuddy asks for an email); a "Lent out" status in the library filter; a date picker; a daily sweep for due reminders; the name in search | The name is personal data about a third party. It follows D29 and D31: the same unencrypted database, covered by the sandbox, the app lock (D30) and the backup passphrase (D32), and an export file holds it in the clear as it holds notes. Typing the name keeps Otium from asking for contacts permission and from holding more than the owner chose to write. "Lent out" is not a reading status, so it is a screen of its own and the library query, filters and search index stay as they are. One piece of work per loan needs no "already reminded" flag, and planning it again from the loan table covers import and restore. The form counts days from today (today, yesterday, a week ago; no reminder, a week, two weeks, a month) instead of asking for a date, which keeps it quick and keeps the clock inside the ledger; a date picker can come later (feature research of 2026-10-15) |
 
 ## 4. Final Design
 
@@ -115,7 +116,8 @@ layering (presentation, domain, data), MVVM with repositories and unidirectional
     scan/        MlKitBarcodeScanner
     transfer/    ContentResolverLibraryFiles, JsonLibraryFormat, RoomLibrarySnapshot
   auth/        DriveConsent (what the screen does to give Drive access)
-  work/        BackupWorker, BackupNotifier, LookupRetryWorker (WorkManager entry points)
+  work/        BackupWorker, BackupNotifier, LookupRetryWorker, LoanReminderWorker,
+               LoanReminderNotifier (WorkManager entry points)
   di/          Hilt modules (@Binds for every domain interface)
 ```
 
@@ -221,6 +223,11 @@ Tables:
   (`REAL`, nullable, so a novella can be 1.5). The series columns arrived in schema version 2.
 - `author`, `book_author`; `category`, `book_category`; `tag`, `book_tag`.
 - `book_fts`: FTS4 over title, subtitle, authors, series.
+- `loan` (schema version 4, D34): `id`, `bookId` (deleted with its book), `counterparty` (the
+  name the owner typed), `direction` (lent or borrowed), `lentOn`, `remindOn` (nullable) and
+  `returnedOn` (null while the loan is open), the three of them epoch days. A book has at most
+  one open loan; the check and the insert are one transaction, as Room cannot declare a unique
+  index over open loans only.
 
 Series:
 
@@ -319,14 +326,18 @@ ISBN, rows without a title. Nothing is written until the owner confirms. Then:
   note editor checks it and keeping the times it was written; a note that fails the check is left
   out and counted on the result screen. The notes of a book that is already in the library are
   not read (D33).
+- The loans of an Otium file (version 3) come the same way, each checked as the ledger checks it:
+  a usable name, days that fit together, and at most one open loan to a book. A loan that fails
+  is left out and counted. Reminders still ahead are planned once the books are in (D34).
 - An import cut short (the screen left, the process killed) keeps what it added; importing the
   file again skips those books by ISBN.
 
 Export writes every book to a file the owner creates: CSV in Goodreads' columns (categories and
-tags become shelves; no notes) or Otium JSON (version 2: each book carries its notes and quotes in
-reading order). Covers are not exported; the JSON keeps each cover's source address. The Goodreads
-and StoryGraph columns were written from their documented exports, not checked against fresh
-ones; the readers look columns up by name and skip the ones they do not know.
+tags become shelves; no notes or loans) or Otium JSON (version 3: each book carries its notes and
+quotes in reading order and its loans, oldest first). Covers are not exported; the JSON keeps
+each cover's source address. The Goodreads and StoryGraph columns were written from their
+documented exports, not checked against fresh ones; the readers look columns up by name and skip
+the ones they do not know.
 
 ### 4.4 UI and backup
 
@@ -477,22 +488,23 @@ text and graphic pair in both themes, and the contrast of cover text on every ge
 ### 4.8 Threat model and data protection
 
 Otium keeps one person's catalogue of their own books: titles, authors, tags, shelves, reading
-progress and dates, and, with Marginalia, their notes and quotes. It is not health or payment
-data, but reading choices and the thoughts written beside them can reveal beliefs, health or
-politics, so it is treated as private. Protection follows from the threats a solo, offline app
-actually faces (D29, D31).
+progress and dates, and, with Marginalia, their notes and quotes, and, with lending, the names of
+people they lent books to or borrowed from. It is not health or payment data, but reading
+choices and the thoughts written beside them can reveal beliefs, health or politics, and a name
+is personal data about someone else, so it is treated as private. Protection follows from the
+threats a solo, offline app actually faces (D29, D31, D34).
 
 Where the data is and how it is protected:
 
 | Data | Where | Protection | Revisit when |
 |------|-------|------------|--------------|
-| Library database (Room), notes and quotes included | App sandbox | Android sandbox; file-based encryption of user storage, which keeps it unreadable until the first unlock after a restart (D31: notes change nothing here) | The threat model changes, for example if notes could be shared |
+| Library database (Room), notes, quotes and loans included | App sandbox | Android sandbox; file-based encryption of user storage, which keeps it unreadable until the first unlock after a restart (D31, D34: notes and loans change nothing here) | The threat model changes, for example if notes or loans could be shared |
 | Cover pictures | App sandbox | As the database | As the database |
 | Backup settings, Drive account email | DataStore in the sandbox | As the database; excluded from Android backup and device transfer | — |
 | App lock choice | DataStore in the sandbox | As the database; a new phone starts with the lock off | — |
 | Backup key | DataStore in the sandbox | Only stored wrapped by an AES-256-GCM key in the Android Keystore that cannot be read out; never stored with or as the passphrase | — |
 | Drive backup | The user's Drive `appDataFolder` (`drive.appdata` scope) | Only Otium can open the folder. With a passphrase: Argon2id (64 MiB, 3 passes), then Tink streaming AES-256-GCM, before upload. Encryption is suggested once Drive is connected (D32) | — |
-| Export file (CSV, JSON) | Wherever the user saves it | None: a plain file for other apps. The screen says so, and CSV cells are escaped against formula injection. The JSON holds every note and quote in the clear (D33) | An encrypted Otium JSON export (open) |
+| Export file (CSV, JSON) | Wherever the user saves it | None: a plain file for other apps. The screen says so, and CSV cells are escaped against formula injection. The JSON holds every note and quote, and the names of people lent to or borrowed from, in the clear (D33, D34) | An encrypted Otium JSON export (open) |
 | Network traffic | Google Books, Open Library, Google Drive | https only, system certificate authorities, no cleartext (network security config) | — |
 
 Threats and how they are met:
@@ -506,9 +518,9 @@ Threats and how they are met:
 - **Someone watching the network.** Covered by https everywhere. There are no certificate pins,
   on purpose: Google rotates its certificates, and a stale pin would break lookups and backups.
 - **Someone with the user's Google account.** Covered for backups with a passphrase set. A backup
-  without one can be read by anyone who signs in as the user and restores with Otium, notes and
-  quotes included. This is the one risk notes add, so the backup screen suggests a passphrase
-  before the first Drive backup (D32).
+  without one can be read by anyone who signs in as the user and restores with Otium, notes,
+  quotes and loans included. This is the one risk notes and loans add, so the backup screen
+  suggests a passphrase before the first Drive backup (D32).
 - **Leaks through the developer.** None possible: no backend, accounts, analytics, crash reporting
   or logging of library data.
 - **An unlocked phone in someone else's hands.** Covered when the owner turns on the app lock

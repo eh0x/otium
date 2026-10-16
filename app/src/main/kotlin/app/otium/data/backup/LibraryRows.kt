@@ -12,6 +12,7 @@ import app.otium.data.local.entity.BookCategoryCrossRef
 import app.otium.data.local.entity.BookEntity
 import app.otium.data.local.entity.BookTagCrossRef
 import app.otium.data.local.entity.CategoryEntity
+import app.otium.data.local.entity.LoanEntity
 import app.otium.data.local.entity.NoteEntity
 import app.otium.data.local.entity.TagEntity
 import java.io.File
@@ -26,6 +27,7 @@ internal data class LibraryRows(
     val bookCategories: List<BookCategoryCrossRef>,
     val bookTags: List<BookTagCrossRef>,
     val notes: List<NoteEntity>,
+    val loans: List<LoanEntity>,
 )
 
 /** Reads the whole library from one consistent view, whatever else is writing meanwhile. */
@@ -40,6 +42,7 @@ internal suspend fun OtiumDatabase.readAll(): LibraryRows = withTransaction {
         bookCategories = dao.bookCategories(),
         bookTags = dao.bookTags(),
         notes = dao.notes(),
+        loans = dao.loans(),
     )
 }
 
@@ -61,6 +64,7 @@ internal suspend fun OtiumDatabase.replaceAll(rows: LibraryRows) = withTransacti
     dao.insertBookCategories(rows.bookCategories)
     dao.insertBookTags(rows.bookTags)
     dao.insertNotes(rows.notes)
+    dao.insertLoans(rows.loans)
 }
 
 /**

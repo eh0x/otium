@@ -7,8 +7,13 @@ import app.otium.domain.fakes.FakeBackupEncryption
 import app.otium.domain.fakes.FakeBackupFiles
 import app.otium.domain.fakes.FakeDriveBackupClient
 import app.otium.domain.fakes.FakeLibraryRestorer
+import app.otium.domain.fakes.FakeLoanReminderScheduler
+import app.otium.domain.fakes.FakeLoanRepository
+import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.backupInfo
 import app.otium.domain.model.BackupSlot
+import app.otium.domain.model.Loan
+import app.otium.domain.model.LoanDirection
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -23,12 +28,16 @@ class LibraryRestoreTest {
     private val encryption = FakeBackupEncryption()
     private val restorer = FakeLibraryRestorer()
     private var lookupsScheduled = 0
+    private val today = 20_000L
+    private val loans = FakeLoanRepository(knownBooks = setOf(1L))
+    private val loanReminders = FakeLoanReminderScheduler()
     private val restore = LibraryRestore(
         drive = drive,
         archiver = FakeBackupArchiver(),
         restorer = restorer,
         encryption = encryption,
         lookups = { lookupsScheduled++ },
+        loanReminders = SyncLoanReminders(loans, loanReminders, FixedClock(today * 86_400_000L)),
         lock = BackupLock(),
         appSchemaVersion = appSchema,
     )
@@ -251,6 +260,31 @@ class LibraryRestoreTest {
 
         assertEquals(1, lookupsScheduled)
     }
+
+    @Test
+    fun `loans with a reminder still ahead are reminded on their day after a restore`() = runTest {
+        // The fake restorer changes nothing, so the loans a real restore would bring are seeded.
+        val ahead = loan(remindOn = today + 4)
+        loans.add(ahead)
+        prepared()
+
+        restore.confirm()
+
+        assertEquals(mapOf(1L to today + 4), loanReminders.planned)
+    }
+
+    @Test
+    fun `a failed restore plans no reminders`() = runTest {
+        loans.add(loan(remindOn = today + 4))
+        restorer.failure = AppError.CorruptBackup
+        prepared()
+
+        restore.confirm()
+
+        assertTrue(loanReminders.planned.isEmpty())
+    }
+
+    private fun loan(remindOn: Long) = Loan(0L, 1L, "Sam", LoanDirection.LENT, today - 10, remindOn)
 
     @Test
     fun `a failed restore leaves the library alone and drops the download`() = runTest {

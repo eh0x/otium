@@ -2,10 +2,13 @@ package app.otium.ui.library
 
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeLibraryPreferences
+import app.otium.domain.fakes.FakeLoanRepository
 import app.otium.domain.fakes.book
 import app.otium.domain.model.BookStatus
 import app.otium.domain.model.LibraryFilter
 import app.otium.domain.model.LibraryViewMode
+import app.otium.domain.model.Loan
+import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.SortOrder
 import app.otium.testing.FakeDebugTools
 import app.otium.testing.MainDispatcherRule
@@ -33,7 +36,10 @@ class LibraryViewModelTest {
     private val prefs = FakeLibraryPreferences()
     private val debugTools = FakeDebugTools()
 
-    private fun viewModel(tools: FakeDebugTools = debugTools) = LibraryViewModel(repo, prefs, tools)
+    private val loans = FakeLoanRepository(repo)
+
+    private fun viewModel(tools: FakeDebugTools = debugTools) =
+        LibraryViewModel(repo, loans, prefs, tools)
 
     /** Keeps the state flow active the way an open screen does. */
     private fun TestScope.screenOpen(vm: LibraryViewModel) {
@@ -255,6 +261,29 @@ class LibraryViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, debugTools.seedCalls)
+    }
+
+    @Test
+    fun `the library counts the books that are out, and only the open loans`() = runTest {
+        val out = repo.seed(book(title = "Out")).id
+        val back = repo.seed(book(title = "Back")).id
+        loans.add(Loan(0L, out, "Sam", LoanDirection.LENT, lentOn = 5L))
+        loans.add(Loan(0L, back, "Ana", LoanDirection.LENT, lentOn = 1L, returnedOn = 2L))
+        val vm = viewModel()
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        assertEquals(1, vm.uiState.value.openLoans)
+    }
+
+    @Test
+    fun `a library with nothing lent offers no lent out link`() = runTest {
+        repo.seed(book(title = "Home"))
+        val vm = viewModel()
+        screenOpen(vm)
+        advanceUntilIdle()
+
+        assertEquals(0, vm.uiState.value.openLoans)
     }
 
     @Test

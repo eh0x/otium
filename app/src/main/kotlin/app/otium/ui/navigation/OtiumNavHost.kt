@@ -35,6 +35,7 @@ import app.otium.ui.backup.BackupScreen
 import app.otium.ui.catalog.ThemeCatalogScreen
 import app.otium.ui.detail.DetailScreen
 import app.otium.ui.library.LibraryScreen
+import app.otium.ui.loans.LoansScreen
 import app.otium.ui.reading.ReadingScreen
 import app.otium.ui.theme.otiumFade
 import app.otium.ui.transfer.ImportExportScreen
@@ -88,6 +89,7 @@ fun OtiumNavHost(modifier: Modifier = Modifier) {
                     onEdit = { navController.navigate(ConfirmRoute.edit(bookId)) },
                 )
             }
+            lending(navController)
             addFlow(navController)
             if (BuildConfig.DEBUG) {
                 composable<CatalogRoute> { ThemeCatalogScreen() }
@@ -106,6 +108,16 @@ fun OtiumNavHost(modifier: Modifier = Modifier) {
     }
 }
 
+/** The Lent out screen, reached from the library; a book on it opens its detail page. */
+private fun NavGraphBuilder.lending(navController: NavHostController) {
+    composable<LoansRoute> {
+        LoansScreen(
+            onBack = { navController.popBackStack() },
+            onOpenBook = { navController.navigate(DetailRoute(it)) },
+        )
+    }
+}
+
 /** The three top-level destinations behind the bottom bar. */
 private fun NavGraphBuilder.tabs(navController: NavHostController, onOpenAddSheet: () -> Unit) {
     composable<LibraryRoute> {
@@ -113,6 +125,7 @@ private fun NavGraphBuilder.tabs(navController: NavHostController, onOpenAddShee
             onOpenBook = { navController.navigate(DetailRoute(it)) },
             onOpenAddSheet = onOpenAddSheet,
             onOpenCatalog = { navController.navigate(CatalogRoute) },
+            onOpenLoans = { navController.navigate(LoansRoute) },
         )
     }
     composable<ReadingRoute> {

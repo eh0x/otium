@@ -11,6 +11,10 @@ data object LibraryRoute
 @Serializable
 data class DetailRoute(val bookId: Long)
 
+/** The Lent out screen: every book that is out, or borrowed in. */
+@Serializable
+data object LoansRoute
+
 /** Adding a book by scanning its barcode. */
 @Serializable
 data object ScanRoute

@@ -15,8 +15,9 @@ import kotlinx.coroutines.withContext
 /**
  * Writes the whole library to a file the owner chose, so it can go to another app or be kept as
  * a copy: CSV in Goodreads' columns, which most reading apps import, or Otium's JSON, which keeps
- * every field and every note and can be imported back. Cover pictures are not included, and the
- * CSV has no notes: Goodreads' columns have no place for several notes with pages.
+ * every field, every note and every loan and can be imported back. Cover pictures are not
+ * included, and the CSV has no notes or loans: Goodreads' columns have no place for several notes
+ * with pages, or for who has a book.
  */
 class ExportLibrary(
     private val snapshot: LibrarySnapshot,

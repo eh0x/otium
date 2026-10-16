@@ -237,6 +237,7 @@
     <string name="error_incompatible_backup">That backup was made by a newer version of Otium.</string>
     <string name="error_corrupt_backup">That backup is damaged and could not be read.</string>
     <string name="error_nothing_to_back_up">Your library is empty, so there is nothing to back up yet.</string>
+    <string name="error_already_on_loan">This book is already out. Mark it returned first.</string>
     <string name="error_passphrase_required">This phone no longer holds your backup key. Set your passphrase again under Encrypt backups.</string>
     <string name="error_wrong_passphrase">That passphrase does not open this backup.</string>
     <string name="error_unknown_file_format">Otium cannot read that file. Choose a library export from Goodreads, StoryGraph or Otium.</string>
@@ -322,6 +323,54 @@
     <string name="backup_channel_name">Backups</string>
     <string name="backup_channel_description">Tells you when automatic backups keep failing.</string>
     <string name="backup_failed_title">Backup did not run</string>
+    <string name="loan_channel_name">Lending</string>
+    <string name="loan_channel_description">A quiet reminder about a book you lent or borrowed.</string>
+    <string name="loan_reminder_lent_title">A book of yours is out</string>
+    <string name="loan_reminder_lent_text">%1$s has had “%2$s” since %3$s.</string>
+    <string name="loan_reminder_borrowed_title">A book you borrowed</string>
+    <string name="loan_reminder_borrowed_text">You have had “%2$s” from %1$s since %3$s.</string>
+    <string name="loan_reminder_public_title">A book is out on loan</string>
+    <string name="loan_reminder_public_text">Unlock to see which one.</string>
+    <string name="loans_title">Lending</string>
+    <string name="loans_lend">Lend</string>
+    <string name="loans_borrowed">Borrowed</string>
+    <string name="loans_none">Not lent out and not borrowed.</string>
+    <string name="loan_lend_title">Lend this book</string>
+    <string name="loan_borrowed_title">Borrowed this book</string>
+    <string name="loan_name_label_lent">Lent to</string>
+    <string name="loan_name_label_borrowed">Borrowed from</string>
+    <string name="loan_when_label">When</string>
+    <string name="loan_when_today">Today</string>
+    <string name="loan_when_yesterday">Yesterday</string>
+    <string name="loan_when_week">A week ago</string>
+    <string name="loan_remind_label">Remind me</string>
+    <string name="loan_remind_none">No</string>
+    <string name="loan_remind_week">In a week</string>
+    <string name="loan_remind_two_weeks">In two weeks</string>
+    <string name="loan_remind_month">In a month</string>
+    <string name="loan_remind_hint">It comes as one quiet notification. If notifications are off, the day still shows here and on the Lent out list.</string>
+    <string name="loan_open_lent">Lent to %1$s</string>
+    <string name="loan_open_borrowed">Borrowed from %1$s</string>
+    <string name="loan_since">Since %1$s</string>
+    <string name="loan_reminder_on">Reminder on %1$s</string>
+    <string name="loan_no_reminder">No reminder</string>
+    <string name="loan_returned">Returned</string>
+    <string name="loan_returned_description">Mark “%1$s” returned</string>
+    <string name="loan_reminder_action">Reminder</string>
+    <string name="loan_reminder_title">Reminder</string>
+    <string name="loan_history_lent">Lent to %1$s, %2$s to %3$s</string>
+    <string name="loan_history_borrowed">Borrowed from %1$s, %2$s to %3$s</string>
+    <string name="loan_remove">Remove</string>
+    <string name="loan_remove_description">Remove %1$s from the history</string>
+    <string name="loan_remove_title">Remove this from the history?</string>
+    <string name="loan_remove_message">The name is deleted from this phone. Backups and exports you made earlier still hold it.</string>
+    <string name="loans_screen_title">Lent out</string>
+    <string name="loans_screen_empty">Nothing is out. Books you lend or borrow appear here.</string>
+    <string name="loans_lent_group">Lent to others</string>
+    <string name="loans_borrowed_group">Borrowed</string>
+    <string name="loans_row_lent">Lent to %1$s · since %2$s</string>
+    <string name="loans_row_borrowed">Borrowed from %1$s · since %2$s</string>
+    <string name="library_lent_out">Lent out · %1$d</string>
 
     <!-- App shell: bottom navigation and the Reading tab -->
     <string name="settings_title">Settings</string>
@@ -360,7 +409,7 @@
     <string name="transfer_settings_note">Bring in books from Goodreads or StoryGraph, or take a copy of your library elsewhere.</string>
     <string name="transfer_settings_action">Import and export</string>
     <string name="import_heading">Import a library</string>
-    <string name="import_note">Choose a library export from Goodreads, StoryGraph or Otium. Books already in your library are left as they are, with their notes. Books with an ISBN get their cover and details later, when you are online. An Otium file also brings back your notes and quotes.</string>
+    <string name="import_note">Choose a library export from Goodreads, StoryGraph or Otium. Books already in your library are left as they are, with their notes. Books with an ISBN get their cover and details later, when you are online. An Otium file also brings back your notes, quotes and loans.</string>
     <string name="import_action">Choose a file</string>
     <string name="import_reading">Reading the file…</string>
     <string name="import_progress">Adding books: %1$d of %2$d</string>
@@ -393,6 +442,10 @@
         <item quantity="one">%1$d note or quote comes with them.</item>
         <item quantity="other">%1$d notes and quotes come with them.</item>
     </plurals>
+    <plurals name="import_preview_loans">
+        <item quantity="one">%1$d loan comes with them.</item>
+        <item quantity="other">%1$d loans come with them.</item>
+    </plurals>
     <string name="import_preview_dropped">Ratings, reviews and reading dates are not imported.</string>
     <string name="import_confirm_action">Import</string>
     <string name="import_cancel">Cancel</string>
@@ -421,9 +474,17 @@
         <item quantity="one">%1$d note was left out: it was empty, too long or could not be saved.</item>
         <item quantity="other">%1$d notes were left out: they were empty, too long or could not be saved.</item>
     </plurals>
+    <plurals name="import_done_loans">
+        <item quantity="one">%1$d loan added.</item>
+        <item quantity="other">%1$d loans added.</item>
+    </plurals>
+    <plurals name="import_done_loans_skipped">
+        <item quantity="one">%1$d loan was left out: its name or dates were not usable, the book was already out, or it could not be saved.</item>
+        <item quantity="other">%1$d loans were left out: their names or dates were not usable, the books were already out, or they could not be saved.</item>
+    </plurals>
     <string name="import_done_dismiss">Done</string>
     <string name="export_heading">Export your library</string>
-    <string name="export_note">A CSV file uses the columns of a Goodreads export: it opens in a spreadsheet and imports into most reading apps. A JSON file keeps everything Otium knows, including your notes and quotes, and imports back into Otium. A CSV file has no notes. Cover pictures are not included.</string>
+    <string name="export_note">A CSV file uses the columns of a Goodreads export: it opens in a spreadsheet and imports into most reading apps. A JSON file keeps everything Otium knows, including your notes and quotes and the names of people you lent books to or borrowed from, and imports back into Otium. A CSV file has no notes and no loans: the Goodreads columns have no place for them. Cover pictures are not included.</string>
     <string name="export_unencrypted">Export files are not encrypted. Keep them somewhere private.</string>
     <string name="export_csv_action">Export as CSV</string>
     <string name="export_json_action">Export as JSON</string>

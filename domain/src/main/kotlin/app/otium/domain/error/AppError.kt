@@ -15,6 +15,9 @@ sealed interface AppError {
     data object CorruptBackup : AppError
     data object NothingToBackUp : AppError
 
+    /** The book already has an open loan; return it before lending or borrowing it again. */
+    data object AlreadyOnLoan : AppError
+
     /** The file is not a library export Otium can read (Goodreads, StoryGraph or Otium). */
     data object UnknownFileFormat : AppError
 

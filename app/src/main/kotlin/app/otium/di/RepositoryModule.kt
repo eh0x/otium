@@ -5,11 +5,13 @@ import app.otium.data.cover.CameraPhotoFiles
 import app.otium.data.cover.FileCoverStore
 import app.otium.data.repo.RemoteMetadataRepository
 import app.otium.data.repo.RoomBookRepository
+import app.otium.data.repo.RoomLoanRepository
 import app.otium.data.repo.RoomNoteRepository
 import app.otium.domain.port.CapturedPhotos
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.LoanRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.repo.NoteRepository
 import dagger.Binds
@@ -29,6 +31,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindNoteRepository(impl: RoomNoteRepository): NoteRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLoanRepository(impl: RoomLoanRepository): LoanRepository
 
     @Binds
     @Singleton

@@ -40,6 +40,7 @@ class LibraryRestore(
     private val restorer: LibraryRestorer,
     private val encryption: BackupEncryption,
     private val lookups: LookupScheduler,
+    private val loanReminders: SyncLoanReminders,
     private val lock: BackupLock,
     private val appSchemaVersion: Int,
 ) {
@@ -78,6 +79,8 @@ class LibraryRestore(
                         // Books that were waiting for their details when backed up resume the
                         // lookup.
                         lookups.schedule()
+                        // Loans with a reminder still ahead are reminded on their day.
+                        loanReminders()
                     }
                 }
             }

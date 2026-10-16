@@ -127,6 +127,75 @@ class ImportExportContentTest {
     }
 
     @Test
+    fun `the preview says how many loans come with the new books`() {
+        show(
+            ImportExportUiState(
+                step = ImportStep.Previewing(
+                    preview(4).copy(format = LibraryFormat.OTIUM, loans = 2),
+                ),
+            ),
+        )
+
+        rule.onNodeWithText("2 loans come with them.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `the preview of a file without loans does not mention them`() {
+        show(ImportExportUiState(step = ImportStep.Previewing(preview(4))))
+
+        rule.onNodeWithText("Import 4 books?").assertIsDisplayed()
+        rule.onNodeWithText("come with them.", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the result says how many loans were added and how many were left out`() {
+        show(
+            ImportExportUiState(
+                step = ImportStep.Done(
+                    ImportResult(
+                        added = 2,
+                        skipped = 0,
+                        failed = 0,
+                        waitingForLookup = 0,
+                        loansAdded = 3,
+                        loansSkipped = 1,
+                    ),
+                ),
+            ),
+        )
+
+        rule.onNodeWithText("3 loans added.").assertIsDisplayed()
+        rule.onNodeWithText("1 loan was left out", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `the result of a file without loans does not mention them`() {
+        show(
+            ImportExportUiState(
+                step = ImportStep.Done(
+                    ImportResult(added = 2, skipped = 0, failed = 0, waitingForLookup = 0),
+                ),
+            ),
+        )
+
+        rule.onNodeWithText("2 books added.").assertIsDisplayed()
+        rule.onNodeWithText("loans added.", substring = true).assertDoesNotExist()
+        rule.onNodeWithText("left out", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `the export says that a csv file has no loans and a json file holds their names`() {
+        show(ImportExportUiState(bookCount = 3))
+
+        rule.onNodeWithText("A CSV file has no notes and no loans", substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+        rule.onNodeWithText("the names of people you lent books to", substring = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun `the preview of a file without notes does not mention them`() {
         show(ImportExportUiState(step = ImportStep.Previewing(preview(4))))
 

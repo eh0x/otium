@@ -5,16 +5,19 @@ import androidx.test.core.app.ApplicationProvider
 import app.otium.data.cover.CoverFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.repo.RoomBookRepository
+import app.otium.data.repo.RoomLoanRepository
 import app.otium.data.repo.RoomNoteRepository
 import app.otium.debug.SyntheticBooks
 import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeLibraryFiles
+import app.otium.domain.fakes.FakeLoanReminderScheduler
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.transfer.GoodreadsCsv
 import app.otium.domain.usecase.BackupLock
 import app.otium.domain.usecase.ImportLibrary
 import app.otium.domain.usecase.ImportPreview
 import app.otium.domain.usecase.ReadLibraryFile
+import app.otium.domain.usecase.SyncLoanReminders
 import java.io.File
 import kotlin.system.measureTimeMillis
 import kotlinx.coroutines.Dispatchers
@@ -53,12 +56,15 @@ class LibraryImportPerformanceTest {
     fun `a 5,000 book file is previewed and imported within budget`() = runTest {
         val files = FakeLibraryFiles()
         files.files["content://big"] = GoodreadsCsv.write(SyntheticBooks.generate(BOOKS))
+        val loans = RoomLoanRepository(db.loanDao(), CoverFiles(File("covers")))
         val import = ImportLibrary(
             books = RoomBookRepository(db.bookDao(), CoverFiles(File("covers")), Dispatchers.IO),
             notes = RoomNoteRepository(db.noteDao()),
+            loans = loans,
             readFile = ReadLibraryFile(files, JsonLibraryFormat(), Dispatchers.Unconfined),
             clock = FixedClock(),
             scheduler = {},
+            loanReminders = SyncLoanReminders(loans, FakeLoanReminderScheduler(), FixedClock()),
             lock = BackupLock(),
         )
 
