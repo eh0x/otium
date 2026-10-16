@@ -323,6 +323,14 @@
     <string name="backup_channel_name">Backups</string>
     <string name="backup_channel_description">Tells you when automatic backups keep failing.</string>
     <string name="backup_failed_title">Backup did not run</string>
+    <string name="loan_channel_name">Lending</string>
+    <string name="loan_channel_description">A quiet reminder about a book you lent or borrowed.</string>
+    <string name="loan_reminder_lent_title">A book of yours is out</string>
+    <string name="loan_reminder_lent_text">%1$s has had “%2$s” since %3$s.</string>
+    <string name="loan_reminder_borrowed_title">A book you borrowed</string>
+    <string name="loan_reminder_borrowed_text">You have had “%2$s” from %1$s since %3$s.</string>
+    <string name="loan_reminder_public_title">A book is out on loan</string>
+    <string name="loan_reminder_public_text">Unlock to see which one.</string>
 
     <!-- App shell: bottom navigation and the Reading tab -->
     <string name="settings_title">Settings</string>

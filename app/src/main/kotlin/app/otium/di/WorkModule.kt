@@ -1,8 +1,10 @@
 package app.otium.di
 
 import app.otium.domain.port.BackupScheduler
+import app.otium.domain.port.LoanReminderScheduler
 import app.otium.domain.port.LookupScheduler
 import app.otium.work.WorkManagerBackupScheduler
+import app.otium.work.WorkManagerLoanReminderScheduler
 import app.otium.work.WorkManagerLookupScheduler
 import dagger.Binds
 import dagger.Module
@@ -19,4 +21,9 @@ abstract class WorkModule {
 
     @Binds
     abstract fun bindBackupScheduler(impl: WorkManagerBackupScheduler): BackupScheduler
+
+    @Binds
+    abstract fun bindLoanReminderScheduler(
+        impl: WorkManagerLoanReminderScheduler,
+    ): LoanReminderScheduler
 }

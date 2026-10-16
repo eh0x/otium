@@ -17,6 +17,8 @@ import app.otium.domain.error.Try
 import app.otium.domain.fakes.FakeBackupScheduler
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeCoverStore
+import app.otium.domain.fakes.FakeLoanReminderScheduler
+import app.otium.domain.fakes.FakeLoanRepository
 import app.otium.domain.fakes.FakeMetadataRepository
 import app.otium.domain.fakes.FakeNoteRepository
 import app.otium.domain.fakes.FixedClock
@@ -27,8 +29,10 @@ import app.otium.domain.port.BackupScheduler
 import app.otium.domain.port.CapturedPhotos
 import app.otium.domain.port.Clock
 import app.otium.domain.port.CoverStore
+import app.otium.domain.port.LoanReminderScheduler
 import app.otium.domain.port.LookupScheduler
 import app.otium.domain.repo.BookRepository
+import app.otium.domain.repo.LoanRepository
 import app.otium.domain.repo.MetadataRepository
 import app.otium.domain.repo.NoteRepository
 import dagger.hilt.android.testing.BindValue
@@ -81,6 +85,12 @@ class AddByIsbnFlowTest {
 
     @BindValue @JvmField
     val notes: NoteRepository = FakeNoteRepository()
+
+    @BindValue @JvmField
+    val loans: LoanRepository = FakeLoanRepository()
+
+    @BindValue @JvmField
+    val loanReminders: LoanReminderScheduler = FakeLoanReminderScheduler()
 
     @BindValue @JvmField
     val metadata: MetadataRepository = services
