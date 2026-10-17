@@ -132,18 +132,27 @@ class GoodreadsCsvTest {
     fun `text a spreadsheet would run as a formula is written as text`() {
         val hostile = book(isbn13 = "9780306406157", title = "=HYPERLINK(\"http://x\")")
             .copy(
+                isbn10 = "0306406152",
                 authors = listOf("+Plus", "@At"),
                 publisher = "-Minus",
                 tags = listOf("\tTabbed"),
             )
+        val brokenIsbn = book(
+            isbn13 = "\"&HYPERLINK(\"http://x\")&\"",
+            title = "Bad ISBN",
+        ).copy(isbn10 = "\"&SUM(1,2)&\"")
 
-        val record = CsvTable.of(GoodreadsCsv.write(listOf(hostile)))!!.records.single()
+        val records = CsvTable.of(GoodreadsCsv.write(listOf(hostile, brokenIsbn)))!!.records
+        val record = records[0]
 
         assertEquals("'=HYPERLINK(\"http://x\")", record["Title"])
         assertEquals("'+Plus", record["Author"])
         assertEquals("'@At", record["Additional Authors"])
         assertEquals("'-Minus", record["Publisher"])
+        assertEquals("the isbn10 guard stays a formula", "=\"0306406152\"", record["ISBN"])
         assertEquals("the isbn guard stays a formula", "=\"9780306406157\"", record["ISBN13"])
+        assertEquals("=\"\"", records[1]["ISBN"])
+        assertEquals("=\"\"", records[1]["ISBN13"])
     }
 
     @Test

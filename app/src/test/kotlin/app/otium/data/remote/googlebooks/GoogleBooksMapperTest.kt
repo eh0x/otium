@@ -153,4 +153,21 @@ class GoogleBooksMapperTest {
 
         assertEquals(listOf(1965, 1999, null), response.toCandidates().map { it.publishedYear })
     }
+
+    @Test
+    fun `invalid isbn10 and isbn13 identifiers are ignored`() {
+        val response = RemoteJson.decodeFromString<VolumesResponse>(
+            """{"items":[{"volumeInfo":{
+                "title":"A",
+                "industryIdentifiers":[
+                    {"type":"ISBN_10","identifier":"\"&HYPERLINK(\"http://x\")&\""},
+                    {"type":"ISBN_13","identifier":"not-an-isbn"}
+                ]
+            }}]}""",
+        )
+
+        val candidate = response.toCandidates().single()
+        assertNull(candidate.isbn10)
+        assertNull(candidate.isbn13)
+    }
 }

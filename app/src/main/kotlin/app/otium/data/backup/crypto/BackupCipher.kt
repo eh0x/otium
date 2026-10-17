@@ -123,10 +123,15 @@ internal class BackupCipher(private val segmentBytes: Int = DEFAULT_SEGMENT_BYTE
             .setHkdfHashType(AesGcmHkdfStreamingParameters.HashType.SHA256)
             .setCiphertextSegmentSizeBytes(segmentBytes)
             .build()
-        val tinkKey = AesGcmHkdfStreamingKey.create(
-            parameters,
-            SecretBytes.copyFrom(key.bytes, InsecureSecretKeyAccess.get()),
-        )
+        val subkey = key.encryptionKey()
+        val tinkKey = try {
+            AesGcmHkdfStreamingKey.create(
+                parameters,
+                SecretBytes.copyFrom(subkey, InsecureSecretKeyAccess.get()),
+            )
+        } finally {
+            subkey.fill(0)
+        }
         return AesGcmHkdfStreaming.create(tinkKey)
     }
 }

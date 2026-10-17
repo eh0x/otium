@@ -1,8 +1,10 @@
 package app.otium.domain.transfer
 
+import app.otium.domain.error.Try
 import app.otium.domain.model.Book
 import app.otium.domain.model.BookFormat
 import app.otium.domain.model.BookStatus
+import app.otium.domain.usecase.ValidateIsbn13
 
 /**
  * The library export Goodreads makes (My Books, Import and export, Export Library). Otium writes
@@ -92,8 +94,8 @@ object GoodreadsCsv {
             AUTHOR to book.authors.firstOrNull().orEmpty(),
             AUTHOR_LAST_FIRST to book.authors.firstOrNull()?.let(::lastFirst).orEmpty(),
             ADDITIONAL_AUTHORS to book.authors.drop(1).joinToString(", "),
-            ISBN to "=\"${book.isbn10.orEmpty()}\"",
-            ISBN13 to "=\"${book.isbn13.orEmpty()}\"",
+            ISBN to "=\"${book.isbn10?.let(::validIsbn).orEmpty()}\"",
+            ISBN13 to "=\"${book.isbn13?.let(::validIsbn).orEmpty()}\"",
             PUBLISHER to book.publisher.orEmpty(),
             BINDING to book.format?.binding.orEmpty(),
             PAGES to book.totalPages.takeIf { it > 0 }?.toString().orEmpty(),
@@ -116,6 +118,9 @@ object GoodreadsCsv {
             if (column in TEXT_COLUMNS) FileValues.spreadsheetSafe(value) else value
         }
     }
+
+    private fun validIsbn(value: String): String? =
+        value.takeIf { ValidateIsbn13(it) is Try.Success }?.let(FileValues::isbnOrNull)
 
     /** "Ursula K. Le Guin" becomes "Guin, Ursula K. Le": a guess, as Goodreads' own is. */
     private fun lastFirst(name: String): String {

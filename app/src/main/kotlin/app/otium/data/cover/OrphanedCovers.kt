@@ -2,6 +2,7 @@ package app.otium.data.cover
 
 import android.content.Context
 import android.database.sqlite.SQLiteException
+import app.otium.data.backup.BackupFiles
 import app.otium.data.local.dao.BookDao
 import app.otium.domain.port.Clock
 import app.otium.domain.port.DispatcherProvider
@@ -17,12 +18,13 @@ import kotlinx.coroutines.launch
 private const val SETTLED_AFTER_MILLIS = 24L * 60 * 60 * 1000
 
 /**
- * Deletes cover files that no book names. The book repository deletes the covers its own writes
- * leave unused; what is left for this are covers of a save whose process died before the book was
- * written, and covers of books deleted before the repository took care of them.
+ * Deletes cover files that no book names and backup scratch files a dead process left behind. The
+ * book repository deletes the covers its own writes leave unused; what is left for this are covers
+ * of a save whose process died before the book was written, and covers of books deleted before the
+ * repository took care of them.
  *
- * Only old files go, and only while no backup or restore runs: a restore copies covers in before
- * the rows that name them are committed.
+ * Only old cover files go, and only while no backup or restore runs: a restore copies covers in
+ * before the rows that name them are committed.
  */
 @Singleton
 class OrphanedCovers internal constructor(
@@ -31,6 +33,7 @@ class OrphanedCovers internal constructor(
     private val lock: BackupLock,
     private val clock: Clock,
     private val scope: CoroutineScope,
+    private val backupFiles: BackupFiles? = null,
 ) {
 
     @Inject
@@ -46,27 +49,35 @@ class OrphanedCovers internal constructor(
         lock,
         clock,
         CoroutineScope(SupervisorJob() + dispatchers.io),
+        BackupFiles.of(context),
     )
 
-    /** Starts [purgeNow] in the background. */
+    /** Starts [purgeNow] and empties leftover backup scratch files in the background. */
     fun purge() {
-        scope.launch { purgeNow() }
+        scope.launch {
+            backupFiles?.purgeNow(lock)
+            purgeNow()
+        }
     }
 
     /**
-     * Deletes the settled cover files no book names and returns how many went. Nothing is deleted
-     * when the library cannot be read.
+     * Deletes the settled cover files no book names (including abandoned `.part` files) and
+     * returns how many went. Only settled `.part` files are deleted when the library cannot be
+     * read.
      */
     @Suppress("SwallowedException") // Without the library nothing is known to be unused.
     internal suspend fun purgeNow(): Int = lock.withLock {
         val cutoff = clock.nowMillis() - SETTLED_AFTER_MILLIS
+        val partialCount = covers.partials()
+            .filter { it.lastModified() < cutoff }
+            .count { covers.delete(it.name) }
         val settled = covers.list().filter { it.lastModified() < cutoff }
-        if (settled.isEmpty()) return@withLock 0
+        if (settled.isEmpty()) return@withLock partialCount
         val named = try {
             dao.coverPaths().mapNotNullTo(HashSet(), covers::nameOf)
         } catch (error: SQLiteException) {
-            return@withLock 0
+            return@withLock partialCount
         }
-        settled.filter { it.name !in named }.count { covers.delete(it.name) }
+        partialCount + settled.filter { it.name !in named }.count { covers.delete(it.name) }
     }
 }

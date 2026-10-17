@@ -41,4 +41,8 @@ class CoverFiles(val directory: File) {
     /** The cover files in [directory], without the `.part` files of covers still being written. */
     fun list(): List<File> = directory.listFiles().orEmpty()
         .filter { it.isFile && it.extension != PARTIAL_EXTENSION }
+
+    /** The `.part` files in [directory] from covers being written or interrupted saves. */
+    fun partials(): List<File> = directory.listFiles().orEmpty()
+        .filter { it.isFile && it.extension == PARTIAL_EXTENSION }
 }

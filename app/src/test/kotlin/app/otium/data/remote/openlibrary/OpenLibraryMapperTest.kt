@@ -176,4 +176,23 @@ class OpenLibraryMapperTest {
         assertNull(candidate.totalPages)
         assertNull(candidate.publisher)
     }
+
+    @Test
+    fun `invalid isbn10 and isbn13 values in editions and search hits are ignored`() {
+        val edition: EditionDto = RemoteJson.decodeFromString(
+            """{"title":"T","isbn_10":["\"=1+1\"","0441013597"],"isbn_13":["../bad"]}""",
+        )
+        val search: SearchResponse = RemoteJson.decodeFromString(
+            """{"docs":[{"title":"T","isbn":["\"=SUM(1)\"","0441013597","1234567890123"]}]}""",
+        )
+
+        val fromEdition = edition.toCandidate(emptyList(), null)
+        val fromSearch = search.toCandidates().single()
+
+        assertEquals("0441013597", fromEdition.isbn10)
+        assertNull(fromEdition.isbn13)
+        assertNull(fromEdition.coverUrl)
+        assertEquals("0441013597", fromSearch.isbn10)
+        assertNull(fromSearch.isbn13)
+    }
 }

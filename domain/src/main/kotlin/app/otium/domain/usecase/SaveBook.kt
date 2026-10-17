@@ -141,7 +141,7 @@ class SaveBook(
 
     private fun Book.withDetailsOf(candidate: BookCandidate, isbn13: String?): Book = copy(
         isbn13 = isbn13,
-        isbn10 = candidate.isbn10?.let(::normalizeIsbn10),
+        isbn10 = candidate.isbn10?.let(ValidateIsbn13::isbn10OrNull),
         title = candidate.title.trim(),
         subtitle = candidate.subtitle.cleaned(),
         series = candidate.series.cleaned(),
@@ -158,7 +158,4 @@ class SaveBook(
     )
 
     private fun String?.cleaned(): String? = this?.trim()?.takeIf(String::isNotEmpty)
-
-    private fun normalizeIsbn10(value: String): String? =
-        value.filter { it != '-' && !it.isWhitespace() }.uppercase().takeIf(String::isNotEmpty)
 }

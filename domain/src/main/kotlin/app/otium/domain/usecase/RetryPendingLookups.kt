@@ -72,7 +72,7 @@ class RetryPendingLookups(
         }
         val totalPages = found.totalPages?.takeIf { it > 0 } ?: book.totalPages
         val updated = book.copy(
-            isbn10 = found.isbn10 ?: book.isbn10,
+            isbn10 = found.isbn10?.let(ValidateIsbn13::isbn10OrNull) ?: book.isbn10,
             title = found.title.ifBlank { book.title },
             subtitle = found.subtitle,
             series = book.series ?: found.series,

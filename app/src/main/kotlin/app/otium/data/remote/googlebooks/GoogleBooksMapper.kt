@@ -2,6 +2,7 @@ package app.otium.data.remote.googlebooks
 
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
+import app.otium.domain.usecase.ValidateIsbn13
 
 private const val MAX_CATEGORIES = 5
 private const val ISBN_13 = "ISBN_13"
@@ -23,8 +24,8 @@ internal fun VolumeDto.toCandidate(): BookCandidate? {
     if (title.isEmpty()) return null
 
     return BookCandidate(
-        isbn13 = info.isbn(ISBN_13),
-        isbn10 = info.isbn(ISBN_10),
+        isbn13 = info.isbn(ISBN_13, ValidateIsbn13::isbn13OrNull),
+        isbn10 = info.isbn(ISBN_10, ValidateIsbn13::isbn10OrNull),
         title = title,
         subtitle = info.subtitle.clean(),
         authors = info.authors.map(String::trim).filter(String::isNotEmpty),
@@ -45,8 +46,10 @@ internal fun VolumeDto.toCandidate(): BookCandidate? {
 
 private fun String?.clean(): String? = this?.trim()?.takeIf(String::isNotEmpty)
 
-private fun VolumeInfoDto.isbn(type: String): String? =
-    industryIdentifiers.firstOrNull { it.type == type }?.identifier.clean()
+private fun VolumeInfoDto.isbn(type: String, validate: (String) -> String?): String? =
+    industryIdentifiers.firstNotNullOfOrNull {
+        if (it.type == type) it.identifier?.let(validate) else null
+    }
 
 /** The largest picture Google offers. */
 private fun ImageLinksDto.best(): String? =

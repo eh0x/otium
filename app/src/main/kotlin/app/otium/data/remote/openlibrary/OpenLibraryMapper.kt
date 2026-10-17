@@ -3,6 +3,7 @@ package app.otium.data.remote.openlibrary
 import app.otium.domain.model.BookCandidate
 import app.otium.domain.model.BookSource
 import app.otium.domain.usecase.ParseSeries
+import app.otium.domain.usecase.ValidateIsbn13
 import java.util.Locale
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -11,8 +12,6 @@ import kotlinx.serialization.json.contentOrNull
 
 private const val COVERS_URL = "https://covers.openlibrary.org/b"
 private const val MAX_CATEGORIES = 3
-private const val ISBN_13_LENGTH = 13
-private const val ISBN_10_LENGTH = 10
 private val YEAR = Regex("""(?<!\d)(\d{4})(?!\d)""")
 
 /**
@@ -51,11 +50,11 @@ private fun JsonElement?.text(): String? = when (this) {
  * may be missing; the candidate is then simply less complete.
  */
 internal fun EditionDto.toCandidate(authorNames: List<String>, work: WorkDto?): BookCandidate {
-    val isbn13 = isbn13.firstOrNull { it.isNotBlank() }
+    val isbn13 = isbn13.firstNotNullOfOrNull(ValidateIsbn13::isbn13OrNull)
     val series = ParseSeries.fromCatalogue(series)
     return BookCandidate(
         isbn13 = isbn13,
-        isbn10 = isbn10.firstOrNull { it.isNotBlank() },
+        isbn10 = isbn10.firstNotNullOfOrNull(ValidateIsbn13::isbn10OrNull),
         title = title.orEmpty().trim(),
         subtitle = subtitle?.trim()?.takeIf(String::isNotEmpty),
         series = series?.name,
@@ -76,8 +75,8 @@ internal fun SearchResponse.toCandidates(): List<BookCandidate> = docs.mapNotNul
     val title = doc.title?.trim().orEmpty()
     if (title.isEmpty()) return@mapNotNull null
     BookCandidate(
-        isbn13 = doc.isbn.firstOrNull { it.length == ISBN_13_LENGTH && it.all(Char::isDigit) },
-        isbn10 = doc.isbn.firstOrNull { it.length == ISBN_10_LENGTH },
+        isbn13 = doc.isbn.firstNotNullOfOrNull(ValidateIsbn13::isbn13OrNull),
+        isbn10 = doc.isbn.firstNotNullOfOrNull(ValidateIsbn13::isbn10OrNull),
         title = title,
         authors = doc.authorNames.map(String::trim).filter(String::isNotEmpty),
         publisher = doc.publisher.firstOrNull { it.isNotBlank() }?.trim(),
