@@ -18,9 +18,9 @@ Your personal Alexandria library.
 
 </div>
 
-Otium is an Android app for cataloguing and tracking your own physical books. Scan an ISBN, let it
-fetch the details, keep your place by page, and find any book in your library in an instant. It is
-built to feel like a quiet study rather than a utility, and it keeps your data on your device.
+Otium is an Android app for cataloguing and tracking your own books. Scan an ISBN, let it fetch the
+details, keep your place by page, and find any book in your library in an instant. It is built to
+feel like a quiet study rather than a utility, and it keeps your data on your device.
 
 > [!NOTE]
 > Otium is in active development and not on Google Play yet. The version 1 features are built and
@@ -61,24 +61,35 @@ by the headless screenshot tests (`app/build/screenshots`).
 - **Add books three ways.** Scan the barcode, type an ISBN, or search by title or author.
 - **Good metadata, fixed by you.** Details and covers come from Google Books, with Open Library
   filling the gaps. A confirm screen always comes before saving, because API data is often wrong,
-  and every field and the cover can be edited.
-- **Shelves and tags.** Each book stands on a shelf (its first category) and can carry tags. Browse
-  the library as a shelf of spines or as a list.
+  and every field, the format (print, ebook or audiobook) and the cover can be edited.
+- **Shelves, series and tags.** Each book stands on a shelf (its first category), can belong to a
+  numbered series, and can carry tags. Browse the library as a shelf of spines, grouped by series
+  in reading order, or as a list.
 - **Reading progress by page.** Set the current and total page. A book is _not started_, _in
   progress_ or _read_, worked out from the pages. The Reading tab keeps the books on your desk and
   the ones you finished recently.
-- **Search and filters.** Instant text search over title and author, filtered by status, category
-  and tag, with several sort orders. Built for a library of around 5,000 books.
+- **Notes and quotes.** Keep notes and quotes on a book, with an optional page number. Add, edit
+  and delete them from the book's page, and search them once a book has six or more.
+- **Lending ledger.** Record when you lend a book out or borrow one, with a name you type yourself
+  and an optional quiet reminder in a week, two weeks or a month. A _Lent out_ link in the library
+  opens the list of books currently out or borrowed, and returning a book keeps one line of
+  history that you can remove.
+- **Search and filters.** Instant full-text search over title, subtitle, author and series,
+  filtered by status, category, tag, author and series, with several sort orders. Built for a
+  library of around 5,000 books.
 - **Works offline.** Browsing, searching and updating progress need no network. Lookups made
   offline wait for a connection.
 - **Backup to your own Google Drive.** A manual backup and an optional scheduled one, stored in
-  your private app folder in Drive, with optional passphrase encryption.
-- **Import and export.** Bring a library in from a Goodreads or StoryGraph export, and take yours
-  out as CSV (in Goodreads' columns, which most reading apps import) or as Otium JSON.
+  your private app folder in Drive, with optional passphrase encryption (books, covers, notes and
+  loans included).
+- **Import and export.** Bring a library in from a Goodreads or StoryGraph CSV export or an Otium
+  JSON file, with a preview before anything is written. Take yours out as CSV (in Goodreads'
+  columns, including the format in `Binding`) or as versioned Otium JSON (books, notes, quotes,
+  loans and format).
 - **App lock.** Optionally ask for your face, fingerprint or screen lock when Otium opens and when
-  you come back to it.
+  you come back to it after a minute or five away.
 
-Not in version 1: iOS, syncing between devices, accounts or a backend, ratings and notes, reading
+Not in version 1: iOS, syncing between devices, accounts or a backend, ratings, reading
 statistics, social features, and several copies of the same ISBN.
 
 ## Privacy
@@ -86,18 +97,26 @@ statistics, social features, and several copies of the same ISBN.
 - Your library stays on your device. There are no accounts and no analytics.
 - The only network calls are to the book APIs, sending an ISBN or a title and author, and to your
   own Google Drive for backup.
+- The lending ledger never reads your contacts or sends messages. You type the name yourself, and
+  reminder notifications hide the name on a locked screen (and hide both the book and the name when
+  the app lock is on).
 - Backups use the private app data folder of your Drive (the `drive.appdata` scope), which the app
   alone can read. With a passphrase set, the backup is encrypted (Argon2id and AES-256-GCM) before
   it leaves the phone. Otium suggests a passphrase once you connect Drive.
-- Import and export read and write only the files you pick.
-- With the app lock on, someone holding your unlocked phone cannot open your library, and Android
-  13 and later leave it out of the recent apps preview. Face and fingerprint checks stay with
-  Android; Otium only learns whether they passed.
+- Import and export read and write only the files you pick. Export files are not encrypted: an
+  Otium JSON file holds your notes, quotes and loan names in the clear, while CSV exports leave
+  them out.
+- With the app lock on, someone holding your unlocked phone cannot open your library, and Otium is
+  left out of the recent apps preview. Face and fingerprint checks stay with Android; Otium only
+  learns whether they passed.
 
 ## Status
 
-The work follows [the implementation plan](docs/plans/2026-10-06-otium-implementation-plan.md),
-which holds the detail and is kept current. This table is a summary.
+The initial build followed [the implementation plan](docs/plans/2026-10-06-otium-implementation-plan.md).
+This table summarizes the version 1 phases; later additions (series, Goodreads, StoryGraph and
+JSON import and export, app lock, notes and quotes, the lending ledger, and book format labels) are
+shipped or on `develop` and tracked in [CHANGELOG.md](CHANGELOG.md) and the decision log of
+[the design document](docs/design/2026-10-06-otium-library-app-design.md).
 
 | Phase | What | State |
 |-------|------|-------|
@@ -229,13 +248,15 @@ The reasoning behind each choice, with the alternatives, is in
 - **Language and UI:** Kotlin, Jetpack Compose with Material 3, and a custom theme.
 - **Data:** Room with an FTS4 full-text index, DataStore, Kotlin coroutines and Flow.
 - **Dependency injection:** Hilt.
-- **Adding books:** CameraX and ML Kit (on-device model) for barcode scanning, Retrofit with
-  kotlinx.serialization for the book APIs, Coil for covers, and WorkManager for lookups that wait
-  for a connection.
-- **Backup:** Google Play services auth and the Drive REST API; Tink and Bouncy Castle (Argon2id)
-  for encryption.
-- **Quality:** Spotless with ktlint, detekt, Android Lint, markdownlint, gitleaks, OSV-Scanner,
-  actionlint and zizmor for the CI workflows, and architecture rules written as tests (Konsist).
+- **Adding books and background work:** CameraX and ML Kit (on-device model) for barcode scanning,
+  Retrofit with kotlinx.serialization for the book APIs, Coil for covers, and WorkManager for
+  offline lookups, scheduled backups and loan reminders.
+- **Backup and security:** Google Play services auth and the Drive REST API; Tink (streaming
+  AES-256-GCM), Bouncy Castle (Argon2id) and the Android Keystore for backup encryption; AndroidX
+  Biometric for the app lock.
+- **Quality:** Spotless with ktlint, detekt, Android Lint, CodeQL, markdownlint, gitleaks,
+  CycloneDX with OSV-Scanner, actionlint and zizmor for the CI workflows, and architecture rules
+  written as tests (Konsist).
 - **Tests:** JUnit, Turbine, Robolectric, Kover for coverage, Macrobenchmark.
 
 Library versions are pinned in [`gradle/libs.versions.toml`](gradle/libs.versions.toml).
@@ -247,16 +268,17 @@ otium/
 ├── app/             Android app (:app)
 │   └── src/main/kotlin/app/otium/
 │       ├── ui/          Compose screens, theme and shared components
-│       ├── data/        Room store, repositories, API, scan and backup clients
+│       ├── data/        Room store, repositories, API, scan, transfer and backup clients
+│       ├── applock/     App lock state and biometric/credential prompt
 │       ├── auth/        Google Drive consent
-│       ├── work/        WorkManager jobs
+│       ├── work/        WorkManager jobs (lookups, backups, loan reminders)
 │       └── di/          Hilt modules
 ├── benchmark/       Macrobenchmark tests for scroll and search (:benchmark)
 ├── domain/          Pure Kotlin (:domain): models, rules, use cases, ports
-├── docs/            Design, plan, style and Markdown guides
+├── docs/            Design, plan, audit, release, style and Markdown guides
 ├── config/detekt/   Static analysis rules
 ├── gradle/          Version catalog and build scripts
-├── scripts/         Documentation, Markdown and secret checks
+├── scripts/         Documentation, Markdown, workflow, dependency and secret checks
 ├── third_party/     Font and icon licenses
 └── .githooks/       Git hooks (enabled by installGitHooks)
 ```
@@ -264,15 +286,19 @@ otium/
 ## Documentation
 
 - [Design document](docs/design/2026-10-06-otium-library-app-design.md): what is built and why,
-  with the decision log.
+  with the decision log and threat model.
 - [Implementation plan](docs/plans/2026-10-06-otium-implementation-plan.md): phases, tasks and
   status.
+- [Changelog](CHANGELOG.md): user-visible changes in each release.
+- [Release guide](docs/RELEASING.md): versioning, signing, release steps and supported versions.
 - [Contributing guide](CONTRIBUTING.md): workflow, commands, tests and the git hooks.
 - [Style guide](docs/STYLE_GUIDE.md): code rules, architecture rules and how each is enforced.
 - [Markdown guidelines](docs/MARKDOWN_GUIDE.md): how documentation is written and linted.
 - [Open source guidelines](docs/OPEN_SOURCE_GUIDELINES.md): governance, triage, security and
   community practices.
 - [Security policy](SECURITY.md): supported versions and how to report a vulnerability privately.
+- [Security audit report](docs/audit/2026-10-17-security-audit.md): OWASP Mobile Top 10 and MASVS
+  v2 review, threat model and resolved findings.
 
 Docs live in the repository and change with the code. `./gradlew checkDocs` fails when this README
 or the guides drift from the build files.
