@@ -236,7 +236,7 @@ class ImportLibrary(
             categories = categories,
             tags = (tags + listOfNotNull(shelfTag())).distinct(),
             coverPath = null,
-            coverSourceUrl = coverSourceUrl,
+            coverSourceUrl = coverSourceUrl?.trim()?.takeIf { it.startsWith(HTTPS_PREFIX) },
             source = source,
             addedAt = addedAt ?: now,
             updatedAt = now,
@@ -269,6 +269,7 @@ class ImportLibrary(
 
     private companion object {
         const val ISBN10_LENGTH = 10
+        const val HTTPS_PREFIX = "https://"
         const val TAG_READ = "read"
         const val TAG_READING = "currently-reading"
     }

@@ -11,11 +11,13 @@ import app.otium.MainActivity
 import app.otium.R
 import app.otium.domain.model.LoanDirection
 import app.otium.domain.model.LoanReminder
+import app.otium.domain.port.AppLockPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
 
 private const val CHANNEL_ID = "loans"
 private const val NOTIFICATION_TAG = "loan"
@@ -23,24 +25,28 @@ private const val NOTIFICATION_TAG = "loan"
 /**
  * Reminds the owner, once and quietly, about a book that is out. No sound, never red, and no
  * "overdue": it says who has the book and since when. The borrower's name is about someone else,
- * so on a locked screen the notice says only that a book is out; the details show once the phone
- * is unlocked. When the owner has not allowed notifications it does nothing, as the Lent out
- * screen shows the same loans and reminder days.
+ * so on a locked screen, or whenever App Lock is turned on, the notice says only that a book is
+ * out. When the owner has not allowed notifications it does nothing, as the Lent out screen shows
+ * the same loans and reminder days.
  */
-class LoanReminderNotifier @Inject constructor(@ApplicationContext private val context: Context) {
+class LoanReminderNotifier @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val appLockPreferences: AppLockPreferences,
+) {
 
-    fun remind(reminder: LoanReminder) {
+    suspend fun remind(reminder: LoanReminder) {
+        val redact = appLockPreferences.settings.first().enabled
         val channel =
             NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(context.getString(R.string.loan_channel_name))
                 .setDescription(context.getString(R.string.loan_channel_description))
                 .build()
         context.notifyIfAllowed(channel, NOTIFICATION_TAG, reminder.loanId.hashCode()) {
-            notificationFor(reminder)
+            notificationFor(reminder, redact)
         }
     }
 
-    private fun notificationFor(reminder: LoanReminder): Notification {
+    private fun notificationFor(reminder: LoanReminder, redact: Boolean): Notification {
         val openApp = PendingIntent.getActivity(
             context,
             0,
@@ -50,15 +56,21 @@ class LoanReminderNotifier @Inject constructor(@ApplicationContext private val c
         val since = LocalDate.ofEpochDay(reminder.lentOn)
             .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
         val lent = reminder.direction == LoanDirection.LENT
-        val title = context.getString(
-            if (lent) R.string.loan_reminder_lent_title else R.string.loan_reminder_borrowed_title,
-        )
-        val text = context.getString(
-            if (lent) R.string.loan_reminder_lent_text else R.string.loan_reminder_borrowed_text,
-            reminder.counterparty,
-            reminder.bookTitle,
-            since,
-        )
+        val title = when {
+            redact -> context.getString(R.string.loan_reminder_public_title)
+            lent -> context.getString(R.string.loan_reminder_lent_title)
+            else -> context.getString(R.string.loan_reminder_borrowed_title)
+        }
+        val text = if (redact) {
+            context.getString(R.string.loan_reminder_public_text)
+        } else {
+            val textRes = if (lent) {
+                R.string.loan_reminder_lent_text
+            } else {
+                R.string.loan_reminder_borrowed_text
+            }
+            context.getString(textRes, reminder.counterparty, reminder.bookTitle, since)
+        }
         val hidden = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.loan_reminder_public_title))

@@ -13,10 +13,12 @@ import java.io.EOFException
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.io.OutputStream
 import java.security.GeneralSecurityException
 
 private const val BUFFER_BYTES = 64 * 1024
 private const val DEFAULT_SEGMENT_BYTES = 256 * 1024
+private const val DEFAULT_MAX_PLAIN_BYTES = 512L * 1024 * 1024
 private const val TINK_KEY_BYTES = 32
 private const val VERSION: Byte = 1
 private const val KDF_ARGON2ID: Byte = 1
@@ -79,7 +81,10 @@ internal class EncryptedHeader(val params: KdfParams, val salt: ByteArray, val k
  * authenticated in segments), so a backup of any size is handled without holding it in memory. A
  * changed, reordered or cut-off segment fails decryption.
  */
-internal class BackupCipher(private val segmentBytes: Int = DEFAULT_SEGMENT_BYTES) {
+internal class BackupCipher(
+    private val segmentBytes: Int = DEFAULT_SEGMENT_BYTES,
+    private val maxPlainBytes: Long = DEFAULT_MAX_PLAIN_BYTES,
+) {
 
     /** Writes [plain] to [target], encrypted under [key]. */
     @Throws(IOException::class, GeneralSecurityException::class)
@@ -103,7 +108,8 @@ internal class BackupCipher(private val segmentBytes: Int = DEFAULT_SEGMENT_BYTE
 
     /**
      * Writes the plain contents of [source] to [target] using [key]. Throws when the data was
-     * changed or cut short; [target] may then hold part of the data and is the caller's to delete.
+     * changed, cut short or larger than [maxPlainBytes]; [target] may then hold part of the data
+     * and is the caller's to delete.
      */
     @Throws(IOException::class, GeneralSecurityException::class)
     fun decrypt(source: File, target: File, key: BackupKey) {
@@ -111,7 +117,7 @@ internal class BackupCipher(private val segmentBytes: Int = DEFAULT_SEGMENT_BYTE
             val header = EncryptedHeader.read(input) ?: throw IOException("Not an encrypted backup")
             val decrypting = streamingAead(key).newDecryptingStream(input, header.encode())
             decrypting.use { plain ->
-                target.outputStream().use { out -> plain.copyTo(out, BUFFER_BYTES) }
+                target.outputStream().use { out -> plain.copyBoundedTo(out, maxPlainBytes) }
             }
         }
     }
@@ -123,10 +129,29 @@ internal class BackupCipher(private val segmentBytes: Int = DEFAULT_SEGMENT_BYTE
             .setHkdfHashType(AesGcmHkdfStreamingParameters.HashType.SHA256)
             .setCiphertextSegmentSizeBytes(segmentBytes)
             .build()
-        val tinkKey = AesGcmHkdfStreamingKey.create(
-            parameters,
-            SecretBytes.copyFrom(key.bytes, InsecureSecretKeyAccess.get()),
-        )
+        val subkey = key.encryptionKey()
+        val tinkKey = try {
+            AesGcmHkdfStreamingKey.create(
+                parameters,
+                SecretBytes.copyFrom(subkey, InsecureSecretKeyAccess.get()),
+            )
+        } finally {
+            subkey.fill(0)
+        }
         return AesGcmHkdfStreaming.create(tinkKey)
+    }
+}
+
+private fun InputStream.copyBoundedTo(out: OutputStream, maxBytes: Long) {
+    val buffer = ByteArray(BUFFER_BYTES)
+    var total = 0L
+    var count = read(buffer)
+    while (count >= 0) {
+        total += count
+        if (total > maxBytes) {
+            throw IOException("Decrypted backup exceeds $maxBytes bytes")
+        }
+        out.write(buffer, 0, count)
+        count = read(buffer)
     }
 }

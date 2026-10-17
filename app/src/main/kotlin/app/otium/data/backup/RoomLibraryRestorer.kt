@@ -11,6 +11,7 @@ import app.otium.domain.error.AppError
 import app.otium.domain.error.Try
 import app.otium.domain.port.DispatcherProvider
 import app.otium.domain.port.LibraryRestorer
+import app.otium.domain.usecase.ValidateIsbn13
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -201,13 +202,17 @@ private fun schemaOf(database: OtiumDatabase): Set<List<String?>> = database.ope
     }
 
 /**
- * These rows with each cover named by its file name alone, which the covers directory resolves.
- * A backup made before names were stored holds full paths of the install that made it; only the
- * name counts. A cover the backup did not carry ([present] lacks its name) is dropped from the
- * book, which keeps its source link.
+ * These rows with each cover named by its file name alone, which the covers directory resolves,
+ * and with any malformed ISBN dropped. A backup made before names were stored holds full paths of
+ * the install that made it; only the name counts. A cover the backup did not carry ([present]
+ * lacks its name) is dropped from the book, which keeps its source link.
  */
 private fun LibraryRows.withCoversFrom(present: Set<String>): LibraryRows = copy(
     books = books.map { book ->
-        book.copy(coverPath = book.coverPath?.let { File(it).name }?.takeIf { it in present })
+        book.copy(
+            isbn13 = book.isbn13?.let(ValidateIsbn13::isbn13OrNull),
+            isbn10 = book.isbn10?.let(ValidateIsbn13::isbn10OrNull),
+            coverPath = book.coverPath?.let { File(it).name }?.takeIf { it in present },
+        )
     },
 )

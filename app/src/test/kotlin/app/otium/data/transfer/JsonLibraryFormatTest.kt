@@ -274,4 +274,17 @@ class JsonLibraryFormatTest {
 
         assertEquals(text, row.notes.single().text)
     }
+
+    @Test
+    fun `a cover url that is not https is dropped`() {
+        val row = rows(
+            """{"format":"otium-library","version":3,"books":[
+                {"title":"Http","coverSourceUrl":"http://example.org/cover.jpg"},
+                {"title":"NotAUrl","coverSourceUrl":"not a url"}
+            ]}""",
+        )
+
+        assertNull(row[0].coverSourceUrl)
+        assertNull(row[1].coverSourceUrl)
+    }
 }

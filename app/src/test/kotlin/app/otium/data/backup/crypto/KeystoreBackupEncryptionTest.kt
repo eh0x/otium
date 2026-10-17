@@ -198,34 +198,47 @@ class KeystoreBackupEncryptionTest {
     }
 
     @Test
-    fun `turning it off forgets the key, and old backups still open with the passphrase`() =
+    fun `turning it off forgets stored and unlocked keys, and old backups still open`() = runTest {
+        val encryption = device()
+        encryption.enable("correct horse".toCharArray())
+        val keyId = checkNotNull(encryption.activeKeyId.first())
+        val sealed = encryption.sealed()
+        // Unlock with the passphrase so the key sits in the in-memory map too.
+        wrapper.delete()
+        assertTrue(encryption.decrypt(sealed, "correct horse".toCharArray()) is Try.Success)
+        assertTrue(encryption.canOpen(keyId))
+
+        encryption.disable()
+
+        assertNull(encryption.activeKeyId.first())
+        assertFalse(encryption.canOpen(keyId))
+        assertEquals(Try.Success(null), encryption.encrypt(plain))
+        assertEquals(Try.Failure(AppError.PassphraseRequired), encryption.decrypt(sealed, null))
+        assertTrue(encryption.decrypt(sealed, "correct horse".toCharArray()) is Try.Success)
+    }
+
+    @Test
+    fun `changing the passphrase forgets unlocked keys and leaves older backups on the old one`() =
         runTest {
             val encryption = device()
             encryption.enable("correct horse".toCharArray())
-            val sealed = encryption.sealed()
+            val oldKeyId = checkNotNull(encryption.activeKeyId.first())
+            val before = encryption.sealed()
+            wrapper.delete()
+            assertTrue(encryption.decrypt(before, "correct horse".toCharArray()) is Try.Success)
+            assertTrue(encryption.canOpen(oldKeyId))
 
-            encryption.disable()
+            encryption.enable("battery staple".toCharArray())
+            val fresh = newPhone()
 
-            assertNull(encryption.activeKeyId.first())
-            assertEquals(Try.Success(null), encryption.encrypt(plain))
-            assertEquals(Try.Failure(AppError.PassphraseRequired), encryption.decrypt(sealed, null))
-            assertTrue(encryption.decrypt(sealed, "correct horse".toCharArray()) is Try.Success)
+            assertFalse(encryption.canOpen(oldKeyId))
+            assertEquals(Try.Failure(AppError.PassphraseRequired), encryption.decrypt(before, null))
+            assertEquals(
+                Try.Failure(AppError.WrongPassphrase),
+                fresh.decrypt(before, "battery staple".toCharArray()),
+            )
+            assertTrue(fresh.decrypt(before, "correct horse".toCharArray()) is Try.Success)
         }
-
-    @Test
-    fun `changing the passphrase leaves older backups on the old one`() = runTest {
-        val encryption = device()
-        encryption.enable("correct horse".toCharArray())
-        val before = encryption.sealed()
-        encryption.enable("battery staple".toCharArray())
-        val fresh = newPhone()
-
-        assertEquals(
-            Try.Failure(AppError.WrongPassphrase),
-            fresh.decrypt(before, "battery staple".toCharArray()),
-        )
-        assertTrue(fresh.decrypt(before, "correct horse".toCharArray()) is Try.Success)
-    }
 
     @Test
     fun `a plain zip or a changed file is reported as a damaged backup`() = runTest {

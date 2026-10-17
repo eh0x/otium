@@ -180,9 +180,13 @@ class PassphrasePanelTest {
         rule.onNodeWithText("That passphrase does not open this backup.").assertIsDisplayed()
         rule.onNodeWithText("Unlock").assertIsNotEnabled()
         rule.onNodeWithText("Passphrase").performTextInput("another try")
+        rule.onNodeWithContentDescription("Show passphrase").performClick()
+        rule.onNodeWithText("another try").assertIsDisplayed()
         rule.onNodeWithText("Unlock").performClick()
 
         assertEquals(listOf("another try" to ""), entered)
+        rule.onNodeWithText("another try").assertDoesNotExist()
+        rule.onNodeWithText("Unlock").assertIsNotEnabled()
     }
 
     @Test

@@ -68,6 +68,28 @@ class BackupKeyTest {
     }
 
     @Test
+    fun `the encryption subkey is 256 bits and distinct from the master key and id`() {
+        val first = derive("correct horse")
+        val second = derive("correct horse")
+
+        val subkey = first.encryptionKey()
+
+        assertEquals(32, subkey.size)
+        assertArrayEquals(subkey, second.encryptionKey())
+        assertFalse(subkey.contentEquals(first.bytes))
+        assertFalse(subkey.toHex().startsWith(first.id))
+    }
+
+    @Test
+    fun `wiping a key zeroes its bytes in place`() {
+        val key = derive("correct horse")
+
+        key.wipe()
+
+        assertTrue(key.bytes.all { it == 0.toByte() })
+    }
+
+    @Test
     fun `the default settings are acceptable`() {
         assertTrue(KdfParams.DEFAULT.isAcceptable)
     }

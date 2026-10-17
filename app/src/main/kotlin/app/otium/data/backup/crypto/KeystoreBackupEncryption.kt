@@ -67,10 +67,15 @@ class KeystoreBackupEncryption internal constructor(
 
     override suspend fun enable(passphrase: CharArray): Try<Unit> {
         val key = withContext(dispatchers.default) { BackupKey.create(passphrase, params) }
-        return store(key)
+        return try {
+            store(key).also { if (it is Try.Success) unlocked.wipeAll() }
+        } finally {
+            key.wipe()
+        }
     }
 
     override suspend fun disable() {
+        unlocked.wipeAll()
         dataStore.edit { preferences -> STORED_KEYS.forEach { preferences.remove(it) } }
         withContext(dispatchers.io) { wrapper.delete() }
     }
@@ -115,6 +120,7 @@ class KeystoreBackupEncryption internal constructor(
             unlocked[derived.id] = derived
             Try.Success(derived)
         } else {
+            derived.wipe()
             Try.Failure(AppError.WrongPassphrase)
         }
     }
@@ -138,6 +144,7 @@ class KeystoreBackupEncryption internal constructor(
         return if (key != null && key.id == id) {
             Try.Success(key)
         } else {
+            key?.wipe()
             Try.Failure(AppError.PassphraseRequired)
         }
     }
@@ -212,4 +219,9 @@ class KeystoreBackupEncryption internal constructor(
         val PARALLELISM = intPreferencesKey("backup_key_parallelism")
         val STORED_KEYS = listOf(KEY_ID, WRAPPED_KEY, SALT, MEMORY_KIB, ITERATIONS, PARALLELISM)
     }
+}
+
+private fun ConcurrentHashMap<String, BackupKey>.wipeAll() {
+    values.forEach(BackupKey::wipe)
+    clear()
 }

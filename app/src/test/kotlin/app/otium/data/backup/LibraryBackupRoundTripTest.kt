@@ -486,6 +486,30 @@ class LibraryBackupRoundTripTest {
     }
 
     @Test
+    fun `a backup with non-isbn text in isbn columns drops it and restores the book`() =
+        runBlocking {
+            val databaseFile = realDatabaseFile()
+            SQLiteDatabase.openDatabase(databaseFile.path, null, SQLiteDatabase.OPEN_READWRITE)
+                .use {
+                    it.execSQL(
+                        "UPDATE book SET isbn10 = '\"&HYPERLINK(\"http://x\")&\"', " +
+                            "isbn13 = 'not-an-isbn' WHERE title = 'Dune'",
+                    )
+                }
+
+            val result = restorer().restore(craftedBackup(databaseFile))
+
+            assertEquals(Try.Success(Unit), result)
+            val restored = targetBooks.observeLibrary(LibraryFilter()).first()
+                .map { (targetBooks.getBook(it.id) as Try.Success).value }
+            val dune = restored.single { it.title == "Dune" }
+            val hobbit = restored.single { it.title == "The Hobbit" }
+            assertEquals(null, dune.isbn10)
+            assertEquals(null, dune.isbn13)
+            assertEquals("9780306406157", hobbit.isbn13)
+        }
+
+    @Test
     fun `a restore with nowhere to unpack reports it and changes nothing`() = runBlocking {
         addKeeper()
         val backup = backupOfSource().file

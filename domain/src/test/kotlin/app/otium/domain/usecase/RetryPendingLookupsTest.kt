@@ -217,4 +217,16 @@ class RetryPendingLookupsTest {
         assertEquals("Dune", saved.series)
         assertEquals(1.0, saved.seriesIndex)
     }
+
+    @Test
+    fun `an invalid isbn10 from the lookup is ignored and a valid one is kept`() = runTest {
+        pending(dune) { copy(isbn10 = "0441013597") }
+        metadata.isbnResult = Try.Success(
+            found("Dune").value.copy(isbn10 = "\"&HYPERLINK(\"http://x\")&\""),
+        )
+
+        retry()
+
+        assertEquals("0441013597", repo.all.single().isbn10)
+    }
 }

@@ -10,6 +10,7 @@ private const val KEY_BYTES = 32
 private const val SALT_BYTES = 16
 private const val KEY_ID_BYTES = 16
 private const val KEY_ID_LABEL = "otium backup key id v1"
+private const val ENCRYPTION_KEY_LABEL = "otium backup encryption key v1"
 private const val HMAC = "HmacSHA256"
 
 /**
@@ -48,6 +49,14 @@ internal class BackupKey(val bytes: ByteArray, val salt: ByteArray, val params: 
 
     val id: String = keyIdOf(bytes)
 
+    /** 256-bit subkey for streaming AEAD encryption, domain-separated from [id] and [bytes]. */
+    fun encryptionKey(): ByteArray = hmac(bytes, ENCRYPTION_KEY_LABEL)
+
+    /** Zeroes the key material in place when it is no longer kept in memory. */
+    fun wipe() {
+        bytes.fill(0)
+    }
+
     companion object {
         /** A key for [passphrase] with a fresh random salt. */
         fun create(
@@ -74,11 +83,11 @@ internal class BackupKey(val bytes: ByteArray, val salt: ByteArray, val params: 
         }
 
         /** HMAC-SHA256 of a fixed label under the key, cut to 16 bytes, as hex. */
-        fun keyIdOf(key: ByteArray): String {
+        fun keyIdOf(key: ByteArray): String = hmac(key, KEY_ID_LABEL).copyOf(KEY_ID_BYTES).toHex()
+
+        private fun hmac(key: ByteArray, label: String): ByteArray {
             val mac = Mac.getInstance(HMAC).apply { init(SecretKeySpec(key, HMAC)) }
-            return mac.doFinal(KEY_ID_LABEL.toByteArray(Charsets.UTF_8))
-                .copyOf(KEY_ID_BYTES)
-                .toHex()
+            return mac.doFinal(label.toByteArray(Charsets.UTF_8))
         }
 
         const val SALT_SIZE = SALT_BYTES

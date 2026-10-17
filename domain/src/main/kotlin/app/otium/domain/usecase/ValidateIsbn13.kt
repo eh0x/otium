@@ -20,7 +20,7 @@ object ValidateIsbn13 {
     private val PREFIXES = listOf("978", "979")
 
     operator fun invoke(input: String): Try<String> {
-        val cleaned = input.filter { it != '-' && !it.isWhitespace() }.uppercase()
+        val cleaned = clean(input)
         val isbn13 = when (cleaned.length) {
             ISBN13_LENGTH -> cleaned.takeIf(::isValidIsbn13)
             ISBN10_LENGTH -> isbn10To13(cleaned)
@@ -28,6 +28,17 @@ object ValidateIsbn13 {
         }
         return if (isbn13 != null) Try.Success(isbn13) else Try.Failure(AppError.InvalidIsbn(input))
     }
+
+    /** Normalized 13-digit ISBN-13 when [input] is a valid ISBN-13, or null otherwise. */
+    fun isbn13OrNull(input: String): String? =
+        clean(input).takeIf { it.length == ISBN13_LENGTH && isValidIsbn13(it) }
+
+    /** Normalized 10-character ISBN-10 when [input] is a valid ISBN-10, or null otherwise. */
+    fun isbn10OrNull(input: String): String? =
+        clean(input).takeIf { it.length == ISBN10_LENGTH && isValidIsbn10(it) }
+
+    private fun clean(input: String): String =
+        input.filter { it != '-' && !it.isWhitespace() }.uppercase()
 
     private fun isValidIsbn13(value: String): Boolean = value.all { it in '0'..'9' } &&
         PREFIXES.any(value::startsWith) &&

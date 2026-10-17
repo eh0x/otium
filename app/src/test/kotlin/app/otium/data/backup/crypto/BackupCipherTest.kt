@@ -130,4 +130,18 @@ class BackupCipherTest {
 
         assertRejected(encrypted(), other)
     }
+
+    @Test
+    fun `a backup that decrypts past the size limit is rejected`() {
+        val capped = BackupCipher(segmentBytes = 1024, maxPlainBytes = 4_096)
+        val sealed = encrypted()
+        val target = folder.newFile()
+
+        try {
+            capped.decrypt(sealed, target, key)
+            fail("A backup larger than maxPlainBytes must not decrypt")
+        } catch (expected: IOException) {
+            // Rejected once the stream passes the cap.
+        }
+    }
 }

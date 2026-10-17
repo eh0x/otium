@@ -144,10 +144,23 @@ class SaveBookTest {
     }
 
     @Test
+    fun `an invalid isbn10 alongside a valid isbn13 is dropped`() = runTest {
+        val result = add(
+            candidate(isbn13 = "9780306406157", isbn10 = "\"&HYPERLINK(\"http://x\")&\""),
+        )
+
+        assertTrue(result is Try.Success)
+        val saved = repo.all.single()
+        assertEquals("9780306406157", saved.isbn13)
+        assertNull(saved.isbn10)
+    }
+
+    @Test
     fun `hyphenated isbn is normalized before saving`() = runTest {
-        add(candidate(isbn13 = "978-0-306-40615-7"))
+        add(candidate(isbn13 = "978-0-306-40615-7", isbn10 = "0-306-40615-2"))
 
         assertEquals("9780306406157", repo.all.single().isbn13)
+        assertEquals("0306406152", repo.all.single().isbn10)
     }
 
     @Test

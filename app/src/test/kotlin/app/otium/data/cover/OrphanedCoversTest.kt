@@ -2,6 +2,7 @@ package app.otium.data.cover
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import app.otium.data.backup.BackupFiles
 import app.otium.data.local.OtiumDatabase
 import app.otium.data.local.testBook
 import app.otium.data.repo.RoomBookRepository
@@ -29,6 +30,7 @@ class OrphanedCoversTest {
 
     private lateinit var db: OtiumDatabase
     private val directory by lazy { temp.newFolder("covers") }
+    private val work by lazy { temp.newFolder("backup") }
     private val books by lazy {
         RoomBookRepository(db.bookDao(), CoverFiles(directory), Dispatchers.Unconfined)
     }
@@ -40,6 +42,7 @@ class OrphanedCoversTest {
             lock,
             { NOW },
             CoroutineScope(Dispatchers.Unconfined),
+            BackupFiles(work, directory),
         )
     }
 
@@ -101,19 +104,24 @@ class OrphanedCoversTest {
     }
 
     @Test
-    fun `a cover still being written is kept`() = runTest {
-        val partial = cover("cover123.part")
+    fun `a cover still being written is kept, and a stale partial cover is deleted`() = runTest {
+        val writing = cover("cover-fresh.part", modifiedAt = NOW - DAY / 2)
+        val abandoned = cover("cover-stale.part", modifiedAt = NOW - DAY - 1)
 
-        orphans.purgeNow()
+        assertEquals(1, orphans.purgeNow())
 
-        assertTrue(partial.exists())
+        assertTrue(writing.exists())
+        assertFalse(abandoned.exists())
     }
 
     @Test
-    fun `purge runs in the background and a missing covers folder is not a problem`() {
+    fun `purge empties backup scratch and tolerates a missing covers folder`() {
+        val leftover = File(work, "otium-restore.zip").apply { writeText("decrypted") }
         directory.delete()
 
         orphans.purge()
+
+        assertFalse(leftover.exists())
     }
 
     private companion object {
