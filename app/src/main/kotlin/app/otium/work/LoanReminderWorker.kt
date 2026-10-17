@@ -22,7 +22,7 @@ class LoanReminderWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val loanId = inputData.getLong(KEY_LOAN_ID, NO_LOAN)
-        if (loanId != NO_LOAN) prepare(loanId)?.let(notifier::remind)
+        if (loanId != NO_LOAN) prepare(loanId)?.let { notifier.remind(it) }
         return Result.success()
     }
 

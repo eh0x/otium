@@ -2,6 +2,7 @@ package app.otium
 
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
@@ -28,8 +29,8 @@ import kotlinx.coroutines.launch
 
 /**
  * The one activity. A [FragmentActivity] because the system biometric prompt is shown over one.
- * The app lock gate sits around everything; while the lock is on, Android 13 and later also leave
- * Otium's screen out of the recent apps preview.
+ * The app lock gate sits around everything; while the lock is on, Otium's screen is also left out
+ * of the recent apps preview.
  */
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
@@ -86,10 +87,17 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun hideFromRecentsWhileLocked() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
-                appLockPreferences.settings.collect { setRecentsScreenshotEnabled(!it.enabled) }
+                appLockPreferences.settings.collect { settings ->
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        setRecentsScreenshotEnabled(!settings.enabled)
+                    } else if (settings.enabled) {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    } else {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    }
+                }
             }
         }
     }

@@ -30,6 +30,7 @@ private const val ZIP_TYPE = "application/zip"
 private const val MAX_TRIES = 3
 private const val RETRY_DELAY_MILLIS = 1_000L
 private const val BUFFER_BYTES = 64 * 1024
+private const val DEFAULT_MAX_DOWNLOAD_BYTES = 512L * 1024 * 1024
 
 /** How a transfer is checked: against the SHA-256 that Drive reports (`sha256Checksum`). */
 private const val CHECKSUM_ALGORITHM = "SHA-256"
@@ -56,6 +57,7 @@ internal class GoogleDriveBackupClient(
     private val cacheDir: File,
     private val dispatchers: DispatcherProvider,
     private val retryDelayMillis: Long = RETRY_DELAY_MILLIS,
+    private val maxDownloadBytes: Long = DEFAULT_MAX_DOWNLOAD_BYTES,
     private val trustsUploadAddress: (HttpUrl) -> Boolean = ::isGoogleUploadAddress,
 ) : DriveBackupClient {
 
@@ -125,7 +127,7 @@ internal class GoogleDriveBackupClient(
         val stored = retrying { api.getFile(sent.id, auth) }
         val expected = withContext(dispatchers.io) { sha256Of(file) }
         val reported = stored.sha256Checksum
-        if (reported != null && !reported.equals(expected, ignoreCase = true)) {
+        if (reported == null || !reported.equals(expected, ignoreCase = true)) {
             retrying { api.deleteFile(sent.id, auth) }
             throw DriveFailure(AppError.Unexpected("Drive stored a different file"))
         }
@@ -140,16 +142,18 @@ internal class GoogleDriveBackupClient(
             ?: throw DriveFailure(AppError.Unexpected("Drive gave an unexpected upload address"))
     }
 
-    /** Streams [remote] into [target], checking its checksum. */
+    /** Streams [remote] into [target], checking its checksum and size. */
     private suspend fun fetch(remote: DriveFile, target: File, auth: String) {
+        val expected = remote.sha256Checksum ?: throw DriveFailure(AppError.CorruptBackup)
         val body = retrying { api.download(remote.id, auth) }
         withContext(dispatchers.io) {
             val digest = MessageDigest.getInstance(CHECKSUM_ALGORITHM)
-            body.use { source ->
-                target.outputStream().use { out -> copyDigesting(source.byteStream(), out, digest) }
+            val withinLimit = body.use { source ->
+                target.outputStream().use { out ->
+                    copyDigesting(source.byteStream(), out, digest, maxDownloadBytes)
+                }
             }
-            val expected = remote.sha256Checksum
-            if (expected != null && !digest.hex().equals(expected, ignoreCase = true)) {
+            if (!withinLimit || !digest.hex().equals(expected, ignoreCase = true)) {
                 throw DriveFailure(AppError.CorruptBackup)
             }
         }
@@ -240,18 +244,26 @@ private fun sha256Of(file: File): String {
 
 private fun MessageDigest.hex(): String = digest().joinToString("") { "%02x".format(it) }
 
-/** Copies [input] to [output] while feeding [digest], giving up promptly when cancelled. */
+/**
+ * Copies [input] to [output] while feeding [digest], giving up promptly when cancelled or when
+ * the stream exceeds [maxBytes].
+ */
 private fun CoroutineScope.copyDigesting(
     input: InputStream,
     output: OutputStream,
     digest: MessageDigest,
-) {
+    maxBytes: Long,
+): Boolean {
     val buffer = ByteArray(BUFFER_BYTES)
+    var total = 0L
     var count = input.read(buffer)
     while (count >= 0) {
         ensureActive()
+        total += count
+        if (total > maxBytes) return false
         digest.update(buffer, 0, count)
         output.write(buffer, 0, count)
         count = input.read(buffer)
     }
+    return true
 }

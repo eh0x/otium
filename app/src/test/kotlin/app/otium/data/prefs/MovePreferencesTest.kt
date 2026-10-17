@@ -51,13 +51,14 @@ class MovePreferencesTest {
     }
 
     @Test
-    fun `the Drive and backup keys move out of the library settings`() = runTest {
+    fun `the Drive, backup and app lock keys move out of the library settings`() = runTest {
         val launch = Launch()
         launch.library.edit {
             it[VIEW_MODE] = "SHELF"
             it[CONNECTED] = true
             it[ACCOUNT] = "reader@example.com"
             it[FAILED_RUNS] = 2
+            it[APP_LOCK_ENABLED] = true
         }
 
         val moved = launch.backupState.data.first()
@@ -65,6 +66,7 @@ class MovePreferencesTest {
         assertEquals(true, moved[CONNECTED])
         assertEquals("reader@example.com", moved[ACCOUNT])
         assertEquals(2, moved[FAILED_RUNS])
+        assertEquals(true, moved[APP_LOCK_ENABLED])
         assertNull(moved[VIEW_MODE])
         assertEquals(mapOf(Pair(VIEW_MODE, "SHELF")), launch.library.data.first().asMap())
     }
@@ -96,5 +98,6 @@ class MovePreferencesTest {
         val CONNECTED = booleanPreferencesKey("drive_connected")
         val ACCOUNT = stringPreferencesKey("drive_account")
         val FAILED_RUNS = intPreferencesKey("backup_failed_runs")
+        val APP_LOCK_ENABLED = booleanPreferencesKey("app_lock_enabled")
     }
 }

@@ -66,6 +66,9 @@ class GoogleDriveBackupClientTest {
 
         /** Makes every checksum Drive reports wrong. */
         var corruptChecksums = false
+
+        /** Leaves sha256Checksum out of Drive's file responses. */
+        var omitChecksums = false
         var quotaLimit: String? = null
         var quotaUsage: String? = "0"
 
@@ -169,7 +172,12 @@ class GoogleDriveBackupClientTest {
         private fun fileJson(stored: Stored) = buildJsonObject {
             put("id", stored.id)
             put("name", stored.name)
-            put("sha256Checksum", if (corruptChecksums) "0".repeat(64) else sha256(stored.bytes))
+            if (!omitChecksums) {
+                put(
+                    "sha256Checksum",
+                    if (corruptChecksums) "0".repeat(64) else sha256(stored.bytes),
+                )
+            }
             put("appProperties", buildJsonObject { stored.props.forEach { (k, v) -> put(k, v) } })
         }
 
@@ -238,7 +246,7 @@ class GoogleDriveBackupClientTest {
 
     private val cacheDir by lazy { temp.newFolder("cache") }
 
-    private fun client(): GoogleDriveBackupClient {
+    private fun client(maxDownloadBytes: Long = 512L * 1024 * 1024): GoogleDriveBackupClient {
         val http = RemoteClients.transferClient(RemoteClients.httpClient("test"))
         val api = RemoteClients.retrofit(server.url("/"), http).create(DriveApi::class.java)
         return GoogleDriveBackupClient(
@@ -247,6 +255,7 @@ class GoogleDriveBackupClientTest {
             cacheDir = cacheDir,
             dispatchers = RealDispatchers,
             retryDelayMillis = 1,
+            maxDownloadBytes = maxDownloadBytes,
             // The fake Drive is plain http on localhost; trust it and nothing else.
             trustsUploadAddress = { it.host == server.hostName && it.port == server.port },
         )
@@ -254,8 +263,10 @@ class GoogleDriveBackupClientTest {
 
     private fun localBackup(content: String): File = temp.newFile().apply { writeText(content) }
 
-    private fun <T> run(block: suspend GoogleDriveBackupClient.() -> T): T =
-        runBlocking { client().block() }
+    private fun <T> run(
+        maxDownloadBytes: Long = 512L * 1024 * 1024,
+        block: suspend GoogleDriveBackupClient.() -> T,
+    ): T = runBlocking { client(maxDownloadBytes).block() }
 
     private fun content(name: String) = drive.named(name)?.bytes?.decodeToString()
 
@@ -352,6 +363,19 @@ class GoogleDriveBackupClientTest {
     }
 
     @Test
+    fun `an upload for which Drive reports no checksum is removed and fails`() {
+        run { upload(localBackup("one"), backupInfo(createdAt = 1L)) }
+        drive.omitChecksums = true
+
+        val result = run { upload(localBackup("two"), backupInfo(createdAt = 2L)) }
+
+        assertTrue(result is Try.Failure)
+        assertNull(drive.named(DriveFileNames.INCOMING))
+        assertEquals(listOf(DriveFileNames.LATEST), drive.names())
+        assertEquals("one", content(DriveFileNames.LATEST))
+    }
+
+    @Test
     fun `an upload that finished but was never renamed becomes the latest`() {
         val older = backupInfo(createdAt = 1L)
         val newer = backupInfo(createdAt = 2L)
@@ -434,6 +458,27 @@ class GoogleDriveBackupClientTest {
         drive.corruptChecksums = true
 
         val result = run { download(BackupSlot.LATEST) }
+
+        assertEquals(Try.Failure(AppError.CorruptBackup), result)
+        assertEquals(emptyList<File>(), cacheDir.listFiles().orEmpty().toList())
+    }
+
+    @Test
+    fun `a download with no checksum is refused and removed`() {
+        drive.add(DriveFileNames.LATEST, backupInfo(), "bytes")
+        drive.omitChecksums = true
+
+        val result = run { download(BackupSlot.LATEST) }
+
+        assertEquals(Try.Failure(AppError.CorruptBackup), result)
+        assertEquals(emptyList<File>(), cacheDir.listFiles().orEmpty().toList())
+    }
+
+    @Test
+    fun `a download over the size limit is refused and removed`() {
+        drive.add(DriveFileNames.LATEST, backupInfo(), "0123456789")
+
+        val result = run(maxDownloadBytes = 5) { download(BackupSlot.LATEST) }
 
         assertEquals(Try.Failure(AppError.CorruptBackup), result)
         assertEquals(emptyList<File>(), cacheDir.listFiles().orEmpty().toList())

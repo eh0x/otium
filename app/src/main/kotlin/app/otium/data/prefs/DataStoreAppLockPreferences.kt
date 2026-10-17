@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.map
  * transfer leave out, so a new phone starts unlocked until its owner turns the lock on there.
  */
 class DataStoreAppLockPreferences @Inject constructor(
-    private val dataStore: DataStore<Preferences>,
+    @BackupStateStore private val dataStore: DataStore<Preferences>,
 ) : AppLockPreferences {
 
     override val settings: Flow<AppLockSettings> = dataStore.data.map { preferences ->

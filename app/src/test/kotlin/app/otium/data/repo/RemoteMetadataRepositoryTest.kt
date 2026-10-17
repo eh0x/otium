@@ -282,6 +282,28 @@ class RemoteMetadataRepositoryTest {
         assertNull(candidate.description)
     }
 
+    @Test
+    fun `malformed Open Library work and author keys are ignored without requesting them`() {
+        backend.on(GOOGLE_PATH, ok("googlebooks/volumes-empty.json"))
+        backend.on(
+            EDITION_PATH,
+            MockResponse().setResponseCode(200).setBody(
+                """{
+                    "title": "Dune",
+                    "works": [{"key": "/works/../../admin"}],
+                    "authors": [{"key": "/authors/not-an-id"}, {"key": "/authors/OL79034A"}]
+                }""",
+            ),
+        )
+
+        val candidate = lookup().candidate()
+
+        assertEquals("Dune", candidate.title)
+        assertEquals(listOf("Frank Herbert"), candidate.authors)
+        assertEquals(0, backend.hits(WORK_PATH))
+        assertEquals(1, backend.hits(AUTHOR_PATH))
+    }
+
     // --- Search by title and author ---
 
     @Test

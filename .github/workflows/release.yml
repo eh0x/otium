@@ -109,11 +109,14 @@ jobs:
             echo "::error::UPLOAD_KEY_PASSWORD does not unlock the key UPLOAD_KEY_ALIAS"
             exit 1
           fi
+          escape_prop() {
+            printf '%s' "$1" | sed 's/\\/\\\\/g'
+          }
           {
-            echo "storeFile=$keystore"
-            echo "storePassword=$UPLOAD_STORE_PASSWORD"
-            echo "keyAlias=$UPLOAD_KEY_ALIAS"
-            echo "keyPassword=$UPLOAD_KEY_PASSWORD"
+            printf 'storeFile=%s\n' "$(escape_prop "$keystore")"
+            printf 'storePassword=%s\n' "$(escape_prop "$UPLOAD_STORE_PASSWORD")"
+            printf 'keyAlias=%s\n' "$(escape_prop "$UPLOAD_KEY_ALIAS")"
+            printf 'keyPassword=%s\n' "$(escape_prop "$UPLOAD_KEY_PASSWORD")"
           } > keystore.properties
 
       - name: Build the signed bundle, APK and SBOM

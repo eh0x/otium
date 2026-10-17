@@ -23,6 +23,8 @@ import java.io.InputStream
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -31,6 +33,14 @@ private const val COVERS_DIRECTORY = "covers"
 private const val MAX_COVER_BYTES = 5_000_000L
 private const val HTTP_NOT_FOUND = 404
 private const val HTTP_TOO_MANY_REQUESTS = 429
+
+private val TRUSTED_COVER_HOSTS = listOf(
+    "books.google.com",
+    "googleapis.com",
+    "googleusercontent.com",
+    "covers.openlibrary.org",
+    "archive.org",
+)
 
 /** Below this a file cannot be a real cover; sites answer a missing cover with a tiny stub. */
 private const val MIN_COVER_BYTES = 1_000
@@ -49,6 +59,13 @@ private const val DEGREES_270 = 270
 internal fun coversDirectory(context: Context): File = File(context.filesDir, COVERS_DIRECTORY)
 
 /**
+ * Whether [url] is a cover address Otium may fetch: `https://` on Google Books, Open Library or
+ * the Internet Archive (which serves Open Library's covers).
+ */
+internal fun isTrustedCoverAddress(url: HttpUrl): Boolean = url.isHttps &&
+    TRUSTED_COVER_HOSTS.any { host -> url.host == host || url.host.endsWith(".$host") }
+
+/**
  * Stores covers as files in the app's private storage. A cover is downloaded once, checked, and
  * written to a temporary file that is renamed into place, so a failed or cancelled download never
  * leaves a half-written cover that a book could point at. Deleting covers is the book repository's
@@ -60,6 +77,7 @@ class FileCoverStore internal constructor(
     private val client: OkHttpClient,
     private val dispatchers: DispatcherProvider,
     private val maxBytes: Long,
+    private val trustsCoverAddress: (HttpUrl) -> Boolean = ::isTrustedCoverAddress,
 ) : CoverStore {
 
     @Inject
@@ -91,11 +109,9 @@ class FileCoverStore internal constructor(
 
     /** The picture's bytes, or why there are none. Oversized bodies count as "no cover". */
     private suspend fun download(url: String): Try<ByteArray> {
-        val request = try {
-            Request.Builder().url(url).build()
-        } catch (ignored: IllegalArgumentException) {
-            return Try.Failure(AppError.InvalidInput("url"))
-        }
+        val parsed = url.toHttpUrlOrNull()?.takeIf(trustsCoverAddress)
+            ?: return Try.Failure(AppError.InvalidInput("url"))
+        val request = Request.Builder().url(parsed).build()
         return try {
             client.newCall(request).await().use(::readBody)
         } catch (error: IOException) {

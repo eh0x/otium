@@ -14,12 +14,14 @@ import javax.imageio.ImageIO
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okio.Buffer
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -59,6 +61,15 @@ class FileCoverStoreTest {
         client = RemoteClients.httpClient("Otium/test"),
         dispatchers = RealDispatchers,
         maxBytes = maxBytes,
+        trustsCoverAddress = { it.host == server.hostName && it.port == server.port },
+    )
+
+    private fun defaultStore() = FileCoverStore(
+        directory = coversDir,
+        resolver = ApplicationProvider.getApplicationContext<Context>().contentResolver,
+        client = RemoteClients.httpClient("Otium/test"),
+        dispatchers = RealDispatchers,
+        maxBytes = 5_000_000L,
     )
 
     /** A cover-sized picture. Noise keeps the file well above the "tiny" threshold. */
@@ -167,6 +178,34 @@ class FileCoverStoreTest {
         server.shutdown()
 
         assertEquals(AppError.Offline, store().saveFromUrl(url).error())
+    }
+
+    @Test
+    fun `an untrusted or cleartext cover address is rejected before calling the network`() =
+        runBlocking {
+            serve(picture())
+
+            assertEquals(
+                AppError.InvalidInput("url"),
+                defaultStore().saveFromUrl(server.url("/cover.jpg").toString()).error(),
+            )
+            assertEquals(
+                AppError.InvalidInput("url"),
+                defaultStore().saveFromUrl("https://evil.example.com/cover.jpg").error(),
+            )
+            assertEquals(0, server.requestCount)
+            assertTrue(savedFiles().isEmpty())
+        }
+
+    @Test
+    fun `trusted cover addresses require https on an allowed catalog host`() {
+        assertTrue(isTrustedCoverAddress("https://covers.openlibrary.org/b/id/1-L.jpg".toHttpUrl()))
+        assertTrue(isTrustedCoverAddress("https://ia800100.us.archive.org/1.jpg".toHttpUrl()))
+        assertTrue(isTrustedCoverAddress("https://books.google.com/books/content?id=1".toHttpUrl()))
+        assertTrue(isTrustedCoverAddress("https://lh3.googleusercontent.com/cover".toHttpUrl()))
+        assertFalse(isTrustedCoverAddress("http://covers.openlibrary.org/b/id/1-L.jpg".toHttpUrl()))
+        assertFalse(isTrustedCoverAddress("https://evil.example.com/cover.jpg".toHttpUrl()))
+        assertFalse(isTrustedCoverAddress("https://notarchive.org/cover.jpg".toHttpUrl()))
     }
 
     // --- From the device (gallery or camera) ---

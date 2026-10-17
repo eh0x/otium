@@ -18,6 +18,7 @@ import javax.inject.Inject
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /**
  * Otium's library file, version 3:
@@ -124,7 +125,7 @@ private data class BookDto(
         currentPage = currentPage,
         categories = categories,
         tags = tags,
-        coverSourceUrl = coverSourceUrl,
+        coverSourceUrl = coverSourceUrl?.trim()?.takeIf { it.toHttpUrlOrNull()?.isHttps == true },
         source = BookSource.entries.firstOrNull { it.name == source } ?: BookSource.MANUAL,
         addedAt = addedAt,
         complete = !needsLookup,

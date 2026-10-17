@@ -70,13 +70,20 @@ private class PassphraseInput {
         passphrase = ""
         confirmation = ""
     }
+
+    fun submitTo(onSubmit: (passphrase: CharArray, confirmation: CharArray) -> Unit) {
+        val typedPassphrase = passphrase.toCharArray()
+        val typedConfirmation = confirmation.toCharArray()
+        clearTyped()
+        onSubmit(typedPassphrase, typedConfirmation)
+    }
 }
 
 /**
  * Asks for a passphrase: a new one, typed twice and acknowledged as unrecoverable, or the one an
  * encrypted backup was made with. The typed text is handed over as character arrays, which the
- * receiver clears, and is cleared here whenever the prompt changes (for example after a wrong
- * try). Kept apart from the dialog window so it can be tested on its own.
+ * receiver clears, and is cleared here on submit and whenever the prompt changes (for example
+ * after a wrong try). Kept apart from the dialog window so it can be tested on its own.
  */
 @Composable
 internal fun PassphrasePanel(
@@ -89,9 +96,7 @@ internal fun PassphrasePanel(
     LaunchedEffect(prompt) { input.clearTyped() }
     val creating = prompt is PassphrasePrompt.Set
     val ready = input.passphrase.isNotEmpty() && !busy && (!creating || input.isValidNew)
-    val submit = {
-        if (ready) onSubmit(input.passphrase.toCharArray(), input.confirmation.toCharArray())
-    }
+    val submit = { if (ready) input.submitTo(onSubmit) }
 
     val colors = MaterialTheme.otiumColors
     val shape = MaterialTheme.shapes.medium

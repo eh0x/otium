@@ -9,18 +9,18 @@ import javax.inject.Qualifier
 import kotlinx.coroutines.flow.first
 
 /**
- * The preferences file for the Drive connection and backup bookkeeping: whether Drive is
- * connected, the account's email, the backup choices, the last backup and the failure count. It
- * is kept apart from the library settings so that whatever moves those (such as Android's device
- * transfer) never carries the account or a grant the new phone does not have.
+ * The preferences file for device-local state: the Drive connection, backup bookkeeping and App
+ * Lock. It is kept apart from the library settings so that whatever moves those (such as Android's
+ * device transfer) never carries an account, a grant or a biometric lock to a new phone.
  */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class BackupStateStore
 
 /** True for the keys that live in the [BackupStateStore] file. */
-internal fun isBackupState(key: Preferences.Key<*>): Boolean =
-    key.name.startsWith("drive_") || key.name.startsWith("backup_")
+internal fun isBackupState(key: Preferences.Key<*>): Boolean = key.name.startsWith("drive_") ||
+    key.name.startsWith("backup_") ||
+    key.name.startsWith("app_lock_")
 
 /**
  * Moves the keys [belongs] accepts out of [source] into the store this migration runs on. Values

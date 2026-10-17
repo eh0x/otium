@@ -11,10 +11,12 @@ import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.workDataOf
+import app.otium.domain.fakes.FakeAppLockPreferences
 import app.otium.domain.fakes.FakeBookRepository
 import app.otium.domain.fakes.FakeLoanRepository
 import app.otium.domain.fakes.FixedClock
 import app.otium.domain.fakes.book
+import app.otium.domain.model.AppLockSettings
 import app.otium.domain.model.Loan
 import app.otium.domain.model.LoanDirection
 import app.otium.domain.usecase.PrepareLoanReminder
@@ -35,6 +37,7 @@ class LoanReminderWorkerTest {
     private val today = 20_000L
     private val books = FakeBookRepository()
     private val loans = FakeLoanRepository(books)
+    private val appLock = FakeAppLockPreferences()
     private val bookId = books.seed(book(title = "The Name of the Wind")).id
 
     private fun run(loanId: Long?): ListenableWorker.Result {
@@ -58,7 +61,7 @@ class LoanReminderWorkerTest {
                             appContext,
                             workerParameters,
                             prepare,
-                            LoanReminderNotifier(appContext),
+                            LoanReminderNotifier(appContext, appLock),
                         )
                     },
                 )
@@ -94,6 +97,22 @@ class LoanReminderWorkerTest {
             .getCharSequence(Notification.EXTRA_TEXT).toString()
         assertTrue(publicText, "Sam" !in publicText && "Wind" !in publicText)
         assertTrue("never alarming", "overdue" !in text.lowercase())
+    }
+
+    @Test
+    fun `when app lock is on the notification hides the borrower and book title`() {
+        val id = runBlocking {
+            appLock.save(AppLockSettings(enabled = true))
+            lend(remindOn = today)
+        }
+
+        assertEquals(ListenableWorker.Result.success(), run(id))
+
+        val notification = notifications.activeNotifications.single().notification
+        val title = notification.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
+        val text = notification.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
+        assertTrue(title, "Sam" !in title && "Wind" !in title)
+        assertTrue(text, "Sam" !in text && "Wind" !in text)
     }
 
     @Test

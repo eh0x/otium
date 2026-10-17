@@ -11,6 +11,7 @@ import retrofit2.HttpException
 
 private const val HTTP_NOT_FOUND = 404
 private const val MAX_AUTHORS = 3
+private val OPEN_LIBRARY_ID = Regex("^OL[0-9]+[A-Z]$")
 
 /**
  * Open Library as a source of candidates. An edition names its authors and work only by key, so a
@@ -26,11 +27,13 @@ internal class OpenLibrarySource @Inject constructor(private val api: OpenLibrar
         } catch (error: HttpException) {
             if (error.code() == HTTP_NOT_FOUND) return@coroutineScope null else throw error
         }
-        val work = edition.workKey()?.let { key -> async { bestEffort { api.work(key.idOf()) } } }
+        val work = edition.workKey()?.idOrNull()?.let { id ->
+            async { bestEffort { api.work(id) } }
+        }
         // Some editions name no authors, so the work is asked as well, and only then.
         val authorKeys = edition.authorKeys().ifEmpty { work?.await()?.authorKeys().orEmpty() }
-        val authors = authorKeys.take(MAX_AUTHORS).map { key ->
-            async { bestEffort { api.author(key.idOf()).name } }
+        val authors = authorKeys.mapNotNull { it.idOrNull() }.take(MAX_AUTHORS).map { id ->
+            async { bestEffort { api.author(id).name } }
         }
 
         edition.toCandidate(authors.awaitAll().filterNotNull(), work?.await())
@@ -40,8 +43,9 @@ internal class OpenLibrarySource @Inject constructor(private val api: OpenLibrar
     suspend fun search(query: String, limit: Int): List<BookCandidate> =
         api.search(query, limit).toCandidates()
 
-    /** `/works/OL893414W` to `OL893414W`. */
-    private fun String.idOf() = substringAfterLast('/')
+    /** `/works/OL893414W` to `OL893414W`, or null when the key is not an Open Library id. */
+    private fun String.idOrNull(): String? =
+        substringAfterLast('/').takeIf(OPEN_LIBRARY_ID::matches)
 
     private suspend fun <T> bestEffort(call: suspend () -> T): T? = try {
         call()
