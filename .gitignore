@@ -49,4 +49,7 @@ lint-results*.xml
 # Graphify
 graphify-out/
 
+# Documentation
 docs/design/
+docs/audit/
+docs/research/
