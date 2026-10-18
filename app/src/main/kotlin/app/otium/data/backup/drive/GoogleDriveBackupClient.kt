@@ -61,30 +61,30 @@ internal class GoogleDriveBackupClient(
     private val trustsUploadAddress: (HttpUrl) -> Boolean = ::isGoogleUploadAddress,
 ) : DriveBackupClient {
 
-    override suspend fun freeSpace(): Try<Long?> = drive { auth ->
-        val quota = retrying { api.about(auth) }.storageQuota
+    override suspend fun freeSpace(): Try<Long?> = drive {
+        val quota = retrying { auth -> api.about(auth) }.storageQuota
         val limit = quota?.limit?.toLongOrNull()
         val usage = quota?.usage?.toLongOrNull() ?: 0L
         limit?.let { (it - usage).coerceAtLeast(0L) }
     }
 
-    override suspend fun list(): Try<List<RemoteBackup>> = drive { auth -> layout(auth).backups() }
+    override suspend fun list(): Try<List<RemoteBackup>> = drive { layout().backups() }
 
-    override suspend fun upload(file: File, info: BackupInfo): Try<Unit> = drive { auth ->
-        val layout = settledLayout(auth)
-        val uploaded = send(file, info, auth)
-        layout.previous?.let { retrying { api.deleteFile(it.id, auth) } }
-        layout.latest?.let { rename(it, DriveFileNames.PREVIOUS, auth) }
-        rename(uploaded, DriveFileNames.LATEST, auth)
+    override suspend fun upload(file: File, info: BackupInfo): Try<Unit> = drive {
+        val layout = settledLayout()
+        val uploaded = send(file, info)
+        layout.previous?.let { retrying { auth -> api.deleteFile(it.id, auth) } }
+        layout.latest?.let { rename(it, DriveFileNames.PREVIOUS) }
+        rename(uploaded, DriveFileNames.LATEST)
     }
 
-    override suspend fun download(slot: BackupSlot): Try<File> = drive { auth ->
-        val remote = layout(auth).fileFor(slot) ?: throw DriveFailure(AppError.NotFound)
+    override suspend fun download(slot: BackupSlot): Try<File> = drive {
+        val remote = layout().fileFor(slot) ?: throw DriveFailure(AppError.NotFound)
         val target =
             withContext(dispatchers.io) { File.createTempFile("restore", ".zip", cacheDir) }
         var complete = false
         try {
-            fetch(remote, target, auth)
+            fetch(remote, target)
             complete = true
             target
         } finally {
@@ -92,43 +92,46 @@ internal class GoogleDriveBackupClient(
         }
     }
 
-    private suspend fun layout(auth: String) = DriveLayout(retrying { api.listFiles(auth) }.files)
+    private suspend fun layout() = DriveLayout(retrying { auth -> api.listFiles(auth) }.files)
 
     /**
      * The layout after clearing up an earlier upload that stopped before its last step: a finished
      * upload with no latest backup becomes the latest; one next to a latest is dropped, as a new
      * upload is about to replace it.
      */
-    private suspend fun settledLayout(auth: String): DriveLayout {
-        val layout = layout(auth)
+    private suspend fun settledLayout(): DriveLayout {
+        val layout = layout()
         val stray = layout.incoming ?: return layout
         if (layout.latest == null) {
-            rename(stray, DriveFileNames.LATEST, auth)
+            rename(stray, DriveFileNames.LATEST)
         } else {
-            retrying { api.deleteFile(stray.id, auth) }
+            retrying { auth -> api.deleteFile(stray.id, auth) }
         }
-        return layout(auth)
+        return layout()
     }
 
-    private suspend fun rename(file: DriveFile, name: String, auth: String) {
-        retrying { api.updateFile(file.id, auth, DriveFileMetadata(name = name)) }
+    private suspend fun rename(file: DriveFile, name: String) {
+        retrying { auth -> api.updateFile(file.id, auth, DriveFileMetadata(name = name)) }
     }
 
     /** Uploads [file] as the incoming backup and checks Drive stored the same bytes. */
-    private suspend fun send(file: File, info: BackupInfo, auth: String): DriveFile {
+    private suspend fun send(file: File, info: BackupInfo): DriveFile {
         val metadata = DriveFileMetadata(
             name = DriveFileNames.INCOMING,
             parents = listOf(APP_DATA_FOLDER),
             appProperties = info.toProperties(),
         )
-        val session = uploadAddress(api.startUpload(auth, ZIP_TYPE, file.length(), metadata))
+        val started = call { auth ->
+            api.startUpload(auth, ZIP_TYPE, file.length(), metadata).apply { requireSuccess() }
+        }
+        val session = uploadAddress(started)
         val content = file.asRequestBody(ZIP_TYPE.toMediaType())
-        val sent = api.uploadContent(session.toString(), auth, content)
-        val stored = retrying { api.getFile(sent.id, auth) }
+        val sent = call { auth -> api.uploadContent(session.toString(), auth, content) }
+        val stored = retrying { auth -> api.getFile(sent.id, auth) }
         val expected = withContext(dispatchers.io) { sha256Of(file) }
         val reported = stored.sha256Checksum
         if (reported == null || !reported.equals(expected, ignoreCase = true)) {
-            retrying { api.deleteFile(sent.id, auth) }
+            retrying { auth -> api.deleteFile(sent.id, auth) }
             throw DriveFailure(AppError.Unexpected("Drive stored a different file"))
         }
         return stored
@@ -143,9 +146,9 @@ internal class GoogleDriveBackupClient(
     }
 
     /** Streams [remote] into [target], checking its checksum and size. */
-    private suspend fun fetch(remote: DriveFile, target: File, auth: String) {
+    private suspend fun fetch(remote: DriveFile, target: File) {
         val expected = remote.sha256Checksum ?: throw DriveFailure(AppError.CorruptBackup)
-        val body = retrying { api.download(remote.id, auth) }
+        val body = retrying { auth -> api.download(remote.id, auth) }
         withContext(dispatchers.io) {
             val digest = MessageDigest.getInstance(CHECKSUM_ALGORITHM)
             val withinLimit = body.use { source ->
@@ -159,61 +162,59 @@ internal class GoogleDriveBackupClient(
         }
     }
 
-    /**
-     * Runs [block] with a token, turning everything it throws into a typed failure.
-     *
-     * Google can hand back a cached token that was revoked since. When Drive refuses the token,
-     * it is dropped and [block] runs once more with a fresh one; every call in [block] is safe to
-     * repeat, as an interrupted upload is cleared up by [settledLayout]. A fresh token refused
-     * too means the grant is gone, which the token provider records so the screen offers to
-     * connect again.
-     */
-    private suspend fun <T> drive(block: suspend (auth: String) -> T): Try<T> {
-        val token = when (val result = tokens.accessToken()) {
-            is Try.Failure -> return result
-            is Try.Success -> result.value
-        }
-        return attempt(token, block) ?: withFreshToken(token, block)
+    /** Runs [block], turning everything it throws into a typed [Try] failure. */
+    private suspend fun <T> drive(block: suspend () -> T): Try<T> = try {
+        Try.Success(block())
+    } catch (error: CancellationException) {
+        throw error
+    } catch (failure: DriveFailure) {
+        Try.Failure(failure.error)
+    } catch (error: HttpException) {
+        Try.Failure(error.toDriveError())
+    } catch (error: IOException) {
+        Try.Failure(error.toAppError())
+    } catch (error: SerializationException) {
+        Try.Failure(error.toAppError())
     }
 
-    /** Drops [refused] and runs [block] once more with a fresh token. */
+    /**
+     * Runs [action] with a token, dropping a refused token and trying once more with a fresh one.
+     * If the fresh token is refused too, the grant is marked revoked.
+     */
+    private suspend fun <T> call(action: suspend (auth: String) -> T): T {
+        val token = tokens.token()
+        return try {
+            action("Bearer $token")
+        } catch (error: HttpException) {
+            if (!error.isRefusedToken()) throw error
+            withFreshToken(token, action)
+        }
+    }
+
+    /** Drops [refused] and runs [action] once more with a fresh token. */
     private suspend fun <T> withFreshToken(
         refused: String,
-        block: suspend (auth: String) -> T,
-    ): Try<T> {
+        action: suspend (auth: String) -> T,
+    ): T {
         tokens.discard(refused)
-        val fresh = when (val result = tokens.accessToken()) {
-            is Try.Failure -> return result
-            is Try.Success -> result.value
-        }
-        return attempt(fresh, block) ?: run {
-            tokens.revoked()
-            Try.Failure(AppError.AuthExpired)
+        val fresh = tokens.token()
+        return try {
+            action("Bearer $fresh")
+        } catch (error: HttpException) {
+            if (error.isRefusedToken()) {
+                tokens.revoked()
+                throw DriveFailure(AppError.AuthExpired)
+            }
+            throw error
         }
     }
 
-    /** The outcome of [block] run with [token], or null when Drive refused the token itself. */
-    private suspend fun <T> attempt(token: String, block: suspend (auth: String) -> T): Try<T>? =
-        try {
-            Try.Success(block("Bearer $token"))
-        } catch (error: CancellationException) {
-            throw error
-        } catch (failure: DriveFailure) {
-            Try.Failure(failure.error)
-        } catch (error: HttpException) {
-            if (error.isRefusedToken()) null else Try.Failure(error.toDriveError())
-        } catch (error: IOException) {
-            Try.Failure(error.toAppError())
-        } catch (error: SerializationException) {
-            Try.Failure(error.toAppError())
-        }
-
     /** Asks again, a little later each time, while Drive answers busy or with a server error. */
-    private suspend fun <T> retrying(call: suspend () -> T): T {
+    private suspend fun <T> retrying(action: suspend (auth: String) -> T): T {
         var tries = 0
         while (true) {
             try {
-                return call()
+                return call(action)
             } catch (error: HttpException) {
                 tries++
                 if (!error.isTransient() || tries >= MAX_TRIES) throw error
@@ -221,9 +222,14 @@ internal class GoogleDriveBackupClient(
             }
         }
     }
+}
 
-    /** An outcome the caller reports as is, thrown from inside [drive] to leave early. */
-    private class DriveFailure(val error: AppError) : RuntimeException(error.toString())
+/** An outcome the caller reports as is, thrown from inside [GoogleDriveBackupClient.drive] to leave early. */
+private class DriveFailure(val error: AppError) : RuntimeException(error.toString())
+
+private suspend fun AccessTokenProvider.token(): String = when (val result = accessToken()) {
+    is Try.Failure -> throw DriveFailure(result.error)
+    is Try.Success -> result.value
 }
 
 private fun Response<*>.requireSuccess(): Response<*> =

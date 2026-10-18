@@ -573,6 +573,21 @@ class GoogleDriveBackupClientTest {
     }
 
     @Test
+    fun `a token expiry on the final rename preserves the previous backup`() {
+        run { upload(localBackup("first"), backupInfo(createdAt = 1L)) }
+        run { upload(localBackup("second"), backupInfo(createdAt = 2L)) }
+
+        drive.failWith(401, times = 1) { it == "PATCH $FILES/f6" }
+
+        val result = run { upload(localBackup("third"), backupInfo(createdAt = 3L)) }
+
+        assertEquals(Try.Success(Unit), result)
+        assertEquals("third", content(DriveFileNames.LATEST))
+        assertEquals("second", content(DriveFileNames.PREVIOUS))
+        assertEquals(setOf(DriveFileNames.LATEST, DriveFileNames.PREVIOUS), drive.names().toSet())
+    }
+
+    @Test
     fun `a full Drive is reported when the upload starts`() {
         drive.failWith(403, QUOTA_REASON) { it == "POST $UPLOAD_START" }
 
