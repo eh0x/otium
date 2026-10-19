@@ -48,6 +48,9 @@ private const val MIN_COVER_BYTES = 1_000
 /** A real cover is at least this many pixels on both sides; placeholders are a pixel or so. */
 private const val MIN_COVER_SIDE = 50
 
+/** Images wider or taller than this are rejected to avoid memory exhaustion from huge dimensions. */
+private const val MAX_COVER_SIDE = 4_096
+
 /** Photos from the gallery or camera are scaled so their longer side is at most this. */
 private const val MAX_STORED_SIDE = 1_200
 private const val JPEG_QUALITY = 90
@@ -171,8 +174,8 @@ class FileCoverStore internal constructor(
         val longest = maxOf(width, height)
         if (longest <= maxSide) return this
         return scale(
-            width * maxSide / longest,
-            height * maxSide / longest,
+            (width * maxSide / longest).coerceAtLeast(1),
+            (height * maxSide / longest).coerceAtLeast(1),
             filter = true,
         )
     }
@@ -195,7 +198,8 @@ class FileCoverStore internal constructor(
         if (bytes.size < MIN_COVER_BYTES) return false
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        return bounds.outWidth >= MIN_COVER_SIDE && bounds.outHeight >= MIN_COVER_SIDE
+        return bounds.outWidth in MIN_COVER_SIDE..MAX_COVER_SIDE &&
+            bounds.outHeight in MIN_COVER_SIDE..MAX_COVER_SIDE
     }
 
     private fun store(bytes: ByteArray): Try<String> {

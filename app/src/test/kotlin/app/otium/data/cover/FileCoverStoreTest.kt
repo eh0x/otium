@@ -10,6 +10,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Random
+import java.util.UUID
 import javax.imageio.ImageIO
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +139,22 @@ class FileCoverStoreTest {
     }
 
     @Test
+    fun `a download with dimensions exceeding the limit is rejected`() = runBlocking {
+        serve(picture(width = 4_097, height = 60))
+        serve(picture(width = 60, height = 4_097))
+
+        assertEquals(
+            AppError.NotFound,
+            store().saveFromUrl(server.url("/wide.png").toString()).error(),
+        )
+        assertEquals(
+            AppError.NotFound,
+            store().saveFromUrl(server.url("/tall.png").toString()).error(),
+        )
+        assertTrue(savedFiles().isEmpty())
+    }
+
+    @Test
     fun `something that is not an image is rejected`() = runBlocking {
         serve("<html>Not found</html>".repeat(200).toByteArray())
 
@@ -210,8 +227,8 @@ class FileCoverStoreTest {
 
     // --- From the device (gallery or camera) ---
 
-    private fun onDevice(bytes: ByteArray): String =
-        temp.newFile("photo.png").apply { writeBytes(bytes) }.toURI().toString()
+    private fun onDevice(bytes: ByteArray, name: String = "${UUID.randomUUID()}.png"): String =
+        temp.newFile(name).apply { writeBytes(bytes) }.toURI().toString()
 
     private fun decodedSize(path: String): Pair<Int, Int> {
         val image = ImageIO.read(File(path))
@@ -248,5 +265,14 @@ class FileCoverStoreTest {
         val result = store().saveFromDevice(File(temp.root, "missing.png").toURI().toString())
 
         assertEquals(AppError.InvalidInput("cover"), result.error())
+    }
+
+    @Test
+    fun `a panoramic strip on device does not crash when scaled`() = runBlocking {
+        val wideResult = store().saveFromDevice(onDevice(picture(width = 2_500, height = 1)))
+        val tallResult = store().saveFromDevice(onDevice(picture(width = 1, height = 2_500)))
+
+        assertEquals(AppError.InvalidInput("cover"), wideResult.error())
+        assertEquals(AppError.InvalidInput("cover"), tallResult.error())
     }
 }
