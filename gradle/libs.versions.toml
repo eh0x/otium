@@ -65,7 +65,7 @@ konsist = "0.18.1"
 # Build classpath only: patched versions of libraries that Gradle plugins bring in with known
 # vulnerabilities (AGP, Kover, CycloneDX). Applied as constraints in the root build.gradle.kts;
 # Bouncy Castle reuses the version above. Drop an entry once its plugin ships the fix.
-buildJackson = "2.22.3"
+buildJackson = "2.22.4"
 buildFreemarker = "2.3.35"
 buildJose4j = "0.9.7"
 buildJdom2 = "2.0.6.1"
