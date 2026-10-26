@@ -42,7 +42,7 @@ serialization = "1.11.0"
 
 # Network and images
 retrofit = "3.0.0"
-okhttp = "5.5.0"
+okhttp = "5.5.1"
 coil = "3.6.3"
 
 # Google
