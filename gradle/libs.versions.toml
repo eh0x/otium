@@ -50,7 +50,7 @@ mlkitBarcode = "17.3.0"
 playServicesAuth = "22.0.0"
 
 # Backup encryption: Tink for streaming AES-256-GCM, Bouncy Castle only for Argon2id.
-tink = "1.23.0"
+tink = "1.24.0"
 bouncycastle = "1.86"
 
 # Test
